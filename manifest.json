@@ -1,0 +1,7 @@
+{
+  "name": "Animation Frame Merger",
+  "description": "Merge folders frame-by-frame like Photopea's GIF export.",
+  "author": "You",
+  "homepage": "https://yourdomain.com/photopea-animation-plugin/index.html",
+  "icon": "https://photopea.com/resource/icon.svg"
+}
