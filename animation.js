@@ -1,6 +1,4 @@
-function exportGif() {
-  const script =
-    'await app.runMenuCommand("toTimeline");\n' +
-    'await app.runMenuCommand("exportAsGif");';
+function testMessage() {
+  const script = 'alert("✅ Hello from inside Photopea!");';
   window.parent.postMessage(script, "*");
 }
