@@ -1,7 +1,7 @@
 function mergeFrames() {
  
 
-  window.parent.postMessage('alert("Hello from plugin!")', '*');
+  window.parent.postMessage('done', '*');
 }
 
 function exportGif() {
