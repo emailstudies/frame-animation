@@ -1,4 +1,9 @@
 function mergeFrames() {
-  const script = `alert("🧪 Hello from plugin - basic test")`;
-  window.parent.postMessage(script, "*");
+  const script = `
+    (function () {
+      alert("🧪 Hello from plugin - basic test (inside function)");
+    })();
+  `;
+
+  window.parent.postMessage(script.trim(), "*");
 }
