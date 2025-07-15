@@ -1,13 +1,7 @@
 function mergeFrames() {
-  const script =
-    '(function () {\n' +
-    '  let doc = app.activeDocument;\n' +
-    '  let newLayer = doc.createLayer();\n' +
-    '  newLayer.name = "Layer_From_Plugin";\n' +
-    '  alert("✅ New layer created by plugin.");\n' +
-    '})();';
+ 
 
-  window.parent.postMessage(script, "*");
+  window.parent.postMessage('alert("Hello from plugin!")', '*');
 }
 
 function exportGif() {
