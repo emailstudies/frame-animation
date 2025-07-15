@@ -1,9 +1,12 @@
 function mergeFrames() {
- 
+  const script = `
+    (function () {
+      var doc = app.activeDocument;
+      var newLayer = doc.createLayer();
+      newLayer.name = "Layer_From_Plugin";
+      alert("✅ New layer created by plugin.");
+    })();
+  `;
 
-  window.parent.postMessage('done', '*');
-}
-
-function exportGif() {
-  alert("🕒 No timeline in Photopea. Please export manually via File > Export As > GIF.");
+  window.parent.postMessage(script.trim(), "*");
 }
