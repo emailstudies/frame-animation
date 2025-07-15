@@ -1,13 +1,15 @@
-function testSetTimeout() {
+function mergeFrames() {
   const script =
     '(function () {\n' +
-    '  let count = 0;\n' +
-    '  function tick() {\n' +
-    '    count++;\n' +
-    '    app.activeDocument.activeLayer.name = "Tick " + count;\n' +
-    '    if (count < 5) setTimeout(tick, 300);\n' +
-    '  }\n' +
-    '  tick();\n' +
+    '  let doc = app.activeDocument;\n' +
+    '  let newLayer = doc.createLayer();\n' +
+    '  newLayer.name = "Layer_From_Plugin";\n' +
+    '  alert("✅ New layer created by plugin.");\n' +
     '})();';
+
   window.parent.postMessage(script, "*");
+}
+
+function exportGif() {
+  alert("🕒 No timeline in Photopea. Please export manually via File > Export As > GIF.");
 }
