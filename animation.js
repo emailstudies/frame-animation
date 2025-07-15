@@ -1,9 +1,6 @@
-function mergeFrames() {
-  const script = 'alert("✅ Script received and running inside Photopea!");';
-  window.parent.postMessage(script, "*");
-}
-
 function exportGif() {
-  const script = 'alert("🚀 Export script triggered!");';
+  const script =
+    'await app.runMenuCommand("toTimeline");\n' +
+    'await app.runMenuCommand("exportAsGif");';
   window.parent.postMessage(script, "*");
 }
