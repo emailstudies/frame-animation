@@ -1,6 +1,6 @@
 function exportGif() {
   const script = `
-(function () {
+(async function () {
   if (!app || !app.activeDocument) {
     alert("No active document.");
     return;
@@ -22,7 +22,7 @@ function exportGif() {
     return;
   }
 
-  // Determine how many frames exist (longest folder wins)
+  // Determine number of frames
   var maxFrames = 0;
   for (var i = 0; i < animFolders.length; i++) {
     maxFrames = Math.max(maxFrames, animFolders[i].artLayers.length);
@@ -44,19 +44,25 @@ function exportGif() {
       }
     }
 
-    // Merge visible layers into a new layer
+    // Merge visible using Action Descriptor
     if (visibleLayers.length > 0) {
-      var merged = doc.mergeVisibleLayers();
-      merged.name = "_a_Frame " + (frame + 1);
+      await app.batchPlay([
+        {
+          _obj: "mergeVisible",
+          _options: { dialogOptions: "dontDisplay" }
+        }
+      ], {});
+
+      var mergedLayer = doc.activeLayer;
+      mergedLayer.name = "_a_Frame " + (frame + 1);
     }
 
-    // Hide the originals again
     for (var v = 0; v < visibleLayers.length; v++) {
       visibleLayers[v].visible = false;
     }
   }
 
-  alert("✅ Merged frames created in root as _a_Frame 1, _a_Frame 2, etc.");
+  alert("✅ Merged frames created using descriptors as _a_Frame 1, _a_Frame 2, etc.");
 })();
 `.trim();
 
