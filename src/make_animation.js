@@ -38,3 +38,4 @@ function handleAddAnimation() {
 
   window.parent.postMessage(script, "*");
 }
+// it tells if layer or folder and which folder is the parent
