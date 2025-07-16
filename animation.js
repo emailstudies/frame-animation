@@ -6,69 +6,71 @@ function exportGif() {
   // Check if preview already exists
   for (var i = 0; i < doc.layerSets.length; i++) {
     if (doc.layerSets[i].name === "anim_preview") {
-      alert("⚠️ 'anim_preview' already exists. Please delete it manually before generating preview.");
+      alert("⚠️ 'anim_preview' already exists. Please delete it before previewing again.");
       return;
     }
   }
 
-  // Collect anim folders
-  var animFolders = [];
+  // Collect anim folders (not locked)
+  var animGroups = [];
   for (var i = 0; i < doc.layerSets.length; i++) {
     var group = doc.layerSets[i];
     if (group.name.startsWith("anim") && !group.allLocked) {
-      animFolders.push(group);
+      animGroups.push(group);
     }
   }
 
-  if (animFolders.length === 0) {
-    alert("⚠️ No anim_* folders found.");
+  if (animGroups.length === 0) {
+    alert("⚠️ No folders starting with 'anim' found.");
     return;
   }
 
-  // Find max frame count
+  // Determine max number of frames
   var maxFrames = 0;
-  for (var i = 0; i < animFolders.length; i++) {
-    var frameCount = 0;
-    for (var j = 0; j < animFolders[i].layers.length; j++) {
-      if (!animFolders[i].layers[j].allLocked) frameCount++;
+  for (var i = 0; i < animGroups.length; i++) {
+    var count = 0;
+    for (var j = 0; j < animGroups[i].layers.length; j++) {
+      var layer = animGroups[i].layers[j];
+      if (!layer.allLocked) count++;
     }
-    if (frameCount > maxFrames) maxFrames = frameCount;
+    if (count > maxFrames) maxFrames = count;
   }
 
   if (maxFrames === 0) {
-    alert("⚠️ No unlocked layers found to merge.");
+    alert("⚠️ No visible, unlocked layers to merge.");
     return;
   }
 
-  // Create preview folder
-  var previewGroup = doc.layerSets.add();
-  previewGroup.name = "anim_preview";
+  // Create anim_preview folder
+  var previewFolder = doc.layerSets.add();
+  previewFolder.name = "anim_preview";
 
-  // Merge frames by index
-  for (var f = 0; f < maxFrames; f++) {
+  // Build frame-by-frame merged layers
+  for (var frame = 0; frame < maxFrames; frame++) {
     // Hide all layers
     for (var i = 0; i < doc.layers.length; i++) {
       doc.layers[i].visible = false;
     }
 
-    // Show matching layers by index in anim folders
-    for (var a = 0; a < animFolders.length; a++) {
-      var group = animFolders[a];
-      var index = group.layers.length - 1 - f;
-      if (index >= 0) {
-        var layer = group.layers[index];
+    // Show matching layer index in all anim folders
+    for (var g = 0; g < animGroups.length; g++) {
+      var group = animGroups[g];
+      var idx = group.layers.length - 1 - frame;
+      if (idx >= 0) {
+        var layer = group.layers[idx];
         if (!layer.allLocked) layer.visible = true;
       }
     }
 
-    // Merge visible
+    // Merge visible layers
     var merged = doc.mergeVisibleLayers();
-    merged.name = "_a_Frame " + (f + 1);
-    merged.move(previewGroup, ElementPlacement.INSIDE);
+    merged.name = "_a_Frame " + (frame + 1);
+    merged.move(previewFolder, ElementPlacement.INSIDE);
   }
 
-  alert("✅ anim_preview ready! You can now export GIF via File > Export As > GIF.");
-})();`.trim();
+  alert("✅ Preview created as 'anim_preview'. Export GIF manually.");
+})();
+`.trim();
 
   window.parent.postMessage(script, "*");
 }
