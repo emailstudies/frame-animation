@@ -9,22 +9,20 @@ function handleAddAnimation() {
 
   const script = `
     var doc = app.activeDocument;
-    var selectionSafe = false;
+    var layer = doc.activeLayer;
 
-    try {
-      var active = doc.activeLayer;
-      selectionSafe = false;
-    } catch (e) {
-      selectionSafe = true;
-    }
+    // Check: if activeLayer is a group or not a top-level layer
+    var isFolder = (layer.typename === "LayerSet");
+    var isNested = (layer.parent !== doc);
 
-    if (!selectionSafe) {
+    if (isFolder || isNested) {
       alert("Please deselect everything in the Layers panel before creating an animation folder.");
     } else {
+      // Check for duplicates
       var exists = false;
       for (var i = 0; i < doc.layers.length; i++) {
-        var layer = doc.layers[i];
-        if (layer.name === "${folderName}" && layer.typename === "LayerSet") {
+        var topLayer = doc.layers[i];
+        if (topLayer.name === "${folderName}" && topLayer.typename === "LayerSet") {
           exists = true;
           break;
         }
@@ -33,6 +31,7 @@ function handleAddAnimation() {
       if (exists) {
         alert("A folder named '${folderName}' already exists at the root level.");
       } else {
+        // Create group
         var groupDesc = new ActionDescriptor();
         var ref = new ActionReference();
         ref.putClass(stringIDToTypeID("layerSection"));
@@ -44,6 +43,7 @@ function handleAddAnimation() {
 
         executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
+        // Create "Frame 1" layer
         var layerDesc = new ActionDescriptor();
         var layerRef = new ActionReference();
         layerRef.putClass(charIDToTypeID("Lyr "));
@@ -55,6 +55,7 @@ function handleAddAnimation() {
 
         executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
+        // Move to group
         var newLayer = app.activeDocument.activeLayer;
         var group = app.activeDocument.layers[0];
         newLayer.move(group, ElementPlacement.INSIDE);
