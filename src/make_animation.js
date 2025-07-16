@@ -2,7 +2,13 @@ function handleAddAnimation() {
   const script = `
     try {
       var doc = app.activeDocument;
-      var sel = doc.activeLayer;
+      var sel = null;
+
+      try {
+        sel = doc.activeLayer;
+      } catch (e) {
+        sel = null;
+      }
 
       function isRoot(layer, doc) {
         return layer && layer.parent === doc;
@@ -13,19 +19,16 @@ function handleAddAnimation() {
       } else {
         var msg = "";
 
-        // Folder vs layer
         if (sel.layers) {
           msg += "⚠️ A folder (group) is selected.\\n";
         } else {
           msg += "⚠️ A regular layer is selected.\\n";
         }
 
-        // Lock status
         if (sel.allLocked) {
           msg += "🔒 The selected item is locked.\\n";
         }
 
-        // Nesting info
         if (isRoot(sel, doc)) {
           msg += "📁 It is at the root level.\\n";
         } else {
