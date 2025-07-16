@@ -6,7 +6,7 @@ function exportGif() {
   var lockedStatus = [];
   var visibilityStatus = [];
 
-  // Step 1: Collect all Frame_ layers (top-down)
+  // Step 1: Collect all Frame_ layers
   for (var i = originalDoc.layers.length - 1; i >= 0; i--) {
     var layer = originalDoc.layers[i];
     if (layer.name.startsWith("Frame_")) {
@@ -21,38 +21,25 @@ function exportGif() {
     return;
   }
 
-  // Step 2: Create new document with same size as original
+  // Step 2: Create new doc with same dimensions
   var width = originalDoc.width;
   var height = originalDoc.height;
   var previewDoc = app.documents.add(width, height, 72, "Animation Preview", NewDocumentMode.RGB);
 
-  // Step 3: Copy + paste each frame layer (group or normal)
-  for (var i = frameLayers.length - 1; i >= 0; i--) {
+  // Step 3: Duplicate each layer directly into the preview doc
+  for (var i = 0; i < frameLayers.length; i++) {
     var originalLayer = frameLayers[i];
-
-    // Switch to original doc
     app.activeDocument = originalDoc;
-
-    // Make visible if not locked
-    if (!originalLayer.allLocked) {
-      originalLayer.visible = true;
-    }
-
     app.activeDocument.activeLayer = originalLayer;
-    app.runMenuItem(stringIDToTypeID("copy"));
 
-    // Switch to preview doc and paste
-    app.activeDocument = previewDoc;
-    app.runMenuItem(stringIDToTypeID("paste"));
-
-    var pasted = previewDoc.activeLayer;
-    pasted.name = "_a_" + originalLayer.name;
-    pasted.visible = visibilityStatus[i];
-    if (lockedStatus[i]) pasted.allLocked = true;
+    var duplicated = originalLayer.duplicate(previewDoc);
+    duplicated.name = "_a_" + originalLayer.name;
+    duplicated.visible = visibilityStatus[i];
+    if (lockedStatus[i]) duplicated.allLocked = true;
   }
 
-  // Step 4: Switch back to original doc
-  app.activeDocument = originalDoc;
+  // Step 4: Switch to preview document
+  app.activeDocument = previewDoc;
 })();`.trim();
 
   window.parent.postMessage(script, "*");
