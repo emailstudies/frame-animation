@@ -5,22 +5,26 @@ function handleAddAnimation() {
       var sel = doc.activeLayer;
 
       if (!sel) {
-        alert("Nothing is selected.");
+        alert("❗ Nothing is selected.");
       } else {
         var msg = "";
 
-        if (sel.typename === "LayerSet") {
-          msg += "✅ A folder (LayerSet) is selected.\\n";
+        // Kind detection (folder vs layer)
+        if (sel.layers) {
+          msg += "✅ A folder (group) is selected.\\n";
         } else {
-          msg += "✅ A pixel layer is selected.\\n";
+          msg += "✅ A pixel or regular layer is selected.\\n";
         }
 
-        if (sel.allLocked || sel.pixelsLocked) {
-          msg += "🔒 The selected item is locked.\\n";
+        // Check lock (this works in most cases)
+        if (sel.allLocked) {
+          msg += "🔒 The layer is locked.\\n";
         }
 
-        if (sel.parent && sel.parent.typename === "LayerSet") {
-          msg += "📂 It is inside a folder named: " + sel.parent.name + "\\n";
+        // Check nesting
+        var parent = sel.parent;
+        if (parent && parent.name && parent !== doc) {
+          msg += "📂 It is inside folder: " + parent.name + "\\n";
         } else {
           msg += "📁 It is at the root level.\\n";
         }
@@ -28,7 +32,7 @@ function handleAddAnimation() {
         alert(msg);
       }
     } catch (e) {
-      alert("Error while detecting selected item: " + e.message);
+      alert("❌ Error: " + e.message);
     }
   `;
 
