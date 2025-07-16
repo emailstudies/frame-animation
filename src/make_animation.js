@@ -56,3 +56,5 @@ function handleAddAnimation() {
 
   window.parent.postMessage(script, "*");
 }
+
+//this works - onion skin - need to hide lower layer tho
