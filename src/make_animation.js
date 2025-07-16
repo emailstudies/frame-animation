@@ -11,12 +11,19 @@ function handleAddAnimation() {
     var doc = app.activeDocument;
     var layer = doc.activeLayer;
 
-    // Check: if activeLayer is a group or not a top-level layer
-    var isFolder = (layer.typename === "LayerSet");
-    var isNested = (layer.parent !== doc);
+    var isFolder = false;
+    var isNested = false;
+
+    try {
+      isFolder = (layer.typename === "LayerSet");
+      isNested = (typeof layer.parent !== "undefined" && layer.parent !== doc);
+    } catch (e) {
+      isFolder = false;
+      isNested = false;
+    }
 
     if (isFolder || isNested) {
-      alert("Please deselect everything in the Layers panel before creating an animation folder.");
+      alert("Please deselect everything or select a top-level layer before creating an animation folder.");
     } else {
       // Check for duplicates
       var exists = false;
@@ -31,7 +38,7 @@ function handleAddAnimation() {
       if (exists) {
         alert("A folder named '${folderName}' already exists at the root level.");
       } else {
-        // Create group
+        // Create folder
         var groupDesc = new ActionDescriptor();
         var ref = new ActionReference();
         ref.putClass(stringIDToTypeID("layerSection"));
