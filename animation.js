@@ -8,13 +8,18 @@ function mergeFrames() {
   for (var i = 0; i < doc.layers.length; i++) {
     var layer = doc.layers[i];
     if (layer.name.startsWith("Frame_")) {
-      frameNames.unshift(layer.name); // topmost layer is index 0
+      frameNames.unshift(layer.name); // reverse order (top layer is frame 1)
     }
   }
 
   if (frameNames.length === 0) {
     alert("⚠️ No layers starting with 'Frame_' found.");
     return;
+  }
+
+  // Fallback: define $.global if it doesn't exist
+  if (typeof $.global === "undefined") {
+    $.global = {};
   }
 
   $.global.frameNames = frameNames;
@@ -41,7 +46,7 @@ function mergeFrames() {
     $.global.currentFrameIndex = ($.global.currentFrameIndex + 1) % $.global.frameCount;
     $.global.remainingLoops--;
 
-    app.scheduleTask("showNextFrame()", 300, false); // 300ms between frames
+    app.scheduleTask("showNextFrame()", 300, false);
   };
 
   app.scheduleTask("showNextFrame()", 0, false);
