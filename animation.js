@@ -1,42 +1,69 @@
 function exportGif() {
   const script = `
 (function () {
-  var doc = app.activeDocument;
-  var visibleLayer = null;
+  var originalDoc = app.activeDocument;
+  var frameLayers = [];
+  var lockedStatus = [];
+  var visibilityStatus = [];
 
-  // Step 1: Find currently visible Frame_ layer
-  for (var i = 0; i < doc.layers.length; i++) {
-    var layer = doc.layers[i];
-    if (layer.name.startsWith("Frame_") && layer.visible) {
-      visibleLayer = layer;
-      break;
+  // Step 1: Collect all Frame_ layers (top-down)
+  for (var i = originalDoc.layers.length - 1; i >= 0; i--) {
+    var layer = originalDoc.layers[i];
+    if (layer.name.startsWith("Frame_")) {
+      frameLayers.push(layer);
+      lockedStatus.push(layer.allLocked);
+      visibilityStatus.push(layer.visible);
     }
   }
 
-  if (!visibleLayer) {
-    alert("⚠️ No visible Frame_ layer found.");
+  if (frameLayers.length === 0) {
+    alert("⚠️ No layers starting with 'Frame_' found.");
     return;
   }
 
-  // Step 2: Duplicate the visible layer
-  var tempLayer = visibleLayer.duplicate();
-  tempLayer.name = "Merged_Frame_Preview";
-
-  // Step 3: Hide all layers except the duplicate
-  for (var j = 0; j < doc.layers.length; j++) {
-    doc.layers[j].visible = (doc.layers[j] === tempLayer);
+  // Step 2: Make all Frame_ layers visible for duplication
+  for (var i = 0; i < frameLayers.length; i++) {
+    if (!frameLayers[i].allLocked) {
+      frameLayers[i].visible = true;
+    }
   }
 
-  // Step 4: Copy Merged Layer to New Document
-  app.runMenuItem(stringIDToTypeID("copy"));
-  var width = tempLayer.bounds[2] - tempLayer.bounds[0];
-  var height = tempLayer.bounds[3] - tempLayer.bounds[1];
-  app.documents.add(width, height, 72, "Frame Preview", NewDocumentMode.RGB);
-  app.runMenuItem(stringIDToTypeID("paste"));
+  // Step 3: Duplicate each frame and store references
+  var duplicatedLayers = [];
+  for (var i = 0; i < frameLayers.length; i++) {
+    var dup = frameLayers[i].duplicate();
+    duplicatedLayers.push(dup);
+  }
 
-  // Step 5: Clean up tempLayer in original doc
-  app.activeDocument = doc;
-  tempLayer.remove();
+  // Step 4: Get bounds from top frame (assumes same size)
+  var refLayer = duplicatedLayers[0];
+  var width = refLayer.bounds[2] - refLayer.bounds[0];
+  var height = refLayer.bounds[3] - refLayer.bounds[1];
+
+  // Step 5: Create new doc for preview
+  var previewDoc = app.documents.add(width, height, 72, "Animation Preview", NewDocumentMode.RGB);
+
+  // Step 6: Paste each duplicated layer into new doc
+  for (var i = duplicatedLayers.length - 1; i >= 0; i--) {
+    app.activeDocument = originalDoc;
+    duplicatedLayers[i].visible = true;
+    app.activeDocument.activeLayer = duplicatedLayers[i];
+    app.runMenuItem(stringIDToTypeID("copy"));
+
+    app.activeDocument = previewDoc;
+    app.runMenuItem(stringIDToTypeID("paste"));
+
+    var pasted = previewDoc.activeLayer;
+    pasted.name = "_a_" + frameLayers[i].name;
+    pasted.visible = visibilityStatus[i];
+    if (lockedStatus[i]) pasted.allLocked = true;
+  }
+
+  // Step 7: Return to original doc and clean up temp layers
+  app.activeDocument = originalDoc;
+  for (var i = 0; i < duplicatedLayers.length; i++) {
+    duplicatedLayers[i].remove();
+  }
 
 })();`.trim();
 
