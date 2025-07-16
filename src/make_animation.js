@@ -7,26 +7,14 @@ function handleAddAnimation() {
 
   const folderName = `anim_${userInput}`;
 
-  // 1. Deselect everything to ensure creation at root
-  // 2. Check for duplicate group names
-  // 3. Create group and Frame 1 layer
-  // 4. Move layer inside group
-
   const script = `
     var doc = app.activeDocument;
 
-    // Deselect all layers to force root-level group creation
-    var selNone = new ActionDescriptor();
-    var ref = new ActionReference();
-    ref.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
-    selNone.putReference(charIDToTypeID("null"), ref);
-    executeAction(charIDToTypeID("Dslc"), selNone, DialogModes.NO);
-
-    // Check for duplicate anim_ folder
+    // Check if folder with same name already exists at root
     var exists = false;
     for (var i = 0; i < doc.layers.length; i++) {
       var layer = doc.layers[i];
-      if (layer.kind === LayerKind.GROUP && layer.name === "${folderName}") {
+      if (layer.name === "${folderName}" && layer.typename === "LayerSet") {
         exists = true;
         break;
       }
@@ -35,6 +23,7 @@ function handleAddAnimation() {
     if (exists) {
       alert("A folder named '${folderName}' already exists at the root level.");
     } else {
+      // Step 1: Create a new group
       var groupDesc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -46,6 +35,11 @@ function handleAddAnimation() {
 
       executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
+      // Step 2: Move group to top/root level if needed
+      var group = app.activeDocument.activeLayer;
+      group.move(app.activeDocument, ElementPlacement.PLACEATBEGINNING);
+
+      // Step 3: Create a new layer
       var layerDesc = new ActionDescriptor();
       var layerRef = new ActionReference();
       layerRef.putClass(charIDToTypeID("Lyr "));
@@ -57,8 +51,8 @@ function handleAddAnimation() {
 
       executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
+      // Step 4: Move layer into group
       var newLayer = app.activeDocument.activeLayer;
-      var group = app.activeDocument.layers[0]; // most recently added group
       newLayer.move(group, ElementPlacement.INSIDE);
     }
   `;
