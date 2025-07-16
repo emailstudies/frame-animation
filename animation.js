@@ -1,24 +1,20 @@
-function mergeFrames() {
+function showFrameByName(name = "Frame_1") {
   const script = `
     (function () {
-      // Create a new raster layer using ActionDescriptor
-      var desc = new ActionDescriptor();
-      var ref = new ActionReference();
-      ref.putClass(stringIDToTypeID("layer")); // Create raster layer
-      desc.putReference(charIDToTypeID("null"), ref);
-      executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+      var doc = app.activeDocument;
+      var layers = doc.layers;
+      var found = false;
 
-      // Rename the new layer
-      var newLayer = app.activeDocument.activeLayer;
-      newLayer.name = "Layer_From_Merge_Button";
+      for (var i = 0; i < layers.length; i++) {
+        if (layers[i].name.startsWith("Frame_")) {
+          layers[i].visible = (layers[i].name === "${name}");
+          if (layers[i].visible) found = true;
+        }
+      }
 
-      alert("✅ New layer created: Layer_From_Merge_Button");
+      alert(found ? "🖼️ Showing: ${name}" : "⚠️ Frame not found: ${name}");
     })();
   `;
 
   window.parent.postMessage(script.trim(), "*");
-}
-
-function exportGif() {
-  alert("🕒 No timeline in Photopea. Please export manually via File > Export As > GIF.");
 }
