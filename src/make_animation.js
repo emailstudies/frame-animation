@@ -9,40 +9,36 @@ function handleAddAnimation() {
 
   const script = `
     var doc = app.activeDocument;
-
-    var isSafeToCreate = true;
+    var shouldCancel = false;
 
     try {
-      var layer = doc.activeLayer;
-
-      // Check if selected layer is a group
-      if (layer.typename === "LayerSet") {
-        isSafeToCreate = false;
+      var selected = doc.activeLayer;
+      if (selected && selected.parent && selected.parent.typename === "LayerSet") {
+        // Selected layer is inside a group — new folder will nest
+        shouldCancel = true;
       }
-
-      // Check if selected layer is nested inside another group
-      if (typeof layer.parent !== "undefined" && layer.parent !== doc) {
-        isSafeToCreate = false;
+      if (selected && selected.typename === "LayerSet") {
+        // A group itself is selected — new folder will nest inside it
+        shouldCancel = true;
       }
     } catch (e) {
-      // If accessing activeLayer fails, assume nothing is selected → safe
-      isSafeToCreate = true;
+      shouldCancel = false;
     }
 
-    if (!isSafeToCreate) {
-      alert("Please deselect all layers and folders before creating an animation folder.");
+    if (shouldCancel) {
+      alert("Please deselect all layers and groups. The animation folder must be created at the root level.");
     } else {
-      // Check for duplicate folder
-      var exists = false;
+      // Check for duplicate anim_ folder
+      var duplicate = false;
       for (var i = 0; i < doc.layers.length; i++) {
         var l = doc.layers[i];
         if (l.name === "${folderName}" && l.typename === "LayerSet") {
-          exists = true;
+          duplicate = true;
           break;
         }
       }
 
-      if (exists) {
+      if (duplicate) {
         alert("A folder named '${folderName}' already exists at the root level.");
       } else {
         // Create group
@@ -69,9 +65,9 @@ function handleAddAnimation() {
 
         executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-        // Move into folder
+        // Move layer into group
         var newLayer = app.activeDocument.activeLayer;
-        var group = app.activeDocument.layers[0];
+        var group = newLayer.parent.layers[0];
         newLayer.move(group, ElementPlacement.INSIDE);
       }
     }
