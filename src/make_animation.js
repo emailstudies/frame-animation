@@ -1,27 +1,29 @@
 function handleAddAnimation() {
   const script = `
     try {
-      function hasLayerSelection() {
-        var ref = new ActionReference();
-        ref.putProperty(charIDToTypeID("Prpr"), stringIDToTypeID("targetLayers"));
-        ref.putEnumerated(charIDToTypeID("Dcmn"), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+      var doc = app.activeDocument;
+      var layer = doc.activeLayer;
 
-        try {
-          var desc = executeActionGet(ref);
-          return true; // if we reach here, something is selected
-        } catch (e) {
-          return false; // if it throws, nothing is selected
-        }
-      }
+      // Lock transparency to preserve only visible pixels
+      layer.transparentPixelsLocked = true;
 
-      if (!hasLayerSelection()) {
-        alert("✅ All okay! Nothing is selected. You can now safely create an animation folder at the root level.");
-      } else {
-        alert("❌ Something is selected in the Layers panel. Please deselect everything before creating an animation folder.");
-      }
+      // Set foreground color to black
+      var color = new SolidColor();
+      color.rgb.red = 0;
+      color.rgb.green = 0;
+      color.rgb.blue = 0;
+      app.foregroundColor = color;
 
+      // Fill the visible parts of the layer with black
+      app.activeDocument.selection.selectAll();
+      app.activeDocument.selection.fill(app.foregroundColor);
+
+      // Unlock transparency again
+      layer.transparentPixelsLocked = false;
+
+      alert("✅ Layer contents replaced with black.");
     } catch (e) {
-      alert("❌ Script error: " + e.message);
+      alert("❌ Error: " + e.message);
     }
   `;
 
