@@ -2,26 +2,51 @@ function handleAddAnimation() {
   const script = `
     try {
       var doc = app.activeDocument;
-      var layer = doc.activeLayer;
+      var layers = doc.layers;
+      var current = doc.activeLayer;
+      var index = layers.indexOf(current);
 
-      // Lock transparency to preserve only visible pixels
-      layer.transparentPixelsLocked = true;
+      if (index < layers.length - 1) {
+        var below = layers[index + 1];
 
-      // Set foreground color to black
-      var color = new SolidColor();
-      color.rgb.red = 0;
-      color.rgb.green = 0;
-      color.rgb.blue = 0;
-      app.foregroundColor = color;
+        // Step 1: Duplicate the below layer
+        var dup = below.duplicate();
+        dup.name = "_onion_clone";
 
-      // Fill the visible parts of the layer with black
-      app.activeDocument.selection.selectAll();
-      app.activeDocument.selection.fill(app.foregroundColor);
+        // Step 2: Lock transparency to preserve shape
+        dup.transparentPixelsLocked = true;
 
-      // Unlock transparency again
-      layer.transparentPixelsLocked = false;
+        // Step 3: Create gray overlay layer
+        var grayLayer = doc.artLayers.add();
+        grayLayer.name = "gray_overlay";
+        doc.activeLayer = grayLayer;
 
-      alert("✅ Layer contents replaced with black.");
+        var gray = new SolidColor();
+        gray.rgb.red = 128;
+        gray.rgb.green = 128;
+        gray.rgb.blue = 128;
+        app.foregroundColor = gray;
+
+        app.activeDocument.selection.selectAll();
+        app.activeDocument.selection.fill(app.foregroundColor);
+        app.activeDocument.selection.deselect();
+
+        grayLayer.blendMode = BlendMode.COLOR;
+
+        // Step 4: Group both into _onion_skin
+        var group = doc.layerSets.add();
+        group.name = "_onion_skin";
+        grayLayer.move(group, ElementPlacement.INSIDE);
+        dup.move(group, ElementPlacement.INSIDE);
+
+        // Step 5: Lower opacity of the group
+        group.opacity = 40;
+
+        alert("✅ Onion skin added from layer below.");
+      } else {
+        alert("ℹ️ No layer below to onion skin from.");
+      }
+
     } catch (e) {
       alert("❌ Error: " + e.message);
     }
