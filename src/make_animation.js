@@ -9,15 +9,15 @@ function handleAddAnimation() {
       }
 
       if (!sel) {
-        alert("❗ Nothing is selected. Please deselect everything if you want to create a root-level animation folder.");
+        alert("✅ All okay! Nothing is selected. You can now safely create an animation folder at the root level.");
       } else {
         var msg = "";
 
-        // Folder vs layer check
+        // Folder vs layer
         if (sel.layers) {
-          msg += "✅ A folder (group) is selected.\\n";
+          msg += "⚠️ A folder (group) is selected.\\n";
         } else {
-          msg += "✅ A regular layer is selected.\\n";
+          msg += "⚠️ A regular layer is selected.\\n";
         }
 
         // Lock status
@@ -25,14 +25,14 @@ function handleAddAnimation() {
           msg += "🔒 The selected item is locked.\\n";
         }
 
-        // Root-level check
+        // Nesting info
         if (isRoot(sel, doc)) {
           msg += "📁 It is at the root level.\\n";
         } else {
           msg += "📂 It is inside a group named: " + sel.parent.name + "\\n";
         }
 
-        alert(msg + "\\nPlease deselect everything before creating an animation folder.");
+        alert(msg + "\\n❌ Please deselect everything before creating an animation folder.");
       }
     } catch (e) {
       alert("❌ Script error: " + e.message);
