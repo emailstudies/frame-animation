@@ -8,15 +8,7 @@ function exportGif() {
 
   var doc = app.activeDocument;
 
-  // Check for existing preview folder
-  for (var i = 0; i < doc.layerSets.length; i++) {
-    if (doc.layerSets[i].name === "anim_preview") {
-      alert("⚠️ 'anim_preview' folder already exists. Please delete it manually if you want to regenerate.");
-      return;
-    }
-  }
-
-  // Collect all anim folders
+  // Gather anim folders
   var animFolders = [];
   for (var i = 0; i < doc.layerSets.length; i++) {
     var folder = doc.layerSets[i];
@@ -26,19 +18,15 @@ function exportGif() {
   }
 
   if (animFolders.length === 0) {
-    alert("❌ No 'anim' folders found.");
+    alert("❌ No folders starting with 'anim' found.");
     return;
   }
 
-  // Determine max number of frames
+  // Determine how many frames exist (longest folder wins)
   var maxFrames = 0;
   for (var i = 0; i < animFolders.length; i++) {
     maxFrames = Math.max(maxFrames, animFolders[i].artLayers.length);
   }
-
-  // Create anim_preview folder
-  var previewGroup = doc.layerSets.add();
-  previewGroup.name = "anim_preview";
 
   for (var frame = 0; frame < maxFrames; frame++) {
     var visibleLayers = [];
@@ -56,20 +44,19 @@ function exportGif() {
       }
     }
 
-    // Merge visible layers
+    // Merge visible layers into a new layer
     if (visibleLayers.length > 0) {
       var merged = doc.mergeVisibleLayers();
       merged.name = "_a_Frame " + (frame + 1);
-      doc.activeLayer.move(previewGroup, ElementPlacement.PLACEATEND);
     }
 
-    // Hide all again
+    // Hide the originals again
     for (var v = 0; v < visibleLayers.length; v++) {
       visibleLayers[v].visible = false;
     }
   }
 
-  alert("✅ 'anim_preview' created with merged frames for preview.");
+  alert("✅ Merged frames created in root as _a_Frame 1, _a_Frame 2, etc.");
 })();
 `.trim();
 
