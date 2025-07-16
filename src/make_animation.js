@@ -5,12 +5,11 @@ function handleAddAnimation() {
     ref.putClass(charIDToTypeID("Lyr "));
     desc.putReference(charIDToTypeID("null"), ref);
 
-    var layerProps = new ActionDescriptor();
-    layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
+    var layerDesc = new ActionDescriptor();
+    layerDesc.putString(charIDToTypeID("Nm  "), "Frame 1");
+    desc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerDesc);
 
-    desc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
-
-    app.doAction("make", desc);
+    executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
   `;
 
   window.parent.postMessage(script, "*");
