@@ -1,13 +1,3 @@
-function mergeFrames() {
-  const script = `
-    (function () {
-      alert("hello");
-    })();
-  `.trim();
-
-  window.parent.postMessage(script, "*");
-}
-
 function exportGif() {
   const script = `
 (function () {
@@ -18,7 +8,15 @@ function exportGif() {
 
   var doc = app.activeDocument;
 
-  // Collect all anim folders manually
+  // Check for existing preview folder
+  for (var i = 0; i < doc.layerSets.length; i++) {
+    if (doc.layerSets[i].name === "anim_preview") {
+      alert("⚠️ 'anim_preview' folder already exists. Please delete it manually if you want to regenerate.");
+      return;
+    }
+  }
+
+  // Collect all anim folders
   var animFolders = [];
   for (var i = 0; i < doc.layerSets.length; i++) {
     var folder = doc.layerSets[i];
@@ -32,31 +30,48 @@ function exportGif() {
     return;
   }
 
-  // Determine the maximum number of frames (layers in folders)
+  // Determine max number of frames
   var maxFrames = 0;
   for (var i = 0; i < animFolders.length; i++) {
     maxFrames = Math.max(maxFrames, animFolders[i].artLayers.length);
   }
 
-  var result = "";
+  // Create anim_preview folder
+  var previewGroup = doc.layerSets.add();
+  previewGroup.name = "anim_preview";
 
-  for (var i = 0; i < maxFrames; i++) {
-    result += "Frame " + (i + 1) + ":\\n";
-    for (var j = 0; j < animFolders.length; j++) {
-      var folder = animFolders[j];
-      var frameIndex = folder.artLayers.length - 1 - i; // bottom = Frame 1
+  for (var frame = 0; frame < maxFrames; frame++) {
+    var visibleLayers = [];
+
+    for (var f = 0; f < animFolders.length; f++) {
+      var folder = animFolders[f];
+      var frameIndex = folder.artLayers.length - 1 - frame;
+
       if (frameIndex >= 0) {
         var layer = folder.artLayers[frameIndex];
-        result += "  " + folder.name + " > " + layer.name + "\\n";
-      } else {
-        result += "  " + folder.name + " > [No layer]\\n";
+        if (!layer.allLocked) {
+          layer.visible = true;
+          visibleLayers.push(layer);
+        }
       }
     }
-    result += "\\n";
+
+    // Merge visible layers
+    if (visibleLayers.length > 0) {
+      var merged = doc.mergeVisibleLayers();
+      merged.name = "_a_Frame " + (frame + 1);
+      doc.activeLayer.move(previewGroup, ElementPlacement.PLACEATEND);
+    }
+
+    // Hide all again
+    for (var v = 0; v < visibleLayers.length; v++) {
+      visibleLayers[v].visible = false;
+    }
   }
 
-  alert(result || "No frames to show.");
-})();`.trim();
+  alert("✅ 'anim_preview' created with merged frames for preview.");
+})();
+`.trim();
 
   window.parent.postMessage(script, "*");
 }
