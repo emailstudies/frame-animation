@@ -1,6 +1,6 @@
 function exportGif() {
   const script = `
-(async function () {
+(function () {
   if (!app || !app.activeDocument) {
     alert("No active document.");
     return;
@@ -8,7 +8,6 @@ function exportGif() {
 
   var doc = app.activeDocument;
 
-  // Gather anim folders
   var animFolders = [];
   for (var i = 0; i < doc.layerSets.length; i++) {
     var folder = doc.layerSets[i];
@@ -22,10 +21,19 @@ function exportGif() {
     return;
   }
 
-  // Determine number of frames
   var maxFrames = 0;
   for (var i = 0; i < animFolders.length; i++) {
     maxFrames = Math.max(maxFrames, animFolders[i].artLayers.length);
+  }
+
+  function mergeVisible() {
+    app.batchPlay(
+      [{
+        _obj: "mergeVisible",
+        _options: { dialogOptions: "dontDisplay" }
+      }],
+      {}
+    );
   }
 
   for (var frame = 0; frame < maxFrames; frame++) {
@@ -44,15 +52,8 @@ function exportGif() {
       }
     }
 
-    // Merge visible using Action Descriptor
     if (visibleLayers.length > 0) {
-      await app.batchPlay([
-        {
-          _obj: "mergeVisible",
-          _options: { dialogOptions: "dontDisplay" }
-        }
-      ], {});
-
+      mergeVisible();
       var mergedLayer = doc.activeLayer;
       mergedLayer.name = "_a_Frame " + (frame + 1);
     }
@@ -62,9 +63,8 @@ function exportGif() {
     }
   }
 
-  alert("✅ Merged frames created using descriptors as _a_Frame 1, _a_Frame 2, etc.");
-})();
-`.trim();
+  alert("✅ Merged frames created using descriptors.");
+})();`.trim();
 
   window.parent.postMessage(script, "*");
 }
