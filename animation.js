@@ -3,15 +3,15 @@ function exportGif() {
 (function () {
   var doc = app.activeDocument;
 
-  // Check if anim_preview already exists
+  // Check for existing preview folder
   for (var i = 0; i < doc.layerSets.length; i++) {
     if (doc.layerSets[i].name === "anim_preview") {
-      alert("⚠️ 'anim_preview' already exists. Please delete it manually.");
+      alert("⚠️ 'anim_preview' folder already exists. Please delete it before re-running.");
       return;
     }
   }
 
-  // Get all anim_* folders
+  // Find all unlocked 'anim' folders
   var animGroups = [];
   for (var i = 0; i < doc.layerSets.length; i++) {
     var group = doc.layerSets[i];
@@ -21,11 +21,11 @@ function exportGif() {
   }
 
   if (animGroups.length === 0) {
-    alert("⚠️ No unlocked folders starting with 'anim' found.");
+    alert("⚠️ No 'anim_*' folders found.");
     return;
   }
 
-  // Find max number of frames
+  // Find max number of layers (frames)
   var maxFrames = 0;
   for (var i = 0; i < animGroups.length; i++) {
     var group = animGroups[i];
@@ -37,54 +37,40 @@ function exportGif() {
   }
 
   if (maxFrames === 0) {
-    alert("⚠️ No unlocked layers found in anim folders.");
+    alert("⚠️ No unlocked animation frames found.");
     return;
   }
 
-  // Create final preview folder
+  // Create preview folder
   var previewFolder = doc.layerSets.add();
   previewFolder.name = "anim_preview";
 
-  // For each frame index
+  // Build each _a_Frame X by merging copies of corresponding index from each group
   for (var f = 0; f < maxFrames; f++) {
-    var tempGroup = doc.layerSets.add();
-    tempGroup.name = "anim_temp_" + (f + 1);
-
-    var addedLayer = false;
+    var duplicates = [];
 
     for (var g = 0; g < animGroups.length; g++) {
       var group = animGroups[g];
-      var index = group.layers.length - 1 - f;
+      var index = group.layers.length - 1 - f;  // Reverse index
       if (index >= 0) {
         var layer = group.layers[index];
         if (!layer.allLocked) {
           var dup = layer.duplicate();
-          dup.move(tempGroup, ElementPlacement.INSIDE);
           dup.visible = true;
-          addedLayer = true;
+          duplicates.push(dup);
         }
       }
     }
 
-    if (!addedLayer) {
-      tempGroup.remove();
-      continue;
-    }
+    if (duplicates.length === 0) continue;
 
-    // Merge and move
+    // Merge all visible duplicates
     var merged = doc.mergeVisibleLayers();
     merged.name = "_a_Frame " + (f + 1);
     merged.move(previewFolder, ElementPlacement.INSIDE);
-
-    // Clean up temp group
-    try {
-      tempGroup.remove();
-    } catch (e) {
-      // ignore
-    }
   }
 
-  alert("✅ anim_preview created. Use File > Export As > GIF to export.");
+  alert("✅ Animation preview created in 'anim_preview'. Export via File > Export As > GIF.");
 })();`.trim();
 
   window.parent.postMessage(script, "*");
