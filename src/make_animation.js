@@ -1,7 +1,7 @@
 function handleAddAnimation() {
   const script = `
     try {
-      // Step 1: Create temp layer to force single selection
+      // Step 1: Create a temporary layer (forces single selection)
       var tempDesc = new ActionDescriptor();
       var tempRef = new ActionReference();
       tempRef.putClass(charIDToTypeID("Lyr "));
@@ -13,16 +13,16 @@ function handleAddAnimation() {
 
       executeAction(charIDToTypeID("Mk  "), tempDesc, DialogModes.NO);
 
-      // Step 2: Delete the temp layer
-      var deleteRef = new ActionReference();
-      deleteRef.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+      // Step 2: Delete the temp layer (leaves nothing selected)
+      var delRef = new ActionReference();
+      delRef.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
 
-      var deleteDesc = new ActionDescriptor();
-      deleteDesc.putReference(charIDToTypeID("null"), deleteRef);
+      var delDesc = new ActionDescriptor();
+      delDesc.putReference(charIDToTypeID("null"), delRef);
 
-      executeAction(charIDToTypeID("Dlt "), deleteDesc, DialogModes.NO);
+      executeAction(charIDToTypeID("Dlt "), delDesc, DialogModes.NO);
     } catch (e) {
-      alert("Deselect workaround failed: " + e.message);
+      alert("Failed to deselect layers: " + e.message);
     }
   `;
 
