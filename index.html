@@ -1,4 +1,4 @@
-<!-- this is the old index.html with the merge frame and export gif. this is tied to try.js -->
+<!-- this is the old index.html with the merge frame and export gif. this is tied to try.js 
 
 <!DOCTYPE html>
 <html>
@@ -19,3 +19,55 @@
   <script src="try.js"></script>
 </body>
 </html>
+-->
+
+<!-- this is the new index.html - in phases-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Photopea Frame Animation Plugin</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h2>Photopea Frame Animation Plugin</h2>
+
+  <!-- Phase 1: Add Animation -->
+  <div class="section">
+    <h3>1. Add Animation</h3>
+    <label for="animFolderInput">Folder Name:</label>
+    <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px;">
+      <span>anim_</span>
+      <input type="text" id="animFolderInput" placeholder="walkCycle" />
+      <button id="createAnimBtn">Create Animation Folder</button>
+    </div>
+  </div>
+
+  <!-- Phase 2: Map Frames (placeholder) -->
+  <div class="section">
+    <h3>2. Map Frames</h3>
+    <button id="mapFramesBtn" disabled>Coming Soon</button>
+  </div>
+
+  <!-- Phase 3: Merge Preview (placeholder) -->
+  <div class="section">
+    <h3>3. Merge Preview</h3>
+    <button id="mergePreviewBtn" disabled>Coming Soon</button>
+  </div>
+
+  <!-- Phase 4: Export GIF (placeholder) -->
+  <div class="section">
+    <h3>4. Export GIF</h3>
+    <button id="exportGifBtn" disabled>Coming Soon</button>
+  </div>
+
+  <!-- Plugin Scripts -->
+  <script src="src/make_animation.js"></script>
+  <script src="src/map_frames.js"></script>
+  <script src="src/merge_preview.js"></script>
+  <script src="src/export_gif.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>
+
