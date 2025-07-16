@@ -1,55 +1,43 @@
-function mergeFrames() {
+function exportGif() {
   const script = `
 (function () {
   var doc = app.activeDocument;
+  var visibleLayer = null;
 
-  // Get all frame layer names in order
-  var frameNames = [];
+  // Step 1: Find currently visible Frame_ layer
   for (var i = 0; i < doc.layers.length; i++) {
     var layer = doc.layers[i];
-    if (layer.name.startsWith("Frame_")) {
-      frameNames.unshift(layer.name); // reverse order (top layer is frame 1)
+    if (layer.name.startsWith("Frame_") && layer.visible) {
+      visibleLayer = layer;
+      break;
     }
   }
 
-  if (frameNames.length === 0) {
-    alert("⚠️ No layers starting with 'Frame_' found.");
+  if (!visibleLayer) {
+    alert("⚠️ No visible Frame_ layer found.");
     return;
   }
 
-  // Fallback: define $.global if it doesn't exist
-  if (typeof $.global === "undefined") {
-    $.global = {};
+  // Step 2: Duplicate the visible layer
+  var tempLayer = visibleLayer.duplicate();
+  tempLayer.name = "Merged_Frame_Preview";
+
+  // Step 3: Hide all layers except the duplicate
+  for (var j = 0; j < doc.layers.length; j++) {
+    doc.layers[j].visible = (doc.layers[j] === tempLayer);
   }
 
-  $.global.frameNames = frameNames;
-  $.global.frameCount = frameNames.length;
-  $.global.currentFrameIndex = 0;
-  $.global.remainingLoops = 4 * frameNames.length; // 4 loops
+  // Step 4: Copy Merged Layer to New Document
+  app.runMenuItem(stringIDToTypeID("copy"));
+  var width = tempLayer.bounds[2] - tempLayer.bounds[0];
+  var height = tempLayer.bounds[3] - tempLayer.bounds[1];
+  app.documents.add(width, height, 72, "Frame Preview", NewDocumentMode.RGB);
+  app.runMenuItem(stringIDToTypeID("paste"));
 
-  $.global.showNextFrame = function () {
-    if ($.global.remainingLoops <= 0) {
-      alert("✅ Animation finished looping 4 times.");
-      return;
-    }
+  // Step 5: Clean up tempLayer in original doc
+  app.activeDocument = doc;
+  tempLayer.remove();
 
-    var layers = app.activeDocument.layers;
-    var currentName = $.global.frameNames[$.global.currentFrameIndex];
-
-    for (var i = 0; i < layers.length; i++) {
-      var layer = layers[i];
-      if (layer.name.startsWith("Frame_")) {
-        layer.visible = (layer.name === currentName);
-      }
-    }
-
-    $.global.currentFrameIndex = ($.global.currentFrameIndex + 1) % $.global.frameCount;
-    $.global.remainingLoops--;
-
-    app.scheduleTask("showNextFrame()", 300, false);
-  };
-
-  app.scheduleTask("showNextFrame()", 0, false);
 })();`.trim();
 
   window.parent.postMessage(script, "*");
