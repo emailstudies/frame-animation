@@ -54,8 +54,10 @@ function exportGif() {
 
     if (visibleLayers.length > 0) {
       mergeVisible();
-      var mergedLayer = doc.activeLayer;
-      mergedLayer.name = "_a_Frame " + (frame + 1);
+
+      if (doc.activeLayer) {
+        doc.activeLayer.name = "_a_Frame " + (frame + 1);
+      }
     }
 
     for (var v = 0; v < visibleLayers.length; v++) {
