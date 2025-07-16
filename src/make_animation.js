@@ -12,30 +12,35 @@ function handleAddAnimation() {
     var shouldCancel = false;
 
     try {
-      var selected = doc.activeLayer;
+      if ("activeLayer" in doc && doc.activeLayer) {
+        var selected = doc.activeLayer;
 
-      if (selected) {
-        var isGroupSelected = selected.typename === "LayerSet";
+        var isGroupSelected = false;
         var isInsideGroup = false;
 
-        try {
-          isInsideGroup = selected.parent && selected.parent.typename === "LayerSet";
-        } catch (innerErr) {
-          isInsideGroup = false;
+        // Check if selected is a group
+        if ("typename" in selected && selected.typename === "LayerSet") {
+          isGroupSelected = true;
+        }
+
+        // Check if selected is inside a group
+        if ("parent" in selected && selected.parent && selected.parent.typename === "LayerSet") {
+          isInsideGroup = true;
         }
 
         if (isGroupSelected || isInsideGroup) {
           shouldCancel = true;
         }
       }
-    } catch (outerErr) {
+    } catch (err) {
+      // If anything fails, assume it's safe to create
       shouldCancel = false;
     }
 
     if (shouldCancel) {
-      alert("Please deselect all layers and folders before creating an animation folder.");
+      alert("Please deselect all layers and folders before creating an animation folder at the root level.");
     } else {
-      // Check for duplicate anim_ folder
+      // Check for duplicate anim_ folder at root
       var duplicate = false;
       for (var i = 0; i < doc.layers.length; i++) {
         var l = doc.layers[i];
@@ -60,7 +65,7 @@ function handleAddAnimation() {
 
         executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-        // Create Frame 1
+        // Create Frame 1 layer
         var layerDesc = new ActionDescriptor();
         var layerRef = new ActionReference();
         layerRef.putClass(charIDToTypeID("Lyr "));
@@ -72,7 +77,7 @@ function handleAddAnimation() {
 
         executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-        // Move layer into group
+        // Move the new layer into the newly created group
         var newLayer = app.activeDocument.activeLayer;
         var group = newLayer.parent.layers[0];
         newLayer.move(group, ElementPlacement.INSIDE);
