@@ -3,33 +3,31 @@ function mergeFrames() {
 (function () {
   var doc = app.activeDocument;
 
-  function createLayer(name) {
-    var desc = new ActionDescriptor();
-    var ref = new ActionReference();
-    ref.putClass(stringIDToTypeID("layer"));
-    desc.putReference(charIDToTypeID("null"), ref);
-    executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
-    app.activeDocument.activeLayer.name = name;
-  }
-
-  // Create 3 layers
-  createLayer("Frame_3");
-  createLayer("Frame_2");
-  createLayer("Frame_1");
-
-  // Hide all but Frame_1
+  // Get all frame layer names in order
+  var frameNames = [];
   for (var i = 0; i < doc.layers.length; i++) {
     var layer = doc.layers[i];
-    layer.visible = (layer.name === "Frame_1");
+    if (layer.name.startsWith("Frame_")) {
+      frameNames.unshift(layer.name); // topmost layer is index 0
+    }
   }
 
-  // Set global vars for playback
-  $.global.frameNames = ["Frame_1", "Frame_2", "Frame_3"];
-  $.global.frameCount = $.global.frameNames.length;
-  $.global.currentFrameIndex = 0;
+  if (frameNames.length === 0) {
+    alert("⚠️ No layers starting with 'Frame_' found.");
+    return;
+  }
 
-  // Define global loop function
+  $.global.frameNames = frameNames;
+  $.global.frameCount = frameNames.length;
+  $.global.currentFrameIndex = 0;
+  $.global.remainingLoops = 4 * frameNames.length; // 4 loops
+
   $.global.showNextFrame = function () {
+    if ($.global.remainingLoops <= 0) {
+      alert("✅ Animation finished looping 4 times.");
+      return;
+    }
+
     var layers = app.activeDocument.layers;
     var currentName = $.global.frameNames[$.global.currentFrameIndex];
 
@@ -41,10 +39,11 @@ function mergeFrames() {
     }
 
     $.global.currentFrameIndex = ($.global.currentFrameIndex + 1) % $.global.frameCount;
-    app.scheduleTask("showNextFrame()", 300, false); // 300ms delay
+    $.global.remainingLoops--;
+
+    app.scheduleTask("showNextFrame()", 300, false); // 300ms between frames
   };
 
-  // Kick off the loop
   app.scheduleTask("showNextFrame()", 0, false);
 })();`.trim();
 
