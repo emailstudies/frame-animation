@@ -33,11 +33,13 @@ function handleAddAnimation() {
 
         grayLayer.blendMode = BlendMode.COLOR;
 
-        // Step 4: Group both into _onion_skin
+        // Step 4: Create a group and add both layers
         var group = doc.layerSets.add();
         group.name = "_onion_skin";
-        grayLayer.move(group, ElementPlacement.INSIDE);
+
+        // Important: Add dup first, gray overlay last (on top)
         dup.move(group, ElementPlacement.INSIDE);
+        grayLayer.move(group, ElementPlacement.PLACEATBEGINNING);
 
         // Step 5: Lower opacity of the group
         group.opacity = 40;
