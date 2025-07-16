@@ -1,35 +1,46 @@
-function exportGif() {
+function mergeFrames() {
   const script = `
 (function () {
   var doc = app.activeDocument;
-  var visibleLayer = null;
 
-  // Step 1: Find the visible Frame_ layer
+  function createLayer(name) {
+    var desc = new ActionDescriptor();
+    var ref = new ActionReference();
+    ref.putClass(stringIDToTypeID("layer"));
+    desc.putReference(charIDToTypeID("null"), ref);
+    executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+    app.activeDocument.activeLayer.name = name;
+  }
+
+  // Step 1: Create 3 layers for animation
+  createLayer("Frame_3");
+  createLayer("Frame_2");
+  createLayer("Frame_1");
+
+  // Step 2: Hide all layers except Frame_1
   for (var i = 0; i < doc.layers.length; i++) {
     var layer = doc.layers[i];
-    if (layer.name.startsWith("Frame_") && layer.visible) {
-      visibleLayer = layer;
-      break;
+    layer.visible = (layer.name === "Frame_1");
+  }
+
+  // Step 3: Start fake playback loop
+  var frameNames = ["Frame_1", "Frame_2", "Frame_3"];
+  var frameCount = frameNames.length;
+  var current = 0;
+
+  function showNextFrame() {
+    for (var i = 0; i < doc.layers.length; i++) {
+      var layer = doc.layers[i];
+      if (layer.name.startsWith("Frame_")) {
+        layer.visible = (layer.name === frameNames[current]);
+      }
     }
+
+    current = (current + 1) % frameCount;
+    app.scheduleTask("showNextFrame()", 500, false); // 500ms delay
   }
 
-  if (!visibleLayer) {
-    alert("⚠️ No visible Frame_ layer found.");
-    return;
-  }
-
-  // Step 2: Duplicate visible layer
-  var duplicated = visibleLayer.duplicate();
-  duplicated.name = "Merged_Frame_For_Export";
-
-  // Step 3: Merge it (make sure only it is visible)
-  for (var j = 0; j < doc.layers.length; j++) {
-    doc.layers[j].visible = (doc.layers[j] === duplicated);
-  }
-
-  // Step 4: Open Save for Web
-  app.runMenuItem(stringIDToTypeID("exportSaveForWeb"));
-
+  app.scheduleTask("showNextFrame()", 0, false);
 })();`.trim();
 
   window.parent.postMessage(script, "*");
