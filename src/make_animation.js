@@ -13,20 +13,27 @@ function handleAddAnimation() {
 
     try {
       var selected = doc.activeLayer;
-      if (selected && selected.parent && selected.parent.typename === "LayerSet") {
-        // Selected layer is inside a group — new folder will nest
-        shouldCancel = true;
+
+      if (selected) {
+        var isGroupSelected = selected.typename === "LayerSet";
+        var isInsideGroup = false;
+
+        try {
+          isInsideGroup = selected.parent && selected.parent.typename === "LayerSet";
+        } catch (innerErr) {
+          isInsideGroup = false;
+        }
+
+        if (isGroupSelected || isInsideGroup) {
+          shouldCancel = true;
+        }
       }
-      if (selected && selected.typename === "LayerSet") {
-        // A group itself is selected — new folder will nest inside it
-        shouldCancel = true;
-      }
-    } catch (e) {
+    } catch (outerErr) {
       shouldCancel = false;
     }
 
     if (shouldCancel) {
-      alert("Please deselect all layers and groups. The animation folder must be created at the root level.");
+      alert("Please deselect all layers and folders before creating an animation folder.");
     } else {
       // Check for duplicate anim_ folder
       var duplicate = false;
