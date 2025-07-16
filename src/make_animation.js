@@ -4,29 +4,29 @@ function handleAddAnimation() {
       var doc = app.activeDocument;
       var sel = doc.activeLayer;
 
+      function isRoot(layer, doc) {
+        return layer && layer.parent === doc;
+      }
+
       if (!sel) {
         alert("❗ Nothing is selected.");
       } else {
         var msg = "";
 
-        // Kind detection (folder vs layer)
         if (sel.layers) {
-          msg += "✅ A folder (group) is selected.\\n";
+          msg += "✅ A folder is selected.\\n";
         } else {
-          msg += "✅ A pixel or regular layer is selected.\\n";
+          msg += "✅ A regular layer is selected.\\n";
         }
 
-        // Check lock (this works in most cases)
         if (sel.allLocked) {
           msg += "🔒 The layer is locked.\\n";
         }
 
-        // Check nesting
-        var parent = sel.parent;
-        if (parent && parent.name && parent !== doc) {
-          msg += "📂 It is inside folder: " + parent.name + "\\n";
-        } else {
+        if (isRoot(sel, doc)) {
           msg += "📁 It is at the root level.\\n";
+        } else {
+          msg += "📂 It is inside a group named: " + sel.parent.name + "\\n";
         }
 
         alert(msg);
@@ -38,4 +38,3 @@ function handleAddAnimation() {
 
   window.parent.postMessage(script, "*");
 }
-// it tells if layer or folder and which folder is the parent
