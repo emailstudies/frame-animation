@@ -1,28 +1,34 @@
 function handleAddAnimation() {
   const script = `
     try {
-      // Step 1: Create a temporary layer (forces single selection)
-      var tempDesc = new ActionDescriptor();
-      var tempRef = new ActionReference();
-      tempRef.putClass(charIDToTypeID("Lyr "));
-      tempDesc.putReference(charIDToTypeID("null"), tempRef);
+      var doc = app.activeDocument;
+      var sel = doc.activeLayer;
 
-      var props = new ActionDescriptor();
-      props.putString(charIDToTypeID("Nm  "), "__temp_deselect__");
-      tempDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), props);
+      if (!sel) {
+        alert("Nothing is selected.");
+      } else {
+        var msg = "";
 
-      executeAction(charIDToTypeID("Mk  "), tempDesc, DialogModes.NO);
+        if (sel.typename === "LayerSet") {
+          msg += "✅ A folder (LayerSet) is selected.\\n";
+        } else {
+          msg += "✅ A pixel layer is selected.\\n";
+        }
 
-      // Step 2: Delete the temp layer (leaves nothing selected)
-      var delRef = new ActionReference();
-      delRef.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+        if (sel.allLocked || sel.pixelsLocked) {
+          msg += "🔒 The selected item is locked.\\n";
+        }
 
-      var delDesc = new ActionDescriptor();
-      delDesc.putReference(charIDToTypeID("null"), delRef);
+        if (sel.parent && sel.parent.typename === "LayerSet") {
+          msg += "📂 It is inside a folder named: " + sel.parent.name + "\\n";
+        } else {
+          msg += "📁 It is at the root level.\\n";
+        }
 
-      executeAction(charIDToTypeID("Dlt "), delDesc, DialogModes.NO);
+        alert(msg);
+      }
     } catch (e) {
-      alert("Failed to deselect layers: " + e.message);
+      alert("Error while detecting selected item: " + e.message);
     }
   `;
 
