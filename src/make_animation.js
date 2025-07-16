@@ -10,7 +10,22 @@ function handleAddAnimation() {
   const script = `
     var doc = app.activeDocument;
 
-    // Check if folder with same name already exists at root
+    var selectionSafe = false;
+
+    try {
+      // If this throws, then no layer is selected (which is what we want)
+      var active = doc.activeLayer;
+      selectionSafe = false; // Something is selected → not safe
+    } catch (e) {
+      selectionSafe = true; // Nothing selected → safe to proceed
+    }
+
+    if (!selectionSafe) {
+      alert("Please deselect everything in the Layers panel before creating an animation folder.");
+      return;
+    }
+
+    // Check for duplicate anim_ folder
     var exists = false;
     for (var i = 0; i < doc.layers.length; i++) {
       var layer = doc.layers[i];
@@ -22,39 +37,37 @@ function handleAddAnimation() {
 
     if (exists) {
       alert("A folder named '${folderName}' already exists at the root level.");
-    } else {
-      // Step 1: Create a new group
-      var groupDesc = new ActionDescriptor();
-      var ref = new ActionReference();
-      ref.putClass(stringIDToTypeID("layerSection"));
-      groupDesc.putReference(charIDToTypeID("null"), ref);
-
-      var props = new ActionDescriptor();
-      props.putString(charIDToTypeID("Nm  "), "${folderName}");
-      groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
-
-      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
-
-      // Step 2: Move group to top/root level if needed
-      var group = app.activeDocument.activeLayer;
-      group.move(app.activeDocument, ElementPlacement.PLACEATBEGINNING);
-
-      // Step 3: Create a new layer
-      var layerDesc = new ActionDescriptor();
-      var layerRef = new ActionReference();
-      layerRef.putClass(charIDToTypeID("Lyr "));
-      layerDesc.putReference(charIDToTypeID("null"), layerRef);
-
-      var layerProps = new ActionDescriptor();
-      layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
-      layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
-
-      executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
-
-      // Step 4: Move layer into group
-      var newLayer = app.activeDocument.activeLayer;
-      newLayer.move(group, ElementPlacement.INSIDE);
+      return;
     }
+
+    // Create the animation folder
+    var groupDesc = new ActionDescriptor();
+    var ref = new ActionReference();
+    ref.putClass(stringIDToTypeID("layerSection"));
+    groupDesc.putReference(charIDToTypeID("null"), ref);
+
+    var props = new ActionDescriptor();
+    props.putString(charIDToTypeID("Nm  "), "${folderName}");
+    groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
+
+    executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
+
+    // Create the "Frame 1" layer
+    var layerDesc = new ActionDescriptor();
+    var layerRef = new ActionReference();
+    layerRef.putClass(charIDToTypeID("Lyr "));
+    layerDesc.putReference(charIDToTypeID("null"), layerRef);
+
+    var layerProps = new ActionDescriptor();
+    layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
+    layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
+
+    executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
+
+    // Move the layer into the newly created folder
+    var newLayer = app.activeDocument.activeLayer;
+    var group = app.activeDocument.layers[0]; // most recently created group
+    newLayer.move(group, ElementPlacement.INSIDE);
   `;
 
   window.parent.postMessage(script, "*");
