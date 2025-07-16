@@ -12,19 +12,20 @@ function handleAddAnimation() {
         // Step 1: Duplicate the below layer
         var dup = below.duplicate();
         dup.name = "_onion_clone";
+        dup.visible = true;
 
-        // Step 2: Lock transparency to preserve shape
+        // Step 2: Lock transparency
         dup.transparentPixelsLocked = true;
 
-        // Step 3: Create gray overlay layer
+        // Step 3: Create darker gray overlay layer
         var grayLayer = doc.artLayers.add();
         grayLayer.name = "gray_overlay";
         doc.activeLayer = grayLayer;
 
         var gray = new SolidColor();
-        gray.rgb.red = 128;
-        gray.rgb.green = 128;
-        gray.rgb.blue = 128;
+        gray.rgb.red = 80;
+        gray.rgb.green = 80;
+        gray.rgb.blue = 80;
         app.foregroundColor = gray;
 
         app.activeDocument.selection.selectAll();
@@ -33,20 +34,22 @@ function handleAddAnimation() {
 
         grayLayer.blendMode = BlendMode.COLOR;
 
-        // Step 4: Create a group and add both layers
+        // Step 4: Create group and move layers into it
         var group = doc.layerSets.add();
         group.name = "_onion_skin";
 
-        // Important: Add dup first, gray overlay last (on top)
         dup.move(group, ElementPlacement.INSIDE);
         grayLayer.move(group, ElementPlacement.PLACEATBEGINNING);
 
-        // Step 5: Lower opacity of the group
+        // Step 5: Reduce group opacity
         group.opacity = 40;
 
-        alert("✅ Onion skin added from layer below.");
+        // Step 6: Hide the original below-layer to avoid color showing through
+        below.visible = false;
+
+        alert("✅ Onion skin added with darker gray. Original layer hidden.");
       } else {
-        alert("ℹ️ No layer below to onion skin from.");
+        alert("ℹ️ No layer below to create onion skin from.");
       }
 
     } catch (e) {
@@ -56,5 +59,3 @@ function handleAddAnimation() {
 
   window.parent.postMessage(script, "*");
 }
-
-//this works - onion skin - need to hide lower layer tho
