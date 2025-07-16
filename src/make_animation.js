@@ -1,42 +1,26 @@
 function handleAddAnimation() {
   const script = `
     try {
-      var doc = app.activeDocument;
-      var sel = null;
+      var hasSelection = false;
+
+      // ActionDescriptor to check selected layers
+      var ref = new ActionReference();
+      ref.putProperty(charIDToTypeID("Prpr"), stringIDToTypeID("targetLayers"));
+      ref.putEnumerated(charIDToTypeID("Dcmn"), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
 
       try {
-        sel = doc.activeLayer;
+        var desc = executeActionGet(ref);
+        hasSelection = true;
       } catch (e) {
-        sel = null;
+        hasSelection = false;
       }
 
-      function isRoot(layer, doc) {
-        return layer && layer.parent === doc;
-      }
-
-      if (!sel) {
+      if (!hasSelection) {
         alert("✅ All okay! Nothing is selected. You can now safely create an animation folder at the root level.");
       } else {
-        var msg = "";
-
-        if (sel.layers) {
-          msg += "⚠️ A folder (group) is selected.\\n";
-        } else {
-          msg += "⚠️ A regular layer is selected.\\n";
-        }
-
-        if (sel.allLocked) {
-          msg += "🔒 The selected item is locked.\\n";
-        }
-
-        if (isRoot(sel, doc)) {
-          msg += "📁 It is at the root level.\\n";
-        } else {
-          msg += "📂 It is inside a group named: " + sel.parent.name + "\\n";
-        }
-
-        alert(msg + "\\n❌ Please deselect everything before creating an animation folder.");
+        alert("❌ Something is selected in the Layers panel. Please deselect everything before creating an animation folder.");
       }
+
     } catch (e) {
       alert("❌ Script error: " + e.message);
     }
