@@ -7,37 +7,60 @@ function handleAddAnimation() {
 
   const folderName = `anim_${userInput}`;
 
-  // Script steps:
-  // 1. Create a folder (layer group) named anim_<input>
-  // 2. Create a layer named "Frame 1"
-  // 3. Move the layer inside the folder
+  // 1. Deselect everything to ensure creation at root
+  // 2. Check for duplicate group names
+  // 3. Create group and Frame 1 layer
+  // 4. Move layer inside group
 
   const script = `
-    var groupDesc = new ActionDescriptor();
+    var doc = app.activeDocument;
+
+    // Deselect all layers to force root-level group creation
+    var selNone = new ActionDescriptor();
     var ref = new ActionReference();
-    ref.putClass(stringIDToTypeID("layerSection"));
-    groupDesc.putReference(charIDToTypeID("null"), ref);
+    ref.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+    selNone.putReference(charIDToTypeID("null"), ref);
+    executeAction(charIDToTypeID("Dslc"), selNone, DialogModes.NO);
 
-    var props = new ActionDescriptor();
-    props.putString(charIDToTypeID("Nm  "), "${folderName}");
-    groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
+    // Check for duplicate anim_ folder
+    var exists = false;
+    for (var i = 0; i < doc.layers.length; i++) {
+      var layer = doc.layers[i];
+      if (layer.kind === LayerKind.GROUP && layer.name === "${folderName}") {
+        exists = true;
+        break;
+      }
+    }
 
-    executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
+    if (exists) {
+      alert("A folder named '${folderName}' already exists at the root level.");
+    } else {
+      var groupDesc = new ActionDescriptor();
+      var ref = new ActionReference();
+      ref.putClass(stringIDToTypeID("layerSection"));
+      groupDesc.putReference(charIDToTypeID("null"), ref);
 
-    var layerDesc = new ActionDescriptor();
-    var layerRef = new ActionReference();
-    layerRef.putClass(charIDToTypeID("Lyr "));
-    layerDesc.putReference(charIDToTypeID("null"), layerRef);
+      var props = new ActionDescriptor();
+      props.putString(charIDToTypeID("Nm  "), "${folderName}");
+      groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
 
-    var layerProps = new ActionDescriptor();
-    layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
-    layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
+      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-    executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
+      var layerDesc = new ActionDescriptor();
+      var layerRef = new ActionReference();
+      layerRef.putClass(charIDToTypeID("Lyr "));
+      layerDesc.putReference(charIDToTypeID("null"), layerRef);
 
-    var newLayer = app.activeDocument.activeLayer;
-    var group = newLayer.parent.layers[0];
-    newLayer.move(group, ElementPlacement.INSIDE);
+      var layerProps = new ActionDescriptor();
+      layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
+      layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
+
+      executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
+
+      var newLayer = app.activeDocument.activeLayer;
+      var group = app.activeDocument.layers[0]; // most recently added group
+      newLayer.move(group, ElementPlacement.INSIDE);
+    }
   `;
 
   window.parent.postMessage(script, "*");
