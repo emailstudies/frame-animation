@@ -1,5 +1,3 @@
-import { handleAddAnimation } from "./make_animation.js";
-
 document.getElementById("createAnimBtn").onclick = handleAddAnimation;
 
 // Placeholders for later phases
