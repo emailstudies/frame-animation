@@ -2,58 +2,65 @@ function handleAddAnimation() {
   const script = `
     try {
       var doc = app.activeDocument;
-      var layers = doc.layers;
-      var current = doc.activeLayer;
-      var index = layers.indexOf(current);
+      var sel = doc.activeLayer;
 
-      if (index < layers.length - 1) {
-        var below = layers[index + 1];
-
-        // Step 1: Duplicate the below layer
-        var dup = below.duplicate();
-        dup.name = "_onion_clone";
-        dup.visible = true;
-
-        // Step 2: Lock transparency
-        dup.transparentPixelsLocked = true;
-
-        // Step 3: Create darker gray overlay layer
-        var grayLayer = doc.artLayers.add();
-        grayLayer.name = "gray_overlay";
-        doc.activeLayer = grayLayer;
-
-        var gray = new SolidColor();
-        gray.rgb.red = 80;
-        gray.rgb.green = 80;
-        gray.rgb.blue = 80;
-        app.foregroundColor = gray;
-
-        app.activeDocument.selection.selectAll();
-        app.activeDocument.selection.fill(app.foregroundColor);
-        app.activeDocument.selection.deselect();
-
-        grayLayer.blendMode = BlendMode.COLOR;
-
-        // Step 4: Create group and move layers into it
-        var group = doc.layerSets.add();
-        group.name = "_onion_skin";
-
-        dup.move(group, ElementPlacement.INSIDE);
-        grayLayer.move(group, ElementPlacement.PLACEATBEGINNING);
-
-        // Step 5: Reduce group opacity
-        group.opacity = 40;
-
-        // Step 6: Hide the original below-layer to avoid color showing through
-        below.visible = false;
-
-        alert("✅ Onion skin added with darker gray. Original layer hidden.");
-      } else {
-        alert("ℹ️ No layer below to create onion skin from.");
+      function isRoot(layer, doc) {
+        return layer && layer.parent === doc;
       }
 
+      // If anything is selected, show diagnostic alert and exit
+      if (sel) {
+        var msg = "";
+
+        if (sel.layers) {
+          msg += "✅ A folder (group) is selected.\\n";
+        } else {
+          msg += "✅ A regular layer is selected.\\n";
+        }
+
+        if (sel.allLocked) {
+          msg += "🔒 The selected item is locked.\\n";
+        }
+
+        if (isRoot(sel, doc)) {
+          msg += "📁 It is at the root level.\\n";
+        } else {
+          msg += "📂 It is inside a group named: " + sel.parent.name + "\\n";
+        }
+
+        alert(msg + "\\n❗ Please deselect everything before creating an animation folder.");
+        return;
+      }
+
+      // No selection – proceed with folder creation
+      var folderName = "anim_untitled";
+      var groupDesc = new ActionDescriptor();
+      var ref = new ActionReference();
+      ref.putClass(stringIDToTypeID("layerSection"));
+      groupDesc.putReference(charIDToTypeID("null"), ref);
+
+      var props = new ActionDescriptor();
+      props.putString(charIDToTypeID("Nm  "), folderName);
+      groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
+      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
+
+      var layerDesc = new ActionDescriptor();
+      var layerRef = new ActionReference();
+      layerRef.putClass(charIDToTypeID("Lyr "));
+      layerDesc.putReference(charIDToTypeID("null"), layerRef);
+
+      var layerProps = new ActionDescriptor();
+      layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
+      layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
+      executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
+
+      var newLayer = app.activeDocument.activeLayer;
+      var group = newLayer.parent.layers[0];
+      newLayer.move(group, ElementPlacement.INSIDE);
+
+      alert("✅ Animation folder created.");
     } catch (e) {
-      alert("❌ Error: " + e.message);
+      alert("❌ Script error: " + e.message);
     }
   `;
 
