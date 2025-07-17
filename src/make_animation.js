@@ -8,7 +8,6 @@ function handleAddAnimation() {
         return layer && layer.parent === doc;
       }
 
-      // If anything is selected, show diagnostic alert and exit
       if (sel) {
         var msg = "";
 
@@ -29,36 +28,35 @@ function handleAddAnimation() {
         }
 
         alert(msg + "\\n❗ Please deselect everything before creating an animation folder.");
-        return;
+      } else {
+        // No selection – proceed with folder creation
+        var folderName = "anim_untitled";
+        var groupDesc = new ActionDescriptor();
+        var ref = new ActionReference();
+        ref.putClass(stringIDToTypeID("layerSection"));
+        groupDesc.putReference(charIDToTypeID("null"), ref);
+
+        var props = new ActionDescriptor();
+        props.putString(charIDToTypeID("Nm  "), folderName);
+        groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
+        executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
+
+        var layerDesc = new ActionDescriptor();
+        var layerRef = new ActionReference();
+        layerRef.putClass(charIDToTypeID("Lyr "));
+        layerDesc.putReference(charIDToTypeID("null"), layerRef);
+
+        var layerProps = new ActionDescriptor();
+        layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
+        layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
+        executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
+
+        var newLayer = app.activeDocument.activeLayer;
+        var group = newLayer.parent.layers[0];
+        newLayer.move(group, ElementPlacement.INSIDE);
+
+        alert("✅ Animation folder created.");
       }
-
-      // No selection – proceed with folder creation
-      var folderName = "anim_untitled";
-      var groupDesc = new ActionDescriptor();
-      var ref = new ActionReference();
-      ref.putClass(stringIDToTypeID("layerSection"));
-      groupDesc.putReference(charIDToTypeID("null"), ref);
-
-      var props = new ActionDescriptor();
-      props.putString(charIDToTypeID("Nm  "), folderName);
-      groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
-      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
-
-      var layerDesc = new ActionDescriptor();
-      var layerRef = new ActionReference();
-      layerRef.putClass(charIDToTypeID("Lyr "));
-      layerDesc.putReference(charIDToTypeID("null"), layerRef);
-
-      var layerProps = new ActionDescriptor();
-      layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
-      layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
-      executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
-
-      var newLayer = app.activeDocument.activeLayer;
-      var group = newLayer.parent.layers[0];
-      newLayer.move(group, ElementPlacement.INSIDE);
-
-      alert("✅ Animation folder created.");
     } catch (e) {
       alert("❌ Script error: " + e.message);
     }
