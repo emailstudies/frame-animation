@@ -8,54 +8,31 @@ function handleAddAnimation() {
         return layer && layer.parent === doc;
       }
 
-      if (sel) {
+      if (!sel) {
+        alert("❗ Nothing is selected. Please deselect everything if you want to create a root-level animation folder.");
+      } else {
         var msg = "";
 
+        // Folder vs layer check
         if (sel.layers) {
           msg += "✅ A folder (group) is selected.\\n";
         } else {
           msg += "✅ A regular layer is selected.\\n";
         }
 
+        // Lock status
         if (sel.allLocked) {
           msg += "🔒 The selected item is locked.\\n";
         }
 
+        // Root-level check
         if (isRoot(sel, doc)) {
           msg += "📁 It is at the root level.\\n";
         } else {
           msg += "📂 It is inside a group named: " + sel.parent.name + "\\n";
         }
 
-        alert(msg + "\\n❗ Please deselect everything before creating an animation folder.");
-      } else {
-        // No selection – proceed with folder creation
-        var folderName = "anim_untitled";
-        var groupDesc = new ActionDescriptor();
-        var ref = new ActionReference();
-        ref.putClass(stringIDToTypeID("layerSection"));
-        groupDesc.putReference(charIDToTypeID("null"), ref);
-
-        var props = new ActionDescriptor();
-        props.putString(charIDToTypeID("Nm  "), folderName);
-        groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
-        executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
-
-        var layerDesc = new ActionDescriptor();
-        var layerRef = new ActionReference();
-        layerRef.putClass(charIDToTypeID("Lyr "));
-        layerDesc.putReference(charIDToTypeID("null"), layerRef);
-
-        var layerProps = new ActionDescriptor();
-        layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
-        layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
-        executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
-
-        var newLayer = app.activeDocument.activeLayer;
-        var group = newLayer.parent.layers[0];
-        newLayer.move(group, ElementPlacement.INSIDE);
-
-        alert("✅ Animation folder created.");
+        alert(msg + "\\nPlease deselect everything before creating an animation folder.");
       }
     } catch (e) {
       alert("❌ Script error: " + e.message);
