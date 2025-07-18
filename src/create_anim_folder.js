@@ -34,3 +34,4 @@ function handleCreateFolder() {
   `;
   window.parent.postMessage(script, "*");
 }
+//creating at non - nested level worked
