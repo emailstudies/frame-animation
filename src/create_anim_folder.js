@@ -1,4 +1,4 @@
-function createTopLevelFolder() {
+function handleCreateFolder() {
   const script = `
     try {
       var desc = new ActionDescriptor();
