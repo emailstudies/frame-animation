@@ -1,17 +1,19 @@
-function handleCreateFolder() {
+function createTopLevelFolder() {
   const script = `
     try {
-      var doc = app.activeDocument;
-      var layers = doc.getSelectedLayers();
-      
-      if (!layers || layers.length === 0) {
-        alert("Nothing is selected.");
-      } else {
-        var summary = layers.map(l => l.name).join("\\n");
-        alert("Selected Layers:\\n" + summary);
-      }
+      var desc = new ActionDescriptor();
+      var ref = new ActionReference();
+      ref.putClass(stringIDToTypeID("layerSection")); // "layerSection" = group/folder
+      desc.putReference(charIDToTypeID("null"), ref);
+
+      // Optional: set a name for the group
+      var nameDesc = new ActionDescriptor();
+      nameDesc.putString(stringIDToTypeID("name"), "New Folder");
+      desc.putObject(stringIDToTypeID("using"), stringIDToTypeID("layerSection"), nameDesc);
+
+      executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
     } catch (e) {
-      alert("Script Error: " + e.message);
+      alert("Error creating folder: " + e.message);
     }
   `;
   window.parent.postMessage(script, "*");
