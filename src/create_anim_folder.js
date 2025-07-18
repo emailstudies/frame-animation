@@ -1,20 +1,16 @@
 function handleCreateFolder() {
   const script = `
-    if (!app.documents || app.documents.length === 0) {
-      alert("No document is open.");
-    } else {
-      var doc = app.activeDocument;
-      if (!doc || !doc.activeLayer) {
-        alert("Nothing is selected.");
+    var sel = app.activeLayer;
+
+    if (sel) {
+      var name = sel.name;
+      if (sel.isFolder) {
+        alert("Selected item is a folder named: " + name);
       } else {
-        var sel = doc.activeLayer;
-        var name = sel.name;
-        if (sel.isFolder) {
-          alert("Selected item is a folder named: " + name);
-        } else {
-          alert("Selected item is a layer named: " + name);
-        }
+        alert("Selected item is a layer named: " + name);
       }
+    } else {
+      alert("Nothing is selected.");
     }
   `;
   window.parent.postMessage(script, "*");
