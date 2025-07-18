@@ -1,48 +1,49 @@
-document.getElementById("createAnimFolderBtn").onclick = async function () {
-  const input = document.getElementById("animFolderInput");
+function handleCreateFolder() {
+  const input = document.getElementById("animNameInput");
   const suffix = input ? input.value.trim() : "";
 
-  if (!suffix) {
-    alert("❌ Please enter a folder name.");
+  if (!suffix || suffix === "walkCycle") {
+    alert("❌ Please enter a custom folder name.");
     return;
   }
 
   const fullName = "anim_" + suffix;
-  const doc = app.activeDocument;
 
-  // Check for existing folder with the full name
-  const exists = doc.layerSets.some(f => f.name === fullName && f.parent === doc);
-  if (exists) {
-    alert("⚠️ A root-level folder named '" + fullName + "' already exists.");
-    return;
-  }
+  const script = `
+    (function () {
+      var doc = app.activeDocument;
 
-  // 📁 Create the folder at the root level
-  const groupDesc = new ActionDescriptor();
-  const groupRef = new ActionReference();
-  groupRef.putClass(stringIDToTypeID("layerSection"));
-  groupDesc.putReference(charIDToTypeID("null"), groupRef);
+      // Check if folder exists
+      for (var i = 0; i < doc.layerSets.length; i++) {
+        var g = doc.layerSets[i];
+        if (g.name === "${fullName}" && g.parent === doc) {
+          alert("⚠️ A root-level folder named '${fullName}' already exists.");
+          return;
+        }
+      }
 
-  const nameDesc = new ActionDescriptor();
-  nameDesc.putString(charIDToTypeID("Nm  "), fullName);
-  groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
+      // Create folder
+      var desc = new ActionDescriptor();
+      var ref = new ActionReference();
+      ref.putClass(stringIDToTypeID("layerSection"));
+      desc.putReference(charIDToTypeID("null"), ref);
 
-  await executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
+      var nameDesc = new ActionDescriptor();
+      nameDesc.putString(charIDToTypeID("Nm  "), "${fullName}");
+      desc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
 
-  // 🖌️ Add a blank layer inside the folder
-  const newFolder = doc.layerSets.find(g => g.name === fullName && g.parent === doc);
-  if (newFolder) {
-    doc.activeLayer = newFolder;
+      executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
 
-    const layerDesc = new ActionDescriptor();
-    const layerRef = new ActionReference();
-    layerRef.putClass(stringIDToTypeID("layer"));
-    layerDesc.putReference(charIDToTypeID("null"), layerRef);
+      // Add layer inside folder
+      var layerDesc = new ActionDescriptor();
+      var layerRef = new ActionReference();
+      layerRef.putClass(stringIDToTypeID("layer"));
+      layerDesc.putReference(charIDToTypeID("null"), layerRef);
+      executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-    await executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
+      alert("✅ Created folder '${fullName}' with one layer.");
+    })();
+  `;
 
-    alert(`✅ Created '${fullName}' with one empty layer inside.`);
-  } else {
-    alert("❌ Folder creation failed.");
-  }
-};
+  window.parent.postMessage(script.trim(), "*");
+}
