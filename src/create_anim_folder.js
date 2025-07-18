@@ -1,6 +1,6 @@
 function handleCreateFolder() {
   const script = `
-    alert("Please click OK to continue.");
+    prompt("Please press OK to continue.", "");
   `;
   window.parent.postMessage(script, "*");
 }
