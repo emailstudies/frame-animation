@@ -1,14 +1,13 @@
 function handleCreateFolder() {
   const script = `
-    if (app.documents.length == 0) {
+    if (!app.documents || app.documents.length === 0) {
       alert("No document is open.");
     } else {
       var doc = app.activeDocument;
-      var sel = doc.activeLayer;
-
-      if (sel == null) {
+      if (!doc || !doc.activeLayer) {
         alert("Nothing is selected.");
       } else {
+        var sel = doc.activeLayer;
         var name = sel.name;
         if (sel.isFolder) {
           alert("Selected item is a folder named: " + name);
@@ -18,7 +17,5 @@ function handleCreateFolder() {
       }
     }
   `;
-  setTimeout(() => {
-    window.parent.postMessage(script, "*");
-  }, 100); // slight delay helps in some cases
+  window.parent.postMessage(script, "*");
 }
