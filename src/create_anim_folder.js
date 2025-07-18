@@ -1,5 +1,5 @@
 function handleCreateFolder() {
-  const input = document.getElementById("animFolderInput");
+  const input = document.getElementById("animNameInput");
   const suffix = input ? input.value.trim() : "";
 
   if (!suffix || suffix === "walkCycle") {
@@ -13,7 +13,7 @@ function handleCreateFolder() {
     (function () {
       var doc = app.activeDocument;
 
-      // Check if folder exists
+      // Check if a root-level folder with the same name already exists
       for (var i = 0; i < doc.layerSets.length; i++) {
         var g = doc.layerSets[i];
         if (g.name === "${fullName}" && g.parent === doc) {
@@ -22,28 +22,28 @@ function handleCreateFolder() {
         }
       }
 
-      // Create folder
-      var desc = new ActionDescriptor();
-      var ref = new ActionReference();
-      ref.putClass(stringIDToTypeID("layerSection"));
-      desc.putReference(charIDToTypeID("null"), ref);
-
-      var nameDesc = new ActionDescriptor();
-      nameDesc.putString(charIDToTypeID("Nm  "), "${fullName}");
-      desc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
-
-      executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
-
-      // Add layer inside folder
+      // Create a new layer first (this will ensure it's at root level)
       var layerDesc = new ActionDescriptor();
       var layerRef = new ActionReference();
       layerRef.putClass(stringIDToTypeID("layer"));
       layerDesc.putReference(charIDToTypeID("null"), layerRef);
       executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-      alert("✅ Created folder '${fullName}' with one layer.");
+      // Create a root-level folder
+      var folderDesc = new ActionDescriptor();
+      var folderRef = new ActionReference();
+      folderRef.putClass(stringIDToTypeID("layerSection"));
+      folderDesc.putReference(charIDToTypeID("null"), folderRef);
+
+      var nameDesc = new ActionDescriptor();
+      nameDesc.putString(charIDToTypeID("Nm  "), "${fullName}");
+      folderDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
+
+      executeAction(charIDToTypeID("Mk  "), folderDesc, DialogModes.NO);
+
+      alert("✅ Created root-level folder: '${fullName}' with a new layer inside.");
     })();
   `;
 
-  window.parent.postMessage(script.trim(), "*");
+  window.parent.postMessage(script, "*");
 }
