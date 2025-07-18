@@ -1,4 +1,4 @@
-afunction handleCreateFolder() {
+function handleCreateFolder() {
   const script = `
   if (!app.activeDocument) {
     alert("No document open. Please open or create a document first.");
