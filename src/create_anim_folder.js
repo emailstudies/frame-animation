@@ -1,16 +1,15 @@
-function handleCreateFolder() {
+function createFolderOnlyWhenNothingSelected() {
   const script = `
     try {
       var doc = app.activeDocument;
       var sel = doc.activeLayer;
 
       if (sel) {
-        // Something is selected: could be a layer or folder
-        var isFolder = typeof sel.layers !== "undefined";
+        var isFolder = sel.isGroup === true;
         var type = isFolder ? "folder" : "layer";
-        alert("A " + type + " is selected. Please deselect by clicking outside the Layers panel.");
+        alert("A " + type + " is currently selected.\\n\\nPlease click on the empty canvas area to deselect all layers, then try again.");
       } else {
-        // ✅ Nothing is selected → safe to create folder at root
+        // ✅ Nothing is selected → create folder at root
         var desc = new ActionDescriptor();
         var ref = new ActionReference();
         ref.putClass(stringIDToTypeID("layerSection"));
@@ -26,5 +25,6 @@ function handleCreateFolder() {
       alert("Script error: " + e.message);
     }
   `;
+
   window.parent.postMessage(script, "*");
 }
