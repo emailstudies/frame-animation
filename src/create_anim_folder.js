@@ -1,7 +1,7 @@
 function handleCreateFolder() {
   const script = `
     (function () {
-      // ✅ Deselect all layers using temporary group trick
+      // ✅ Deselect all layers by creating and deleting a temp group
       var desc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -11,17 +11,17 @@ function handleCreateFolder() {
       nameDesc.putString(charIDToTypeID("Nm  "), "__temp_deselect__");
       desc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
 
-      // Create the temp group
+      // Create the group (automatically selects it)
       executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
 
-      // Immediately delete the temp group
-      var delRef = new ActionReference();
-      delRef.putName(stringIDToTypeID("layerSection"), "__temp_deselect__");
-      var delDesc = new ActionDescriptor();
-      delDesc.putReference(charIDToTypeID("null"), delRef);
-      executeAction(charIDToTypeID("Dlt "), delDesc, DialogModes.NO);
+      // Now delete the currently selected (temp) group
+      var deleteRef = new ActionReference();
+      deleteRef.putEnumerated(charIDToTypeID("Lyr "), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+      var deleteDesc = new ActionDescriptor();
+      deleteDesc.putReference(charIDToTypeID("null"), deleteRef);
+      executeAction(charIDToTypeID("Dlt "), deleteDesc, DialogModes.NO);
 
-      alert("✅ All layers deselected.");
+      alert("✅ All layers deselected using temp group trick.");
     })();
   `;
 
