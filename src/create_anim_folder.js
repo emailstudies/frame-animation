@@ -1,25 +1,21 @@
 function handleCreateFolder() {
   const script = `
     try {
-      var doc = app.activeDocument;
-      var sel = doc.activeLayer;
+      var desc = new ActionDescriptor();
+      var ref = new ActionReference();
+      ref.putClass(stringIDToTypeID("layerSection")); // "layerSection" means folder
+      desc.putReference(charIDToTypeID("null"), ref);
 
-      if (!sel) {
-        alert("Nothing is selected.");
-      } else if (!sel.isFolder) {
-        alert("This is a problem: you selected a layer, not a folder.");
-      } else {
-        var isRootLevel = (sel.parent == doc);
-        if (isRootLevel) {
-          alert("Folder is at root level.");
-        } else {
-          alert("This is a problem: folder is nested inside another group.");
-        }
-      }
+      // Optional: give the folder a name
+      var nameDesc = new ActionDescriptor();
+      nameDesc.putString(stringIDToTypeID("name"), "anim_1");
+      desc.putObject(stringIDToTypeID("using"), stringIDToTypeID("layerSection"), nameDesc);
+
+      // ✅ No parent specified → will be added at root
+      executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
     } catch (e) {
-      alert("Script error: " + e.message);
+      alert("Error: " + e.message);
     }
   `;
-
   window.parent.postMessage(script, "*");
 }
