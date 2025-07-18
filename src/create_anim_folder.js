@@ -2,7 +2,6 @@ function handleCreateFolder() {
   const input = document.getElementById("animFolderInput");
   const suffix = input ? input.value.trim() : "";
 
-  // Ensure user actually changed the default value
   if (!suffix || suffix === "walkCycle") {
     alert("❌ Please enter a custom folder name.");
     return;
@@ -14,7 +13,16 @@ function handleCreateFolder() {
     (function () {
       var doc = app.activeDocument;
 
-      // Check if a folder with the same name already exists at root level
+      // Deselect everything to ensure root-level creation
+      while (app.activeDocument.activeLayer) {
+        try {
+          app.activeDocument.activeLayer = null;
+        } catch (e) {
+          break;
+        }
+      }
+
+      // Check for existing folder with the same full name at root level
       for (var i = 0; i < doc.layerSets.length; i++) {
         var g = doc.layerSets[i];
         if (g.name === "${fullName}" && g.parent === doc) {
@@ -23,7 +31,7 @@ function handleCreateFolder() {
         }
       }
 
-      // Create a root-level folder with ActionDescriptor
+      // 1. Create folder
       var desc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -35,7 +43,22 @@ function handleCreateFolder() {
 
       executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
 
-      alert("✅ Created root-level folder: '${fullName}'");
+      // 2. Select newly created folder
+      var group = doc.layerSets.getByName("${fullName}");
+      doc.activeLayer = group;
+
+      // 3. Create a new layer inside the group
+      var layerDesc = new ActionDescriptor();
+      var layerRef = new ActionReference();
+      layerRef.putClass(stringIDToTypeID("artLayer"));
+      layerDesc.putReference(charIDToTypeID("null"), layerRef);
+      executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
+
+      // 4. Move new layer into the group
+      var newLayer = doc.activeLayer;
+      newLayer.move(group, ElementPlacement.INSIDE);
+
+      alert("✅ Created '${fullName}' at root with 1 frame layer.");
     })();
   `;
 
