@@ -1,4 +1,4 @@
-function createFolderOnlyWhenNothingSelected() {
+function handleCreateFolder() {
   const script = `
     try {
       var doc = app.activeDocument;
