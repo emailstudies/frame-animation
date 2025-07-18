@@ -3,28 +3,23 @@ function handleCreateFolder() {
     try {
       if (!app || !app.activeDocument) {
         alert("No document open.");
-        return;
-      }
+      } else {
+        var doc = app.activeDocument;
+        var sel = doc.activeLayer;
 
-      var doc = app.activeDocument;
-      var selected = doc.getSelectedLayers ? doc.getSelectedLayers() : [];
-      var sel = doc.activeLayer;
-
-      if (selected && selected.length > 0) {
-        alert("Selected using getSelectedLayers(). Count: " + selected.length);
-      } else if (sel) {
-        if (sel.locked || !sel.visible) {
-          alert("Selected layer is locked or hidden.");
+        if (!sel) {
+          // ✅ Nothing selected → add a layer
+          var newLayer = doc.createLayer();
+          newLayer.name = "Auto Layer";
+          alert("Nothing was selected. A new layer was created.");
         } else {
+          // ✅ Something selected → alert type and name
+          var type = sel.isFolder ? "Folder" : "Layer";
           var name = "(Unnamed)";
           try { name = sel.name; } catch (e) {}
-          var type = sel.isFolder ? "Folder" : "Layer";
-          alert("Fallback selection: " + type + " → " + name);
+          alert("You selected a " + type + " named: " + name);
         }
-      } else {
-        alert("Nothing is selected.");
       }
-
     } catch (e) {
       alert("Script error: " + e.message);
     }
@@ -32,5 +27,5 @@ function handleCreateFolder() {
 
   setTimeout(() => {
     window.parent.postMessage(script, "*");
-  }, 200);
+  }, 50);
 }
