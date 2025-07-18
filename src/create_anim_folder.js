@@ -8,16 +8,19 @@ function handleCreateFolder() {
         var sel = doc.activeLayer;
 
         if (!sel) {
-          // ✅ Nothing selected → add a layer
-          var newLayer = doc.createLayer();
-          newLayer.name = "Auto Layer";
-          alert("Nothing was selected. A new layer was created.");
+          // ✅ Nothing is selected — use Action Descriptor to create a new layer
+          var desc = new ActionDescriptor();
+          var ref = new ActionReference();
+          ref.putClass(stringIDToTypeID("layer"));
+          desc.putReference(charIDToTypeID("null"), ref);
+          executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+
+          alert("Nothing was selected. A new layer has been created safely.");
         } else {
-          // ✅ Something selected → alert type and name
-          var type = sel.isFolder ? "Folder" : "Layer";
-          var name = "(Unnamed)";
-          try { name = sel.name; } catch (e) {}
-          alert("You selected a " + type + " named: " + name);
+          // ✅ Something is selected — alert type
+          var type = "Layer";
+          try { if (sel.isFolder) type = "Folder"; } catch (e) {}
+          alert("You selected a " + type + ".");
         }
       }
     } catch (e) {
@@ -27,5 +30,5 @@ function handleCreateFolder() {
 
   setTimeout(() => {
     window.parent.postMessage(script, "*");
-  }, 50);
+  }, 200);
 }
