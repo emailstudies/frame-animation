@@ -1,25 +1,31 @@
 function handleCreateFolder() {
   const script = `
-    if (!app.activeDocument) {
-      alert("No document open.");
-    } else {
-      var sel = app.activeDocument.activeLayer;
-
-      if (sel) {
-        var name = sel.name;
-        if (sel.isFolder) {
-          alert("Selected item is a folder named: " + name);
-        } else {
-          alert("Selected item is a layer named: " + name);
-        }
+    try {
+      if (!app.activeDocument) {
+        alert("No document open.");
       } else {
-        alert("Nothing is selected.");
+        var doc = app.activeDocument;
+        var sel = doc.activeLayer;
+
+        if (sel == null) {
+          alert("Nothing is selected.");
+        } else if (typeof sel.name !== "undefined") {
+          var name = sel.name;
+          if (sel.isFolder) {
+            alert("Selected item is a folder named: " + name);
+          } else {
+            alert("Selected item is a layer named: " + name);
+          }
+        } else {
+          alert("Layer selected but name is not accessible.");
+        }
       }
+    } catch (e) {
+      alert("Error: " + e.message);
     }
   `;
 
-  // Delay to ensure selection is registered
   setTimeout(() => {
     window.parent.postMessage(script, "*");
-  }, 100);
+  }, 150); // Slightly longer delay
 }
