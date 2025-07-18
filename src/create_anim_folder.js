@@ -6,16 +6,25 @@ function handleCreateFolder() {
         alert("No document open.");
       } else {
         var selected = doc.getSelectedLayers();
+        var sel = doc.activeLayer;
 
-        if (!selected || selected.length === 0) {
-          alert("Nothing is selected.");
-        } else {
-          var summary = selected.map(l => {
+        if (selected.length > 0) {
+          var summary = selected.map((l, i) => {
             var type = l.isFolder ? "Folder" : "Layer";
-            return type + ": " + l.name;
+            var name = "(Unnamed)";
+            try { name = l.name; } catch (e) {}
+            return type + " #" + (i+1) + ": " + name;
           }).join("\\n");
+          alert("Selected layers:\\n" + summary);
 
-          alert("Selected items:\\n" + summary);
+        } else if (sel) {
+          var type = sel.isFolder ? "Folder" : "Layer";
+          var name = "(Unnamed)";
+          try { name = sel.name; } catch (e) {}
+          alert("Fallback to active layer:\\n" + type + ": " + name);
+
+        } else {
+          alert("Nothing is selected.");
         }
       }
     } catch (e) {
@@ -23,5 +32,7 @@ function handleCreateFolder() {
     }
   `;
 
-  window.parent.postMessage(script, "*");
+  setTimeout(() => {
+    window.parent.postMessage(script, "*");
+  }, 200);
 }
