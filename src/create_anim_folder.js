@@ -1,16 +1,24 @@
-function handleCreateFolder() {
-  var script = `
-    var sel = app.activeLayer;
-    if (sel == null) {
-      alert("Nothing is selected.");
+function handleAddAnimation() {
+  const script = `
+    if (app.documents.length == 0) {
+      alert("No document is open.");
     } else {
-      var name = sel.name;
-      if (sel.isFolder) {
-        alert("Selected item is a folder named: " + name);
+      var doc = app.activeDocument;
+      var sel = doc.activeLayer;
+
+      if (sel == null) {
+        alert("Nothing is selected.");
       } else {
-        alert("Selected item is a layer named: " + name);
+        var name = sel.name;
+        if (sel.isFolder) {
+          alert("Selected item is a folder named: " + name);
+        } else {
+          alert("Selected item is a layer named: " + name);
+        }
       }
     }
   `;
-  window.parent.postMessage(script, "*");
+  setTimeout(() => {
+    window.parent.postMessage(script, "*");
+  }, 100); // slight delay helps in some cases
 }
