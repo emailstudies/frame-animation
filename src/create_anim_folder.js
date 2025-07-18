@@ -4,28 +4,25 @@ function handleCreateFolder() {
       var doc = app.activeDocument;
       if (!doc) {
         alert("No document open.");
-      } else {
-        var selected = doc.getSelectedLayers();
+        return;
+      }
 
-        if (!selected || selected.length === 0) {
-          alert("Nothing is selected.");
-        } else {
-          var messages = [];
-          for (var i = 0; i < selected.length; i++) {
-            var layer = selected[i];
-            var name = (typeof layer.name === "string") ? layer.name : "(Unnamed)";
-            var type = layer.isFolder ? "Folder" : "Layer";
-            messages.push(type + ": " + name);
-          }
-          alert(messages.join("\\n"));
-        }
+      var selected = doc.getSelectedLayers();
+
+      if (!selected || selected.length === 0) {
+        alert("Nothing is selected.");
+      } else {
+        var summary = selected.map(l => {
+          var type = l.isFolder ? "Folder" : "Layer";
+          return type + ": " + l.name;
+        }).join("\\n");
+
+        alert("Selected items:\\n" + summary);
       }
     } catch (e) {
       alert("Script error: " + e.message);
     }
   `;
 
-  setTimeout(() => {
-    window.parent.postMessage(script, "*");
-  }, 200); // Allow layer state to stabilize
+  window.parent.postMessage(script, "*");
 }
