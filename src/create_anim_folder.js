@@ -1,6 +1,6 @@
 function handleCreateFolder() {
   const script = `
-    prompt("Please press OK to continue.", "");
+    app.activeDocument.activeLayer = null;
   `;
   window.parent.postMessage(script, "*");
 }
