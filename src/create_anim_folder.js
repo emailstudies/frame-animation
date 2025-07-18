@@ -13,7 +13,7 @@ function handleCreateFolder() {
     (function () {
       var doc = app.activeDocument;
 
-      // Check if a root-level folder with the same name already exists
+      // Check if a folder with the same name already exists at root level
       for (var i = 0; i < doc.layerSets.length; i++) {
         var g = doc.layerSets[i];
         if (g.name === "${fullName}" && g.parent === doc) {
@@ -22,26 +22,33 @@ function handleCreateFolder() {
         }
       }
 
-      // Create a new layer first (this will ensure it's at root level)
+      // Step 1: Create a root-level folder with name '${fullName}'
+      var groupDesc = new ActionDescriptor();
+      var groupRef = new ActionReference();
+      groupRef.putClass(stringIDToTypeID("layerSection"));
+      groupDesc.putReference(charIDToTypeID("null"), groupRef);
+
+      var nameDesc = new ActionDescriptor();
+      nameDesc.putString(charIDToTypeID("Nm  "), "${fullName}");
+      groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
+
+      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
+
+      // Step 2: Select the new folder (it will be on top of the layer stack)
+      var selDesc = new ActionDescriptor();
+      var selRef = new ActionReference();
+      selRef.putIndex(charIDToTypeID("Lyr "), 1); // Topmost item
+      selDesc.putReference(charIDToTypeID("null"), selRef);
+      executeAction(charIDToTypeID("slct"), selDesc, DialogModes.NO);
+
+      // Step 3: Create a new layer inside the folder
       var layerDesc = new ActionDescriptor();
       var layerRef = new ActionReference();
       layerRef.putClass(stringIDToTypeID("layer"));
       layerDesc.putReference(charIDToTypeID("null"), layerRef);
       executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-      // Create a root-level folder
-      var folderDesc = new ActionDescriptor();
-      var folderRef = new ActionReference();
-      folderRef.putClass(stringIDToTypeID("layerSection"));
-      folderDesc.putReference(charIDToTypeID("null"), folderRef);
-
-      var nameDesc = new ActionDescriptor();
-      nameDesc.putString(charIDToTypeID("Nm  "), "${fullName}");
-      folderDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
-
-      executeAction(charIDToTypeID("Mk  "), folderDesc, DialogModes.NO);
-
-      alert("✅ Created root-level folder: '${fullName}' with a new layer inside.");
+      alert("✅ Created '${fullName}' at root with 'Frame 1' inside.");
     })();
   `;
 
