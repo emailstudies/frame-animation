@@ -1,4 +1,4 @@
-function createFolderAtTopOnlyIfRootFolderSelected() {
+function handleCreateFolder() {
   const script = `
     try {
       var doc = app.activeDocument;
