@@ -4,9 +4,7 @@ function handleCreateFolder() {
       var doc = app.activeDocument;
       var sel = doc.activeLayer;
 
-      if (!sel) {
-        alert("Created folder should be top level — please deselect everything by clicking on canvas.");
-      } else {
+     
         var isFolder = typeof sel.layers !== "undefined";
         var isRootLevel = sel.parent === doc;
 
