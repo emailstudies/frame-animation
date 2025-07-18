@@ -1,4 +1,4 @@
-function handleAddAnimation() {
+function handleCreateFolder() {
   const script = `
     if (app.documents.length == 0) {
       alert("No document is open.");
