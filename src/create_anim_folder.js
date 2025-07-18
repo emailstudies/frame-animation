@@ -5,19 +5,24 @@ function handleCreateFolder() {
         alert("No document open.");
       } else {
         var doc = app.activeDocument;
-        var sel = doc.activeLayer;
+        var selected = doc.getSelectedLayers();
 
-        if (sel == null) {
+        if (!selected || selected.length === 0) {
           alert("Nothing is selected.");
-        } else if (typeof sel.name !== "undefined") {
-          var name = sel.name;
-          if (sel.isFolder) {
-            alert("Selected item is a folder named: " + name);
-          } else {
-            alert("Selected item is a layer named: " + name);
-          }
         } else {
-          alert("Layer selected but name is not accessible.");
+          var messages = [];
+          for (var i = 0; i < selected.length; i++) {
+            var layer = selected[i];
+            if (layer && typeof layer.name !== "undefined") {
+              var msg = layer.isFolder 
+                ? "Folder: " + layer.name 
+                : "Layer: " + layer.name;
+              messages.push(msg);
+            } else {
+              messages.push("Selected item #" + (i+1) + " is invalid or not ready.");
+            }
+          }
+          alert(messages.join("\\n"));
         }
       }
     } catch (e) {
@@ -25,7 +30,8 @@ function handleCreateFolder() {
     }
   `;
 
+  // Longer delay to ensure selection is fully ready
   setTimeout(() => {
     window.parent.postMessage(script, "*");
-  }, 150); // Slightly longer delay
+  }, 200);
 }
