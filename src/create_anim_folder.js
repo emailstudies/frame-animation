@@ -1,4 +1,4 @@
-function handleCreateFolder() {
+function createFolderOnlyAtRoot() {
   const script = `
     try {
       var doc = app.activeDocument;
@@ -7,19 +7,20 @@ function handleCreateFolder() {
       var willBeNested = false;
 
       if (sel) {
-        // Check if the selected item's parent is not the document itself
-        if (sel.parent && sel.parent !== doc) {
+        var parent = sel.parent;
+        // Check if the selected layer is nested inside a folder
+        if (parent && parent !== doc) {
           willBeNested = true;
         }
       }
 
       if (willBeNested) {
-        alert("Cannot create folder here. It would be nested inside another folder or layer.");
+        alert("Cannot create folder: it would be nested inside another folder.");
       } else {
-        // Create the folder at root level
+        // ✅ Create at root level
         var desc = new ActionDescriptor();
         var ref = new ActionReference();
-        ref.putClass(stringIDToTypeID("layerSection")); // folder
+        ref.putClass(stringIDToTypeID("layerSection"));
         desc.putReference(charIDToTypeID("null"), ref);
 
         var nameDesc = new ActionDescriptor();
