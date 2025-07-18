@@ -1,18 +1,16 @@
-async function handleCreateFolder() {
-  var sel = app.activeLayer;
-
-  if (sel == null) {
-    alert("Nothing is selected.");
-    return;
-  }
-
-  // If something is selected
-  var name = sel.name;
-  var isFolder = sel.isFolder;
-
-  if (isFolder) {
-    alert("Selected item is a folder named: " + name);
-  } else {
-    alert("Selected item is a layer named: " + name);
-  }
+function handleCreateFolder() {
+  var script = `
+    var sel = app.activeLayer;
+    if (sel == null) {
+      alert("Nothing is selected.");
+    } else {
+      var name = sel.name;
+      if (sel.isFolder) {
+        alert("Selected item is a folder named: " + name);
+      } else {
+        alert("Selected item is a layer named: " + name);
+      }
+    }
+  `;
+  window.parent.postMessage(script, "*");
 }
