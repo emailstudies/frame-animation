@@ -6,19 +6,17 @@ function handleCreateFolder() {
         alert("No document open.");
       } else {
         var sel = doc.activeLayer;
-
-        var allow = true;
+        var isOkayToCreate = true;
 
         if (sel) {
-          var isRoot = sel.parent === doc;
-          if (!isRoot) {
-            alert("❌ Selected item is inside a folder.\\n\\nPlease deselect or select a top-level item to create a new folder at root.");
-            allow = false;
+          var parent = sel.parent;
+          if (parent !== doc) {
+            isOkayToCreate = false;
+            alert("❌ Cannot create folder here.\\n\\nPlease deselect or select a top-level layer/folder.");
           }
         }
 
-        if (allow) {
-          // ✅ Create folder
+        if (isOkayToCreate) {
           var desc = new ActionDescriptor();
           var ref = new ActionReference();
           ref.putClass(stringIDToTypeID("layerSection"));
@@ -34,5 +32,5 @@ function handleCreateFolder() {
       }
     `;
     window.parent.postMessage(script, "*");
-  }, 50);
+  }, 50); // Delay to ensure selection is updated
 }
