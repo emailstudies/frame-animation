@@ -4,20 +4,19 @@ function handleCreateFolder() {
       var doc = app.activeDocument;
       if (!doc) {
         alert("No document open.");
-        return;
-      }
-
-      var selected = doc.getSelectedLayers();
-
-      if (!selected || selected.length === 0) {
-        alert("Nothing is selected.");
       } else {
-        var summary = selected.map(l => {
-          var type = l.isFolder ? "Folder" : "Layer";
-          return type + ": " + l.name;
-        }).join("\\n");
+        var selected = doc.getSelectedLayers();
 
-        alert("Selected items:\\n" + summary);
+        if (!selected || selected.length === 0) {
+          alert("Nothing is selected.");
+        } else {
+          var summary = selected.map(l => {
+            var type = l.isFolder ? "Folder" : "Layer";
+            return type + ": " + l.name;
+          }).join("\\n");
+
+          alert("Selected items:\\n" + summary);
+        }
       }
     } catch (e) {
       alert("Script error: " + e.message);
