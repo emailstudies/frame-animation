@@ -4,30 +4,28 @@ function handleCreateFolder() {
       var doc = app.activeDocument;
       var sel = doc.activeLayer;
 
-      var willBeNested = false;
-
-      if (sel) {
-        var parent = sel.parent;
-        // Check if the selected layer is nested inside a folder
-        if (parent && parent !== doc) {
-          willBeNested = true;
-        }
-      }
-
-      if (willBeNested) {
-        alert("Cannot create folder: it would be nested inside another folder.");
+      if (!sel) {
+        alert("Created folder should be top level — please deselect everything by clicking on canvas.");
       } else {
-        // ✅ Create at root level
-        var desc = new ActionDescriptor();
-        var ref = new ActionReference();
-        ref.putClass(stringIDToTypeID("layerSection"));
-        desc.putReference(charIDToTypeID("null"), ref);
+        var isFolder = typeof sel.layers !== "undefined";
+        var isRootLevel = sel.parent === doc;
 
-        var nameDesc = new ActionDescriptor();
-        nameDesc.putString(stringIDToTypeID("name"), "anim_1");
-        desc.putObject(stringIDToTypeID("using"), stringIDToTypeID("layerSection"), nameDesc);
+        if (isFolder && isRootLevel) {
+          // ✅ Top-level folder is selected → create new folder
+          var desc = new ActionDescriptor();
+          var ref = new ActionReference();
+          ref.putClass(stringIDToTypeID("layerSection")); // "folder"
+          desc.putReference(charIDToTypeID("null"), ref);
 
-        executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+          var nameDesc = new ActionDescriptor();
+          nameDesc.putString(stringIDToTypeID("name"), "anim_1");
+          desc.putObject(stringIDToTypeID("using"), stringIDToTypeID("layerSection"), nameDesc);
+
+          executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+        } else {
+          // ❌ Not a root-level folder
+          alert("Created folder should be top level — please deselect everything by clicking on canvas.");
+        }
       }
     } catch (e) {
       alert("Script error: " + e.message);
