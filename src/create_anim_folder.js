@@ -1,10 +1,10 @@
 function handleCreateFolder() {
-  const script = `
-    var doc = app.activeDocument;
-    if (!doc) {
-      alert("No document open.");
-    } else {
-      setTimeout(function () {
+  setTimeout(() => {
+    const script = `
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No document open.");
+      } else {
         var sel = doc.activeLayer;
 
         if (sel) {
@@ -16,7 +16,7 @@ function handleCreateFolder() {
           }
         }
 
-        // ✅ Either nothing is selected or selected item is at root → create folder
+        // ✅ Create folder
         var desc = new ActionDescriptor();
         var ref = new ActionReference();
         ref.putClass(stringIDToTypeID("layerSection"));
@@ -28,9 +28,8 @@ function handleCreateFolder() {
 
         executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
         alert("✅ Created folder 'anim_1' at root.");
-      }, 50);
-    }
-  `;
-
-  window.parent.postMessage(script, "*");
+      }
+    `;
+    window.parent.postMessage(script, "*");
+  }, 50); // Delay in browser context
 }
