@@ -1,19 +1,27 @@
-function handleCreateFolder() {
+function checkIfRootFolder() {
   const script = `
     try {
-      var desc = new ActionDescriptor();
-      var ref = new ActionReference();
-      ref.putClass(stringIDToTypeID("layerSection")); // "layerSection" = group/folder
-      desc.putReference(charIDToTypeID("null"), ref);
+      var doc = app.activeDocument;
+      var sel = doc.activeLayer;
 
-      // Optional: set a name for the group
-      var nameDesc = new ActionDescriptor();
-      nameDesc.putString(stringIDToTypeID("name"), "New Folder");
-      desc.putObject(stringIDToTypeID("using"), stringIDToTypeID("layerSection"), nameDesc);
+      if (!sel) {
+        alert("Nothing is selected.");
+        return;
+      }
 
-      executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+      if (!sel.isFolder) {
+        alert("This is a problem: you selected a layer, not a folder.");
+        return;
+      }
+
+      var isRootLevel = (sel.parent == doc); // true if folder is at root
+      if (isRootLevel) {
+        alert("Folder is at root level.");
+      } else {
+        alert("This is a problem: folder is nested inside another group.");
+      }
     } catch (e) {
-      alert("Error creating folder: " + e.message);
+      alert("Script error: " + e.message);
     }
   `;
   window.parent.postMessage(script, "*");
