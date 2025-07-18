@@ -1,4 +1,4 @@
-function handleCreateFolder() {
+function createFolderAtTopOnlyIfRootFolderSelected() {
   const script = `
     try {
       var doc = app.activeDocument;
@@ -11,10 +11,10 @@ function handleCreateFolder() {
         var isRootLevel = sel.parent === doc;
 
         if (isFolder && isRootLevel) {
-          // ✅ Top-level folder is selected → create new folder
+          // ✅ Create folder
           var desc = new ActionDescriptor();
           var ref = new ActionReference();
-          ref.putClass(stringIDToTypeID("layerSection")); // "folder"
+          ref.putClass(stringIDToTypeID("layerSection"));
           desc.putReference(charIDToTypeID("null"), ref);
 
           var nameDesc = new ActionDescriptor();
@@ -22,8 +22,14 @@ function handleCreateFolder() {
           desc.putObject(stringIDToTypeID("using"), stringIDToTypeID("layerSection"), nameDesc);
 
           executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+
+          // 📌 Move new folder to the top (index 0)
+          var newFolder = doc.activeLayer; // last created = active
+          if (newFolder) {
+            doc.layers.move(newFolder, 0);
+          }
         } else {
-          // ❌ Not a root-level folder
+          // ❌ Not a top-level folder
           alert("Created folder should be top level — please deselect everything by clicking on canvas.");
         }
       }
@@ -31,5 +37,6 @@ function handleCreateFolder() {
       alert("Script error: " + e.message);
     }
   `;
+
   window.parent.postMessage(script, "*");
 }
