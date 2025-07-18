@@ -1,5 +1,5 @@
 function handleCreateFolder() {
-  const input = document.getElementById("animNameInput");
+  const input = document.getElementById("animFolderInput");
   const suffix = input ? input.value.trim() : "";
 
   if (!suffix || suffix === "walkCycle") {
