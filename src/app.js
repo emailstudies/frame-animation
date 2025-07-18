@@ -1,4 +1,4 @@
-document.getElementById("createAnimBtn").onclick = handleAddAnimation;
+document.getElementById("createAnimBtn").onclick = handleCreateFolder;
 
 // Placeholders for later phases
 document.getElementById("mapFramesBtn").onclick = () => alert("Feature coming soon!");
