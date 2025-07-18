@@ -1,31 +1,31 @@
 function handleCreateFolder() {
   const script = `
     try {
-      if (!app.activeDocument) {
+      var doc = app.activeDocument;
+      if (!doc) {
         alert("No document open.");
       } else {
-        var doc = app.activeDocument;
-        var sel = doc.activeLayer;
+        var selected = doc.getSelectedLayers();
 
-        if (!sel) {
+        if (!selected || selected.length === 0) {
           alert("Nothing is selected.");
         } else {
-          try {
-            var name = sel.name;
-            var isFolder = sel.isFolder;
-            var type = isFolder ? "folder" : "layer";
-            alert("Selected item is a " + type + " named: " + name);
-          } catch (innerErr) {
-            alert("Layer selected, but Photopea hasn't fully loaded it yet.");
+          var messages = [];
+          for (var i = 0; i < selected.length; i++) {
+            var layer = selected[i];
+            var name = (typeof layer.name === "string") ? layer.name : "(Unnamed)";
+            var type = layer.isFolder ? "Folder" : "Layer";
+            messages.push(type + ": " + name);
           }
+          alert(messages.join("\\n"));
         }
       }
     } catch (e) {
-      alert("Fatal script error: " + e.message);
+      alert("Script error: " + e.message);
     }
   `;
 
   setTimeout(() => {
     window.parent.postMessage(script, "*");
-  }, 200); // ← Slightly more time to settle
+  }, 200); // Allow layer state to stabilize
 }
