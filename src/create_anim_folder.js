@@ -52,3 +52,4 @@ function handleCreateFolder() {
     window.parent.postMessage(createLayerScript, "*");
   }, 10);
 }
+// this worked for creating a non nested folder for anim_folders
