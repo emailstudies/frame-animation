@@ -67,7 +67,7 @@ function handleCreateFolder() {
         var newLayer = doc.activeLayer;
         newLayer.move(newGroup, ElementPlacement.INSIDE);
 
-        alert("✅ Folder '${folderName}' created at top with Frame 1 inside.");
+        alert("✅ Folder '${folderName}' created at top of Layers Panel. Rearrange/Re-order in the Layers Panel, over or below other folders/layers, as desired.");
       }
     }
   `;
