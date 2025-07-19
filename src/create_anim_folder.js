@@ -1,19 +1,12 @@
 function handleCreateFolder() {
   const script = `
-    try {
+    var doc = app.activeDocument;
+    if (doc.layers.length > 0) {
       var desc = new ActionDescriptor();
       var ref = new ActionReference();
-      ref.putEnumerated(
-        charIDToTypeID("Lyr "),
-        charIDToTypeID("Ordn"),
-        charIDToTypeID("Trgt") // Target → then deselect below
-      );
+      ref.putIndex(charIDToTypeID("Lyr "), 1); // bottom-most = index 1
       desc.putReference(charIDToTypeID("null"), ref);
-      desc.putBoolean(stringIDToTypeID("dontRecord"), true);
-      desc.putBoolean(stringIDToTypeID("forceDeselect"), true); // ⬅️ Experimental
       executeAction(charIDToTypeID("slct"), desc, DialogModes.NO);
-    } catch (e) {
-      alert("Force-deselect failed: " + e.message);
     }
   `;
   window.parent.postMessage(script, "*");
