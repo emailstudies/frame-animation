@@ -5,17 +5,18 @@ function handleCreateFolder() {
     if (!doc) {
       alert("No document is open.");
     } else {
-      var first = doc.layers[0]; // top-most visible layer/folder
+      var total = doc.layers.length;
+      var topIndex = total; // Photopea indexing is 1-based
 
-      // Force-select the top layer/folder using ActionDescriptor
+      // Select the top-most visible layer or folder
       var desc = new ActionDescriptor();
       var ref = new ActionReference();
-      ref.putIndex(charIDToTypeID("Lyr "), 1); // 1-based index
+      ref.putIndex(charIDToTypeID("Lyr "), topIndex);
       desc.putReference(charIDToTypeID("null"), ref);
-      desc.putBoolean(charIDToTypeID("MkVs"), false); // no make visible
+      desc.putBoolean(charIDToTypeID("MkVs"), false);
       executeAction(charIDToTypeID("slct"), desc, DialogModes.NO);
 
-      // Alert the name and type
+      // Confirm selection
       var sel = app.activeDocument.activeLayer;
       var name = sel && sel.name ? sel.name : "(Unnamed)";
       var isFolder = typeof sel.layers !== "undefined";
