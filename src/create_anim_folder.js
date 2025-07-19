@@ -1,59 +1,76 @@
 function handleCreateFolder() {
+  const userInput = document.getElementById("animFolderInput").value.trim();
+  if (!userInput) {
+    alert("Please enter a folder name.");
+    return;
+  }
+
+  const folderName = `anim_${userInput}`;
+
   const script = `
     var doc = app.activeDocument;
     var docName = doc.name;
 
-    // Step 1: Create temp folder to check if at root
-    var tempFolder = doc.layerSets.add();
-    tempFolder.name = "temp_check_folder";
-    var parent = tempFolder.parent;
+    // Step 1: Check for duplicates at root
+    var isDuplicate = false;
+    for (var i = 0; i < doc.layers.length; i++) {
+      var layer = doc.layers[i];
+      if (layer.name === "${folderName}" && layer.typename === "LayerSet") {
+        isDuplicate = true;
+        break;
+      }
+    }
 
-    var atRoot = (parent && parent.name === docName);
-
-    // Remove temp
-    tempFolder.remove();
-
-    if (!atRoot) {
-      alert("❌ Folder would not be created at root. Please deselect nested items.");
+    if (isDuplicate) {
+      alert("❌ A folder named '${folderName}' already exists at root.");
     } else {
-      // Step 2: Create real folder
-      var groupDesc = new ActionDescriptor();
-      var ref = new ActionReference();
-      ref.putClass(stringIDToTypeID("layerSection"));
-      groupDesc.putReference(charIDToTypeID("null"), ref);
+      // Step 2: Use temp folder to check nesting
+      var tempFolder = doc.layerSets.add();
+      tempFolder.name = "temp_check_folder";
+      var parent = tempFolder.parent;
+      var atRoot = (parent && parent.name === docName);
+      tempFolder.remove();
 
-      var props = new ActionDescriptor();
-      props.putString(charIDToTypeID("Nm  "), "anim_auto");
-      groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
+      if (!atRoot) {
+        alert("❌ Anim_Folder cannot be nested under another folder. Please deselect everything by clicking outside the Layers Panel or select a un-nested folder.");
+      } else {
+        // Step 3: Create real folder
+        var groupDesc = new ActionDescriptor();
+        var ref = new ActionReference();
+        ref.putClass(stringIDToTypeID("layerSection"));
+        groupDesc.putReference(charIDToTypeID("null"), ref);
 
-      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
+        var props = new ActionDescriptor();
+        props.putString(charIDToTypeID("Nm  "), "${folderName}");
+        groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
 
-      // Step 3: Move new group to top of UI stack (visually top = index 0)
-      var newGroup = doc.activeLayer;
-      var topLayer = doc.layers[0];
-      newGroup.move(topLayer, ElementPlacement.PLACEBEFORE);
+        executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-      // Step 4: Create Frame 1 inside it
-      var layerDesc = new ActionDescriptor();
-      var layerRef = new ActionReference();
-      layerRef.putClass(charIDToTypeID("Lyr "));
-      layerDesc.putReference(charIDToTypeID("null"), layerRef);
+        // Step 4: Move folder to top of UI
+        var newGroup = doc.activeLayer;
+        var topLayer = doc.layers[0];
+        newGroup.move(topLayer, ElementPlacement.PLACEBEFORE);
 
-      var layerProps = new ActionDescriptor();
-      layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
-      layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
+        // Step 5: Create Frame 1 layer inside
+        var layerDesc = new ActionDescriptor();
+        var layerRef = new ActionReference();
+        layerRef.putClass(charIDToTypeID("Lyr "));
+        layerDesc.putReference(charIDToTypeID("null"), layerRef);
 
-      executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
+        var layerProps = new ActionDescriptor();
+        layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
+        layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
 
-      // Step 5: Move new layer into folder
-      var newLayer = doc.activeLayer;
-      newLayer.move(newGroup, ElementPlacement.INSIDE);
+        executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-      alert("✅ Folder 'anim_auto' created at top of UI with Frame 1 inside.");
+        // Step 6: Move Frame 1 into the folder
+        var newLayer = doc.activeLayer;
+        newLayer.move(newGroup, ElementPlacement.INSIDE);
+
+        alert("✅ Folder '${folderName}' created at top with Frame 1 inside.");
+      }
     }
   `;
+
   window.parent.postMessage(script, "*");
 }
-
-//this worked. place the temp (temp takes care of the root when nothing is selected or sel is null). temp always at top of visual stack. 
-//not forcing to select the new folder since it was breaking the nesting logic
