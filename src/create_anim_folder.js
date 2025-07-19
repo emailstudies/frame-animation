@@ -54,3 +54,6 @@ function handleCreateFolder() {
   `;
   window.parent.postMessage(script, "*");
 }
+
+//this worked. place the temp (temp takes care of the root when nothing is selected or sel is null). temp always at top of visual stack. 
+//not forcing to select the new folder since it was breaking the nesting logic
