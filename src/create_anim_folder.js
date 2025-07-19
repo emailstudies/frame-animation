@@ -1,5 +1,5 @@
 function handleCreateFolder() {
-  // STEP 1: Create folder (this activates it)
+  // STEP 1: Create folder
   const createFolderScript = `
     var doc = app.activeDocument;
     if (!doc) {
@@ -27,29 +27,31 @@ function handleCreateFolder() {
 
   window.parent.postMessage(createFolderScript, "*");
 
-  // STEP 2: Wait 10ms and create a layer inside the newly created folder
+  // STEP 2: Wait and add a layer if a folder was created
   setTimeout(() => {
-    const createLayerScript = `
+    const addLayerScript = `
       var doc = app.activeDocument;
-      var newFolder = doc.activeLayer;
+      var target = doc.activeLayer;
 
-      if (newFolder && typeof newFolder.layers !== "undefined") {
-        var layerDesc = new ActionDescriptor();
-        var layerRef = new ActionReference();
-        layerRef.putClass(charIDToTypeID("ArtLayer"));
-        layerDesc.putReference(charIDToTypeID("null"), layerRef);
+      // Check that the active layer exists and is a folder
+      if (target && typeof target.layers !== "undefined") {
+        // Create new layer
+        var desc = new ActionDescriptor();
+        var ref = new ActionReference();
+        ref.putClass(charIDToTypeID("ArtLayer"));
+        desc.putReference(charIDToTypeID("null"), ref);
 
-        executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
+        executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
 
+        // Move it inside the folder
         var newLayer = doc.activeLayer;
-        newLayer.move(newFolder, ElementPlacement.INSIDE);
+        newLayer.move(target, ElementPlacement.INSIDE);
 
         alert("✅ Created folder 'anim_1' with a layer inside.");
       } else {
-        alert("⚠️ Could not add layer — active layer is not a folder.");
+        alert("⚠️ No valid folder selected to insert layer into.");
       }
     `;
-    window.parent.postMessage(createLayerScript, "*");
+    window.parent.postMessage(addLayerScript, "*");
   }, 10);
 }
-// this worked for creating a non nested folder for anim_folders
