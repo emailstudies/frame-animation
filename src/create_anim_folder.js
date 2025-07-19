@@ -1,5 +1,5 @@
 function handleCreateFolder() {
-  const script = 
+  const script = `
     var doc = app.activeDocument;
     var docName = doc.name;
 
@@ -32,6 +32,6 @@ function handleCreateFolder() {
     } else {
       alert("❌ Folder would not be at root. Please deselect nested items.");
     }
-  ;
+  `;
   window.parent.postMessage(script, "*");
 }
