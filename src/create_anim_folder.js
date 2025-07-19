@@ -28,10 +28,10 @@ function handleCreateFolder() {
 
       executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-      // Step 3: Move new group to top of visual stack
+      // Step 3: Move new group to top of UI stack (visually top = index 0)
       var newGroup = doc.activeLayer;
-      var topLayer = doc.layers[doc.layers.length - 1];
-      newGroup.move(topLayer, ElementPlacement.PLACEAFTER);
+      var topLayer = doc.layers[0];
+      newGroup.move(topLayer, ElementPlacement.PLACEBEFORE);
 
       // Step 4: Create Frame 1 inside it
       var layerDesc = new ActionDescriptor();
