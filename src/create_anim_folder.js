@@ -9,12 +9,14 @@ function handleCreateFolder() {
 
   const script = `
     var folderName = "${folderName}";
-    var docName = app.activeDocument.name;
+    var doc = app.activeDocument;
+    var docName = doc.name;
+    var totalLayers = doc.layers.length;
     var duplicate = false;
 
-    // Check for duplicate at root
-    for (var i = 0; i < app.activeDocument.layers.length; i++) {
-      var l = app.activeDocument.layers[i];
+    // Check if a folder with same name already exists at root
+    for (var i = 0; i < totalLayers; i++) {
+      var l = doc.layers[i];
       if (l.name === folderName && l.typename === "LayerSet") {
         duplicate = true;
         break;
@@ -24,21 +26,26 @@ function handleCreateFolder() {
     if (duplicate) {
       alert("❌ A folder named '" + folderName + "' already exists at the root level.");
     } else {
-      var sel = app.activeDocument.activeLayer;
+      var sel = doc.activeLayer;
       var allow = false;
 
-      if (!sel) {
-        // Nothing is selected → safe
-        allow = true;
-      } else if (sel.parent && sel.parent.name === docName) {
-        // Selected item is at root → safe
+      if (totalLayers > 1 || totalLayers === 1) {
+        // Case: One or more layers — check if selection is nested
+        if (!sel) {
+          allow = true; // Nothing selected, still okay
+        } else if (sel.parent && sel.parent.name === docName) {
+          allow = true; // Selected layer/folder is at root
+        } else {
+          // Selected item is nested
+          var pname = sel && sel.parent ? sel.parent.name : "unknown";
+          alert("❌ Cannot create folder. Selected item's parent is: '" + pname + "'.\\nPlease deselect or select a top-level item.");
+        }
+      } else {
+        // Case: fallback — unknown state, safe to create
         allow = true;
       }
 
-      if (!allow) {
-        var pname = sel && sel.parent ? sel.parent.name : "unknown";
-        alert("❌ Cannot create folder. Selected item's parent is: '" + pname + "'.\\nPlease deselect or select a top-level item.");
-      } else {
+      if (allow) {
         // ✅ Create Folder
         var groupDesc = new ActionDescriptor();
         var ref = new ActionReference();
@@ -63,9 +70,9 @@ function handleCreateFolder() {
 
         executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-        // Move the new layer into the newly created folder
+        // Move "Frame 1" layer into the newly created folder
         var newLayer = app.activeDocument.activeLayer;
-        var group = newLayer.parent.layers[0]; // Assumes the newly created group is selected
+        var group = newLayer.parent.layers[0];
         newLayer.move(group, ElementPlacement.INSIDE);
       }
     }
