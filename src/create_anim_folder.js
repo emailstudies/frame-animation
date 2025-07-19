@@ -6,20 +6,21 @@ function handleCreateFolder() {
     if (totalLayers > 1) {
       alert("Number of layers = " + totalLayers);
     } else if (totalLayers === 1) {
-      var sel = doc.activeLayer;
+      var onlyLayer = doc.layers[0];
+      var parentName = onlyLayer.parent && onlyLayer.parent.name ? onlyLayer.parent.name : "";
 
-      if (!sel) {
-        alert("Only one layer exists, but nothing is selected.");
+      if (parentName === doc.name) {
+        alert("Only one layer exists and it is at the root level.");
       } else {
-        var parent = sel.parent;
-        if (parent && parent.name !== doc.name) {
-          alert("Selected layer is nested. Auto-selecting root-level folder.");
+        alert("Only one layer exists and it is nested. Selecting the top-level layer...");
 
-          // Automatically select the top-level item
-          app.activeDocument.activeLayer = doc.layers[0];
-        } else {
-          alert("Only one layer exists and it is already at the root.");
-        }
+        // Use ActionDescriptor to select the only top-level item (layer/folder)
+        var desc = new ActionDescriptor();
+        var ref = new ActionReference();
+        ref.putIndex(charIDToTypeID("Lyr "), doc.layers.length); // Layer index in reverse (last = 1)
+        desc.putReference(charIDToTypeID("null"), ref);
+        desc.putBoolean(charIDToTypeID("MkVs"), false); // Don't make visible
+        executeAction(charIDToTypeID("slct"), desc, DialogModes.NO);
       }
     } else {
       alert("No layers found in the document.");
