@@ -3,17 +3,17 @@ function handleCreateFolder() {
     var doc = app.activeDocument;
     var docName = doc.name;
 
-    // Step 1: Create TEMP folder to detect nesting
+    // 1. Create TEMP folder to check if creation is at root
     var tempFolder = doc.layerSets.add();
     tempFolder.name = "temp_check_folder";
-
-    var isAtRoot = tempFolder.parent.name === docName;
-
-    // Step 2: Remove temp folder
+    var parent = tempFolder.parent;
+    var atRoot = (parent && parent.name === docName);
     tempFolder.remove();
 
-    if (isAtRoot) {
-      // Step 3: Create new anim_auto folder
+    if (!atRoot) {
+      alert("❌ Folder would not be created at root. Please deselect nested items.");
+    } else {
+      // 2. Create actual anim_auto folder
       var groupDesc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -25,15 +25,12 @@ function handleCreateFolder() {
 
       executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
+      // 3. Move new folder to the visual top of Layers panel
       var newGroup = doc.activeLayer;
+      var topLayer = doc.layers[doc.layers.length - 1];
+      newGroup.move(topLayer, ElementPlacement.PLACEAFTER);
 
-      // Step 4: Move it to top of UI (bottom of doc.layers[])
-      if (doc.layers.length > 1) {
-        var bottomLayer = doc.layers[doc.layers.length - 1];
-        newGroup.move(bottomLayer, ElementPlacement.PLACEAFTER);
-      }
-
-      // Step 5: Add "Frame 1" layer inside it
+      // 4. Create "Frame 1" layer inside the new group
       var layerDesc = new ActionDescriptor();
       var layerRef = new ActionReference();
       layerRef.putClass(charIDToTypeID("Lyr "));
@@ -45,20 +42,16 @@ function handleCreateFolder() {
 
       executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
+      // 5. Move the new layer inside the newly created group
       var newLayer = doc.activeLayer;
       newLayer.move(newGroup, ElementPlacement.INSIDE);
 
-      // Step 6: Select the anim_auto folder using ActionDescriptor
-      var selectDesc = new ActionDescriptor();
-      var selectRef = new ActionReference();
-      selectRef.putName(charIDToTypeID("Lyr "), "anim_auto");
-      selectDesc.putReference(charIDToTypeID("null"), selectRef);
-      executeAction(charIDToTypeID("slct"), selectDesc, DialogModes.NO);
+      // 6. Select the folder
+      doc.activeLayer = newGroup;
 
-      alert("✅ Folder 'anim_auto' created at top with 'Frame 1' inside and selected.");
-    } else {
-      alert("❌ Cannot create folder here — selection is nested. Please deselect or select a top-level item.");
+      alert("✅ Folder 'anim_auto' created at top with 'Frame 1' inside.");
     }
   `;
+
   window.parent.postMessage(script, "*");
 }
