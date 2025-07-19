@@ -1,4 +1,4 @@
-function createAnimFolderAtRoot() {
+function handleCreateFolder() {
   const script = `
     (function () {
       function createTempFolderAndGetIndex(doc) {
