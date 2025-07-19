@@ -1,4 +1,4 @@
-function handleAddAnimation() {
+function handleCreateFolder() {
   const userInput = document.getElementById("animFolderInput").value.trim();
   if (!userInput) {
     alert("Please enter a folder name.");
