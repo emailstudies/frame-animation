@@ -1,5 +1,6 @@
 function handleCreateFolder() {
-  const script = `
+  // STEP 1: Create folder (this activates it)
+  const createFolderScript = `
     var doc = app.activeDocument;
     if (!doc) {
       alert("No document is open.");
@@ -8,7 +9,6 @@ function handleCreateFolder() {
       var docName = doc.name;
 
       if (!sel || sel.parent.name === docName) {
-        // ✅ Nothing selected or top-level item selected → create folder
         var desc = new ActionDescriptor();
         var ref = new ActionReference();
         ref.putClass(stringIDToTypeID("layerSection"));
@@ -19,32 +19,36 @@ function handleCreateFolder() {
         desc.putObject(stringIDToTypeID("using"), stringIDToTypeID("layerSection"), nameDesc);
 
         executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
-
-        // ⏱ Delay to ensure folder is created before adding the layer
-        setTimeout(function () {
-          var newFolder = app.activeDocument.activeLayer; // The folder just created becomes active
-
-          if (newFolder && typeof newFolder.layers !== "undefined") {
-            var layerDesc = new ActionDescriptor();
-            var layerRef = new ActionReference();
-            layerRef.putClass(charIDToTypeID("ArtLayer"));
-            layerDesc.putReference(charIDToTypeID("null"), layerRef);
-
-            executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
-
-            // Move the layer into the new folder
-            var newLayer = app.activeDocument.activeLayer;
-            newLayer.move(newFolder, ElementPlacement.INSIDE);
-
-            alert("✅ Created folder 'anim_1' with a layer inside.");
-          } else {
-            alert("⚠️ Could not add layer — folder creation failed.");
-          }
-        }, 10);
       } else {
-        alert("❌ Cannot create folder here.\\nParent is: '" + sel.parent.name + "' (not the document).\\n\\nPlease deselect or select a top-level item.");
+        alert("❌ Cannot create folder here.\\nParent is: '" + sel.parent.name + "' (not the document).");
       }
     }
   `;
-  window.parent.postMessage(script, "*");
+
+  window.parent.postMessage(createFolderScript, "*");
+
+  // STEP 2: Wait 10ms and create a layer inside the newly created folder
+  setTimeout(() => {
+    const createLayerScript = `
+      var doc = app.activeDocument;
+      var newFolder = doc.activeLayer;
+
+      if (newFolder && typeof newFolder.layers !== "undefined") {
+        var layerDesc = new ActionDescriptor();
+        var layerRef = new ActionReference();
+        layerRef.putClass(charIDToTypeID("ArtLayer"));
+        layerDesc.putReference(charIDToTypeID("null"), layerRef);
+
+        executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
+
+        var newLayer = doc.activeLayer;
+        newLayer.move(newFolder, ElementPlacement.INSIDE);
+
+        alert("✅ Created folder 'anim_1' with a layer inside.");
+      } else {
+        alert("⚠️ Could not add layer — active layer is not a folder.");
+      }
+    `;
+    window.parent.postMessage(createLayerScript, "*");
+  }, 10);
 }
