@@ -49,9 +49,6 @@ function handleCreateFolder() {
       var newLayer = doc.activeLayer;
       newLayer.move(newGroup, ElementPlacement.INSIDE);
 
-      // Step 6: Select the new group
-      doc.activeLayer = newGroup;
-
       alert("✅ Folder 'anim_auto' created at top of UI with Frame 1 inside.");
     }
   `;
