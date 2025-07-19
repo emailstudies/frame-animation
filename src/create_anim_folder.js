@@ -1,73 +1,72 @@
 function handleCreateFolder() {
   const script = `
-    (function () {
-      function createTempFolderAndGetIndex(doc) {
-        var tempFolder = doc.layerSets.add();
-        tempFolder.name = "temp_check_folder";
+    var doc = app.activeDocument;
+    var docName = doc.name;
 
-        var index = -1;
-        for (var i = 0; i < doc.layers.length; i++) {
-          if (doc.layers[i].name === "temp_check_folder") {
-            index = i;
-            break;
-          }
-        }
+    // 1. Create TEMP folder
+    var tempFolder = doc.layerSets.add();
+    tempFolder.name = "temp_check_folder";
 
-        var isRoot = (tempFolder.parent.name === doc.name);
-        tempFolder.remove();
+    // 2. Check if TEMP is at root level
+    var atRoot = (tempFolder.parent.name === docName);
 
-        return { isRoot: isRoot, index: index };
+    // 3. Find its index among top-level layers
+    var tempIndex = -1;
+    for (var i = 0; i < doc.layers.length; i++) {
+      if (doc.layers[i].name === "temp_check_folder") {
+        tempIndex = i;
+        break;
       }
+    }
 
-      function createFolderAtIndex(name) {
-        var desc = new ActionDescriptor();
-        var ref = new ActionReference();
-        ref.putClass(stringIDToTypeID("layerSection"));
-        desc.putReference(charIDToTypeID("null"), ref);
+    // 4. Store name of layer currently below it (if any)
+    var targetLayerBelow = (tempIndex > 0) ? doc.layers[tempIndex - 1] : null;
 
-        var props = new ActionDescriptor();
-        props.putString(charIDToTypeID("Nm  "), name);
-        desc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
+    // 5. Remove TEMP folder
+    tempFolder.remove();
 
-        executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
-        return app.activeDocument.activeLayer;
-      }
+    if (!atRoot) {
+      alert("❌ Folder would not be at root. Please deselect nested items.");
+      return;
+    }
 
-      function createFrameInside(folder, frameName) {
-        var desc = new ActionDescriptor();
-        var ref = new ActionReference();
-        ref.putClass(charIDToTypeID("Lyr "));
-        desc.putReference(charIDToTypeID("null"), ref);
+    // 6. Create new anim_auto folder
+    var groupDesc = new ActionDescriptor();
+    var ref = new ActionReference();
+    ref.putClass(stringIDToTypeID("layerSection"));
+    groupDesc.putReference(charIDToTypeID("null"), ref);
 
-        var props = new ActionDescriptor();
-        props.putString(charIDToTypeID("Nm  "), frameName);
-        desc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), props);
+    var props = new ActionDescriptor();
+    props.putString(charIDToTypeID("Nm  "), "anim_auto");
+    groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
 
-        executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+    executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-        var newLayer = app.activeDocument.activeLayer;
-        newLayer.move(folder, ElementPlacement.INSIDE);
-      }
+    // 7. Get the newly created folder
+    var newGroup = app.activeDocument.activeLayer;
 
-      // MAIN EXECUTION
-      var doc = app.activeDocument;
-      var result = createTempFolderAndGetIndex(doc);
+    // 8. Move it below the same layer the temp was above
+    if (targetLayerBelow) {
+      newGroup.move(targetLayerBelow, ElementPlacement.PLACEAFTER);
+    }
 
-      if (!result.isRoot) {
-        alert("❌ Folder would not be at root. Please deselect nested items.");
-        return;
-      }
+    // 9. Add "Frame 1" inside it
+    var layerDesc = new ActionDescriptor();
+    var layerRef = new ActionReference();
+    layerRef.putClass(charIDToTypeID("Lyr "));
+    layerDesc.putReference(charIDToTypeID("null"), layerRef);
 
-      var animFolder = createFolderAtIndex("anim_auto");
+    var layerProps = new ActionDescriptor();
+    layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
+    layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
 
-      if (result.index > 0) {
-        var belowLayer = doc.layers[result.index - 1];
-        animFolder.move(belowLayer, ElementPlacement.PLACEAFTER);
-      }
+    executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-      createFrameInside(animFolder, "Frame 1");
-      alert("✅ Folder and Frame 1 created.");
-    })();
+    // 10. Move it inside the new folder
+    var newLayer = app.activeDocument.activeLayer;
+    newLayer.move(newGroup, ElementPlacement.INSIDE);
+
+    alert("✅ Folder 'anim_auto' created with Frame 1 at correct index.");
   `;
 
   window.parent.postMessage(script, "*");
