@@ -7,11 +7,11 @@ function handleCreateFolder() {
       var sel = doc.activeLayer;
       var docName = doc.name;
 
-      // ✅ Allow creation if nothing is selected or selected item's parent is the doc (root)
+      // ✅ Allow folder creation if nothing is selected or selection is at root
       var allowCreation = (!sel) || (sel.parent && sel.parent.name === docName);
 
       if (allowCreation) {
-        // Create new folder
+        // 🟢 Create new folder at root
         var folderDesc = new ActionDescriptor();
         var folderRef = new ActionReference();
         folderRef.putClass(stringIDToTypeID("layerSection"));
@@ -23,24 +23,27 @@ function handleCreateFolder() {
 
         executeAction(charIDToTypeID("Mk  "), folderDesc, DialogModes.NO);
 
-        // After creation, the new folder is selected → now create a layer inside it
-        var newFolder = doc.activeLayer;
+        // 🟢 Automatically selected folder after creation
+        var newFolder = app.activeDocument.activeLayer;
 
+        // Confirm it is a folder
         if (newFolder && typeof newFolder.layers !== "undefined") {
+          // Create a layer (it will go inside the folder)
           var layerDesc = new ActionDescriptor();
           var layerRef = new ActionReference();
           layerRef.putClass(charIDToTypeID("ArtLayer"));
           layerDesc.putReference(charIDToTypeID("null"), layerRef);
-
           executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-          alert("✅ Created folder 'anim_1' with a layer inside.");
+          alert("✅ Folder 'anim_1' created with one layer inside.");
         } else {
-          alert("⚠️ Could not create layer — the new folder was not created properly.");
+          alert("⚠️ Created something, but it was not a valid folder.");
         }
 
       } else {
-        alert("❌ Cannot create folder here.\\nParent is: '" + sel.parent.name + "' (not at document root).\\n\\nPlease deselect or select a top-level item.");
+        // ❌ Nested selection – not allowed
+        var parentName = sel && sel.parent ? sel.parent.name : "(unknown)";
+        alert("❌ Cannot create folder.\\nParent is: '" + parentName + "' (not at document root).\\nPlease deselect or select a top-level item.");
       }
     }
   `;
