@@ -3,11 +3,11 @@ function handleCreateFolder() {
     var doc = app.activeDocument;
     var docName = doc.name;
 
-    // 1. Create TEMP folder to find insertion index
+    // Step 1: Create a TEMP folder
     var tempFolder = doc.layerSets.add();
     tempFolder.name = "temp_check_folder";
 
-    // 2. Find temp's index
+    // Step 2: Get its index among top-level layers
     var tempIndex = -1;
     for (var i = 0; i < doc.layers.length; i++) {
       if (doc.layers[i].name === "temp_check_folder") {
@@ -16,16 +16,16 @@ function handleCreateFolder() {
       }
     }
 
-    // 3. Check nesting (parent should be document)
-    var atRoot = tempFolder.parent.name === docName;
+    // Step 3: Check if it's at root
+    var atRoot = (tempFolder.parent.name === docName);
 
-    // 4. Remove TEMP folder
+    // Step 4: Remove temp
     tempFolder.remove();
 
     if (!atRoot) {
-      alert("❌ Folder would not be at root. Please deselect nested items.");
+      alert("❌ Folder would not be created at root. Please deselect nested items.");
     } else {
-      // 5. Create new anim_auto folder
+      // Step 5: Create the real anim_auto folder
       var groupDesc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -37,12 +37,18 @@ function handleCreateFolder() {
 
       executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-      // 6. Move new folder to tempIndex position
-      var newGroup = app.activeDocument.activeLayer;
-      var target = doc.layers[tempIndex];
-      newGroup.move(target, ElementPlacement.PLACEAFTER);
+      // Step 6: Move it to tempIndex
+      var newGroup = doc.activeLayer;
 
-      // 7. Create "Frame 1" layer
+      var safeIndex = tempIndex;
+      if (safeIndex >= doc.layers.length) {
+        safeIndex = doc.layers.length - 1;
+      }
+
+      var target = doc.layers[safeIndex];
+      newGroup.move(target, ElementPlacement.PLACEBEFORE);
+
+      // Step 7: Add "Frame 1" layer inside the new folder
       var layerDesc = new ActionDescriptor();
       var layerRef = new ActionReference();
       layerRef.putClass(charIDToTypeID("Lyr "));
@@ -54,13 +60,11 @@ function handleCreateFolder() {
 
       executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-      // 8. Move new layer into folder
       var newLayer = app.activeDocument.activeLayer;
       newLayer.move(newGroup, ElementPlacement.INSIDE);
 
-      alert("✅ anim_auto folder created with Frame 1 at correct index.");
+      alert("✅ Folder 'anim_auto' created at index " + tempIndex + " with Frame 1 inside.");
     }
   `;
-
   window.parent.postMessage(script, "*");
 }
