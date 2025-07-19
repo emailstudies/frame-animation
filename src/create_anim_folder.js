@@ -1,91 +1,29 @@
 function handleCreateFolder() {
-  const userInput = document.getElementById("animFolderInput").value.trim();
-  if (!userInput) {
-    alert("Please enter a folder name.");
-    return;
-  }
-
-  const folderName = `anim_${userInput}`;
-
   const script = `
     var doc = app.activeDocument;
-    var docName = doc.name;
-    var totalLayers = doc.layers.length;
-    var folderExists = false;
+    var sel = doc.activeLayer;
 
-    // Check for duplicate anim_ folder at root
-    for (var i = 0; i < totalLayers; i++) {
-      var l = doc.layers[i];
-      if (l.name === "${folderName}" && l.typename === "LayerSet") {
-        folderExists = true;
-        break;
-      }
-    }
-
-    function createAnimFolderAndLayer() {
-      // Create Folder
-      var groupDesc = new ActionDescriptor();
-      var ref = new ActionReference();
-      ref.putClass(stringIDToTypeID("layerSection"));
-      groupDesc.putReference(charIDToTypeID("null"), ref);
-
-      var props = new ActionDescriptor();
-      props.putString(charIDToTypeID("Nm  "), "${folderName}");
-      groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
-
-      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
-
-      // Create Layer
-      var layerDesc = new ActionDescriptor();
-      var layerRef = new ActionReference();
-      layerRef.putClass(charIDToTypeID("Lyr "));
-      layerDesc.putReference(charIDToTypeID("null"), layerRef);
-
-      var layerProps = new ActionDescriptor();
-      layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
-      layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
-
-      executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
-
-      // Move the new layer into the folder
-      var newLayer = app.activeDocument.activeLayer;
-      var group = newLayer.parent.layers[0];
-      newLayer.move(group, ElementPlacement.INSIDE);
-    }
-
-    if (folderExists) {
-      alert("A folder named '${folderName}' already exists at the root.");
-    } else if (totalLayers > 1) {
-      var active = doc.activeLayer;
-      var parentName = active && active.parent ? active.parent.name : "";
-
-      if (parentName !== docName) {
-        alert("Selected layer is nested. Please select a root-level layer.");
-      } else {
-        createAnimFolderAndLayer();
-      }
-    } else if (totalLayers === 1) {
-      var onlyLayer = doc.layers[0];
-      var onlyParentName = onlyLayer && onlyLayer.parent ? onlyLayer.parent.name : "";
-
-      if (onlyParentName === docName) {
-        // ✅ Treat as "nothing is selected"
-        createAnimFolderAndLayer();
-      } else {
-        // ⚠️ Layer is nested — select top-level then create
-        var desc = new ActionDescriptor();
-        var ref = new ActionReference();
-        ref.putIndex(charIDToTypeID("Lyr "), totalLayers); // Select root layer
-        desc.putReference(charIDToTypeID("null"), ref);
-        desc.putBoolean(charIDToTypeID("MkVs"), false);
-        executeAction(charIDToTypeID("slct"), desc, DialogModes.NO);
-
-        createAnimFolderAndLayer();
-      }
+    if (sel) {
+      var name = sel.name;
+      var isFolder = typeof sel.layers !== "undefined";
+      var type = isFolder ? "folder" : "layer";
+      alert("You already selected a " + type + ": " + name);
     } else {
-      alert("No layers found in the document.");
+      // Nothing is selected, select the topmost layer
+      var first = doc.layers[0];
+      var desc = new ActionDescriptor();
+      var ref = new ActionReference();
+      ref.putIndex(charIDToTypeID("Lyr "), 1);  // 1-based index
+      desc.putReference(charIDToTypeID("null"), ref);
+      desc.putBoolean(charIDToTypeID("MkVs"), false);
+      executeAction(charIDToTypeID("slct"), desc, DialogModes.NO);
+
+      var newlySelected = app.activeDocument.activeLayer;
+      var name = newlySelected.name;
+      var isFolder = typeof newlySelected.layers !== "undefined";
+      var type = isFolder ? "folder" : "layer";
+      alert("Nothing was selected. Auto-selected " + type + ": " + name);
     }
   `;
-
   window.parent.postMessage(script, "*");
 }
