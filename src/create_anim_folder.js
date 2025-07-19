@@ -1,25 +1,3 @@
-function isSelectionNested() {
-  const script = `
-    var doc = app.activeDocument;
-    var sel = doc.activeLayer;
-    if (!sel) {
-      true; // Nothing selected → treat as non-nested (safe)
-    } else {
-      var docName = doc.name;
-      (sel.parent && sel.parent.name !== docName); // true = nested, false = top-level
-    }
-  `;
-  return new Promise((resolve) => {
-    window.addEventListener("message", function handler(event) {
-      if (typeof event.data === "boolean") {
-        window.removeEventListener("message", handler);
-        resolve(event.data);
-      }
-    });
-    window.parent.postMessage(script, "*");
-  });
-}
-
 function handleCreateFolder() {
   const userInput = document.getElementById("animFolderInput").value.trim();
   if (!userInput) {
@@ -29,63 +7,63 @@ function handleCreateFolder() {
 
   const folderName = `anim_${userInput}`;
 
-  isSelectionNested().then((isNested) => {
-    if (isNested) {
-      alert("❌ Cannot create folder. Selection is inside a nested group.\\nPlease deselect or select a top-level item.");
-      return;
+  const script = `
+    var doc = app.activeDocument;
+    var duplicate = false;
+
+    // Check for duplicate anim_ folder at root
+    for (var i = 0; i < doc.layers.length; i++) {
+      var l = doc.layers[i];
+      if (l.name === "${folderName}" && l.typename === "LayerSet") {
+        duplicate = true;
+        break;
+      }
     }
 
-    const script = `
-      var doc = app.activeDocument;
-      if (!doc) {
-        alert("No document open.");
+    if (duplicate) {
+      alert("A folder named '${folderName}' already exists at the root level.");
+    } else {
+      var sel = doc.activeLayer;
+      var docName = doc.name;
+
+      // Allow if nothing is selected or selection is at root
+      var allowCreation = (!sel) || (sel.parent && sel.parent.name === docName);
+
+      if (!allowCreation) {
+        var pname = sel && sel.parent ? sel.parent.name : "unknown";
+        alert("❌ Cannot create folder. Selected item's parent is: '" + pname + "'.\\nPlease deselect or select a top-level item.");
       } else {
-        var sel = doc.activeLayer;
-        var docName = doc.name;
-        var allowCreation = (!sel) || (sel.parent && sel.parent.name === docName);
+        // ✅ Safe to create folder
+        var groupDesc = new ActionDescriptor();
+        var ref = new ActionReference();
+        ref.putClass(stringIDToTypeID("layerSection"));
+        groupDesc.putReference(charIDToTypeID("null"), ref);
 
-        if (allowCreation) {
-          // Create folder
-          var groupDesc = new ActionDescriptor();
-          var groupRef = new ActionReference();
-          groupRef.putClass(stringIDToTypeID("layerSection"));
-          groupDesc.putReference(charIDToTypeID("null"), groupRef);
+        var props = new ActionDescriptor();
+        props.putString(charIDToTypeID("Nm  "), "${folderName}");
+        groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
 
-          var groupProps = new ActionDescriptor();
-          groupProps.putString(charIDToTypeID("Nm  "), "${folderName}");
-          groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), groupProps);
+        executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-          executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
+        // Create a new layer named "Frame 1"
+        var layerDesc = new ActionDescriptor();
+        var layerRef = new ActionReference();
+        layerRef.putClass(charIDToTypeID("Lyr "));
+        layerDesc.putReference(charIDToTypeID("null"), layerRef);
 
-          var newFolder = doc.activeLayer;
+        var layerProps = new ActionDescriptor();
+        layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
+        layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
 
-          if (newFolder && typeof newFolder.layers !== "undefined") {
-            // Create layer
-            var layerDesc = new ActionDescriptor();
-            var layerRef = new ActionReference();
-            layerRef.putClass(charIDToTypeID("Lyr "));
-            layerDesc.putReference(charIDToTypeID("null"), layerRef);
+        executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-            var layerProps = new ActionDescriptor();
-            layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
-            layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
-
-            executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
-
-            // Move the layer into the new folder
-            var newLayer = doc.activeLayer;
-            newLayer.move(newFolder, ElementPlacement.INSIDE);
-
-            alert("✅ Folder '${folderName}' created with 'Frame 1' inside.");
-          } else {
-            alert("⚠️ Folder creation failed.");
-          }
-        } else {
-          var pname = sel && sel.parent ? sel.parent.name : "unknown";
-          alert("❌ Cannot create folder. Selected item's parent is: '" + pname + "'.\\nPlease deselect or select a top-level item.");
-        }
+        // Move new layer into the new folder
+        var newLayer = app.activeDocument.activeLayer;
+        var group = newLayer.parent.layers[0];
+        newLayer.move(group, ElementPlacement.INSIDE);
       }
-    `;
-    window.parent.postMessage(script, "*");
-  });
+    }
+  `;
+
+  window.parent.postMessage(script, "*");
 }
