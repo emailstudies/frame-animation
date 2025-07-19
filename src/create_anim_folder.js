@@ -1,46 +1,55 @@
-function handleCreateFolder() {
+function handleAddAnimation() {
+  const userInput = document.getElementById("animFolderInput").value.trim();
+  if (!userInput) {
+    alert("Please enter a folder name.");
+    return;
+  }
+
+  const folderName = `anim_${userInput}`;
+
   const script = `
     var doc = app.activeDocument;
     if (!doc) {
       alert("No document open.");
     } else {
-      var sel = doc.activeLayer;
-      var docName = doc.name;
+      // Create folder
+      var groupDesc = new ActionDescriptor();
+      var groupRef = new ActionReference();
+      groupRef.putClass(stringIDToTypeID("layerSection"));
+      groupDesc.putReference(charIDToTypeID("null"), groupRef);
 
-      var isAtRoot = (!sel || (sel.parent && sel.parent.name === docName));
+      var groupProps = new ActionDescriptor();
+      groupProps.putString(charIDToTypeID("Nm  "), "${folderName}");
+      groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), groupProps);
 
-      if (isAtRoot) {
-        // Create folder
-        var desc = new ActionDescriptor();
-        var ref = new ActionReference();
-        ref.putClass(stringIDToTypeID("layerSection")); // Folder class
-        desc.putReference(charIDToTypeID("null"), ref);
+      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-        var nameDesc = new ActionDescriptor();
-        nameDesc.putString(stringIDToTypeID("name"), "anim_1");
-        desc.putObject(stringIDToTypeID("using"), stringIDToTypeID("layerSection"), nameDesc);
+      // Store reference to the newly created folder
+      var newFolder = doc.activeLayer;
 
-        executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+      if (newFolder && typeof newFolder.layers !== "undefined") {
+        // Create layer
+        var layerDesc = new ActionDescriptor();
+        var layerRef = new ActionReference();
+        layerRef.putClass(charIDToTypeID("Lyr "));
+        layerDesc.putReference(charIDToTypeID("null"), layerRef);
 
-        // Create layer inside newly created folder
-        var folder = doc.activeLayer;
-        if (folder && typeof folder.layers !== "undefined") {
-          var layerDesc = new ActionDescriptor();
-          var layerRef = new ActionReference();
-          layerRef.putClass(charIDToTypeID("ArtLayer"));
-          layerDesc.putReference(charIDToTypeID("null"), layerRef);
+        var layerProps = new ActionDescriptor();
+        layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
+        layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
 
-          executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
+        executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
-          alert("✅ Folder 'anim_1' created with a layer inside.");
-        } else {
-          alert("⚠️ Folder creation failed.");
-        }
+        // Move the layer inside the folder
+        var newLayer = doc.activeLayer;
+        newLayer.move(newFolder, ElementPlacement.INSIDE);
+
+        alert("✅ Folder '${folderName}' created with 'Frame 1' inside.");
       } else {
-        var pname = sel && sel.parent ? sel.parent.name : "unknown";
-        alert("❌ Cannot create folder. Selected item's parent is: '" + pname + "'.\\nPlease deselect or select a top-level layer or folder.");
+        alert("❌ Folder creation failed or not selected.");
       }
     }
   `;
+
   window.parent.postMessage(script, "*");
 }
