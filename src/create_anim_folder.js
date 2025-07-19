@@ -8,12 +8,11 @@ function handleCreateFolder() {
   const folderName = `anim_${userInput}`;
 
   const script = `
-    var doc = app.activeDocument;
     var duplicate = false;
 
-    // Check if anim_* folder already exists at root
-    for (var i = 0; i < doc.layers.length; i++) {
-      var l = doc.layers[i];
+    // Check if a folder with the same name already exists at root
+    for (var i = 0; i < app.activeDocument.layers.length; i++) {
+      var l = app.activeDocument.layers[i];
       if (l.name === "${folderName}" && l.typename === "LayerSet") {
         duplicate = true;
         break;
@@ -23,13 +22,25 @@ function handleCreateFolder() {
     if (duplicate) {
       alert("A folder named '${folderName}' already exists at the root level.");
     } else {
-      var rootCount = doc.layers.length;
-      var sel = doc.activeLayer;
-      var docName = doc.name;
+      var rootCount = app.activeDocument.layers.length;
+      var sel = app.activeDocument.activeLayer;
+      var docName = app.activeDocument.name;
 
-      // CASE 1: Nothing selected (rootCount is 0)
+      var allow = false;
+
       if (rootCount === 0 || (!sel && rootCount >= 0)) {
-        // Create folder
+        // Case: nothing selected (clean state)
+        allow = true;
+      } else if (sel && sel.parent && sel.parent.name === docName) {
+        // Case: something selected but at root
+        allow = true;
+      }
+
+      if (!allow) {
+        var pname = sel && sel.parent ? sel.parent.name : "unknown";
+        alert("❌ Cannot create folder. Selected item's parent is: '" + pname + "'.\\nPlease deselect or select a top-level item.");
+      } else {
+        // ✅ Create folder
         var groupDesc = new ActionDescriptor();
         var ref = new ActionReference();
         ref.putClass(stringIDToTypeID("layerSection"));
@@ -41,7 +52,7 @@ function handleCreateFolder() {
 
         executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-        // Create layer inside the folder
+        // ✅ Create a layer inside that folder
         var layerDesc = new ActionDescriptor();
         var layerRef = new ActionReference();
         layerRef.putClass(charIDToTypeID("Lyr "));
@@ -53,45 +64,10 @@ function handleCreateFolder() {
 
         executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
 
+        // Move newly created layer into the newly created folder
         var newLayer = app.activeDocument.activeLayer;
-        var group = newLayer.parent.layers[0];
+        var group = newLayer.parent.layers[0]; // Last created folder
         newLayer.move(group, ElementPlacement.INSIDE);
-      }
-      // CASE 2: Something selected
-      else {
-        var parent = sel.parent;
-        if (parent && parent.name === docName) {
-          // Selection is at root → allow
-          var groupDesc = new ActionDescriptor();
-          var ref = new ActionReference();
-          ref.putClass(stringIDToTypeID("layerSection"));
-          groupDesc.putReference(charIDToTypeID("null"), ref);
-
-          var props = new ActionDescriptor();
-          props.putString(charIDToTypeID("Nm  "), "${folderName}");
-          groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
-
-          executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
-
-          var layerDesc = new ActionDescriptor();
-          var layerRef = new ActionReference();
-          layerRef.putClass(charIDToTypeID("Lyr "));
-          layerDesc.putReference(charIDToTypeID("null"), layerRef);
-
-          var layerProps = new ActionDescriptor();
-          layerProps.putString(charIDToTypeID("Nm  "), "Frame 1");
-          layerDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Lyr "), layerProps);
-
-          executeAction(charIDToTypeID("Mk  "), layerDesc, DialogModes.NO);
-
-          var newLayer = app.activeDocument.activeLayer;
-          var group = newLayer.parent.layers[0];
-          newLayer.move(group, ElementPlacement.INSIDE);
-        } else {
-          // ❌ Selection is nested
-          var pname = parent ? parent.name : "unknown";
-          alert("❌ Cannot create folder. Selected item's parent is: '" + pname + "'.\\nPlease deselect or select a top-level item.");
-        }
       }
     }
   `;
