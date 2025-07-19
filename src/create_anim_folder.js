@@ -1,4 +1,4 @@
-function handleCreateAnimFolder() {
+function handleCreateFolder() {
   const script = `
     var doc = app.activeDocument;
     var docName = doc.name;
