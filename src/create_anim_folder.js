@@ -27,7 +27,7 @@ function handleCreateFolder() {
 
       executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-      var finalIndex = tempIndex + 1;
+      var finalIndex = tempIndex;
       alert("✅ Folder 'anim_auto' created at root at index: " + finalIndex);
     } else {
       alert("❌ Folder would not be at root. Please deselect nested items.");
