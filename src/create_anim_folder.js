@@ -1,4 +1,4 @@
-function handleCreateFolder() {
+function createFolderAtIndexMinusTemp() {
   const script = `
     var doc = app.activeDocument;
     var docName = doc.name;
