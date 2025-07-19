@@ -1,28 +1,27 @@
 function handleCreateFolder() {
   const script = `
     var doc = app.activeDocument;
-    var sel = doc.activeLayer;
 
-    if (sel) {
-      var name = sel.name;
-      var isFolder = typeof sel.layers !== "undefined";
-      var type = isFolder ? "folder" : "layer";
-      alert("You already selected a " + type + ": " + name);
+    if (!doc) {
+      alert("No document is open.");
     } else {
-      // Nothing is selected, select the topmost layer
-      var first = doc.layers[0];
+      var first = doc.layers[0]; // top-most visible layer/folder
+
+      // Force-select the top layer/folder using ActionDescriptor
       var desc = new ActionDescriptor();
       var ref = new ActionReference();
-      ref.putIndex(charIDToTypeID("Lyr "), 1);  // 1-based index
+      ref.putIndex(charIDToTypeID("Lyr "), 1); // 1-based index
       desc.putReference(charIDToTypeID("null"), ref);
-      desc.putBoolean(charIDToTypeID("MkVs"), false);
+      desc.putBoolean(charIDToTypeID("MkVs"), false); // no make visible
       executeAction(charIDToTypeID("slct"), desc, DialogModes.NO);
 
-      var newlySelected = app.activeDocument.activeLayer;
-      var name = newlySelected.name;
-      var isFolder = typeof newlySelected.layers !== "undefined";
+      // Alert the name and type
+      var sel = app.activeDocument.activeLayer;
+      var name = sel && sel.name ? sel.name : "(Unnamed)";
+      var isFolder = typeof sel.layers !== "undefined";
       var type = isFolder ? "folder" : "layer";
-      alert("Nothing was selected. Auto-selected " + type + ": " + name);
+
+      alert("Auto-selected " + type + ": " + name);
     }
   `;
   window.parent.postMessage(script, "*");
