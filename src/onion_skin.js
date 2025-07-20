@@ -1,3 +1,5 @@
+// 🧅 Onion Skin Mode with multi-folder awareness and visibility control
+
 function toggleOnionSkinMode() {
   const script = `
     (function () {
@@ -7,11 +9,11 @@ function toggleOnionSkinMode() {
       var selectedLayers = [];
 
       // Step 1: Collect selected layers inside anim_* folders
-      for (var i = 0; i < doc.layers.length; i++) {
-        var top = doc.layers[i];
-        if (top.typename === "LayerSet" && top.name.startsWith("anim_")) {
-          for (var j = 0; j < top.layers.length; j++) {
-            var layer = top.layers[j];
+      for (var i = 0; i < doc.layerSets.length; i++) {
+        var top = doc.layerSets[i];
+        if (top.name.startsWith("anim_")) {
+          for (var j = 0; j < top.artLayers.length; j++) {
+            var layer = top.artLayers[j];
             if (layer.selected && layer.typename !== "LayerSet") {
               selectedLayers.push({ layer: layer, parent: top });
             }
@@ -37,54 +39,60 @@ function toggleOnionSkinMode() {
       // Step 3: Apply new onion skin and store log
       var newLog = [];
 
-      for (var k = 0; k < selectedLayers.length; k++) {
-        var sel = selectedLayers[k].layer;
-        var parent = selectedLayers[k].parent;
-        var siblings = parent.layers;
+      for (var i = 0; i < doc.layerSets.length; i++) {
+        var top = doc.layerSets[i];
+        if (!top.name.startsWith("anim_")) continue;
 
-        var idx = -1;
-        for (var m = 0; m < siblings.length; m++) {
-          if (siblings[m] == sel) {
-            idx = m;
-            break;
-          }
-        }
-
-        if (idx === -1) continue;
-
+        var selectedInFolder = selectedLayers.filter(sl => sl.parent.name === top.name);
         var entryLog = {
-          selectedLayer: sel.name,
-          parentName: parent.name,
+          folderName: top.name,
+          selectedLayer: selectedInFolder.length > 0 ? selectedInFolder[0].layer.name : null,
           affected: []
         };
 
-        for (var n = 0; n < siblings.length; n++) {
-          var sib = siblings[n];
+        for (var j = 0; j < top.artLayers.length; j++) {
+          var layer = top.artLayers[j];
 
-          // Skip the selected layer itself
-          if (sib == sel || sib.typename === "LayerSet") continue;
+          // If selected
+          if (selectedInFolder.some(sl => sl.layer.name === layer.name)) {
+            continue; // leave selected layer at 100%
+          }
 
-          var originalOpacity = sib.opacity;
+          // If sibling of selected
+          var isSibling = false;
+          if (selectedInFolder.length > 0) {
+            var selectedIndex = -1;
+            for (var k = 0; k < top.artLayers.length; k++) {
+              if (top.artLayers[k].name === selectedInFolder[0].layer.name) {
+                selectedIndex = k;
+                break;
+              }
+            }
 
-          if (n === idx - 1 || n === idx + 1) {
-            // Immediate prev or next
-            sib.opacity = 40;
-            entryLog.affected.push({ layer: sib, originalOpacity: originalOpacity });
-          } else {
-            // All other siblings get fully dimmed
-            sib.opacity = 0;
-            entryLog.affected.push({ layer: sib, originalOpacity: originalOpacity });
+            if (
+              j === selectedIndex - 1 ||
+              j === selectedIndex + 1
+            ) {
+              entryLog.affected.push({ layer: layer, originalOpacity: layer.opacity });
+              layer.opacity = 40;
+              isSibling = true;
+            }
+          }
+
+          // If neither selected nor sibling → set opacity 0
+          if (!isSibling) {
+            entryLog.affected.push({ layer: layer, originalOpacity: layer.opacity });
+            layer.opacity = 0;
           }
         }
 
         newLog.push(entryLog);
       }
 
-      // Store updated log
       window.onionSkinLog = newLog;
 
       // 🐞 DEBUG: Print the onion skin log to console
-      console.log("🧅 Updated Onion Skin Log:", window.onionSkinLog);
+      console.log("\uD83E\uDDC5 Updated Onion Skin Log:", window.onionSkinLog);
     })();
   `;
 
