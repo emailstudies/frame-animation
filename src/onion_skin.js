@@ -80,6 +80,9 @@ function toggleOnionSkinMode() {
       }
 
       window.onionSkinLog = newLog;
+
+      // 🐞 DEBUG: Print the onion skin log to console
+      console.log("\ud83e\udd45 Updated Onion Skin Log:", window.onionSkinLog);
     })();
   `;
 
