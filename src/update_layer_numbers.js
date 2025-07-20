@@ -1,12 +1,14 @@
 function handleUpdateLayerNumbers() {
   const script = `
     var doc = app.activeDocument;
+    var foundAnimFolder = false;
 
     for (var i = 0; i < doc.layers.length; i++) {
       var folder = doc.layers[i];
 
-      // ✅ Confirm it's a group and name starts with "anim_"
+      // ✅ Check for anim_* folders
       if (folder.name && folder.name.startsWith("anim_") && folder.typename === "LayerSet") {
+        foundAnimFolder = true;
 
         var frameLayers = [];
 
@@ -31,7 +33,11 @@ function handleUpdateLayerNumbers() {
       }
     }
 
-    alert("Layer Numbers Updated");
+    if (foundAnimFolder) {
+      alert("Layer Numbers Updated");
+    } else {
+      alert("No anim folder exists. To update layer numbers, at least one anim folder must exist.");
+    }
   `;
 
   window.parent.postMessage(script, "*");
