@@ -1,19 +1,11 @@
-const MAX_ONION_STEPS = 5;
-
-const OPACITY_MAP = {
-  1: 50,
-  2: 40,
-  3: 30,
-  4: 20,
-  5: 10,
-};
-
-// Public function to trigger the Onion Skin script
-window.toggleOnionSkinMode = function (stepCount = 1) {
-  if (stepCount < 1 || stepCount > MAX_ONION_STEPS) {
-    alert("Step count must be between 1 and " + MAX_ONION_STEPS);
-    return;
-  }
+window.applyOnionSkinMultiStep = function (stepCount = 1) {
+  const OPACITY_MAP = {
+    1: 50,
+    2: 40,
+    3: 30,
+    4: 20,
+    5: 10,
+  };
 
   const script = `
     (function () {
@@ -22,12 +14,18 @@ window.toggleOnionSkinMode = function (stepCount = 1) {
       // Get selected layers manually
       var selLayers = [];
       for (var i = 0; i < doc.layers.length; i++) {
-        var layer = doc.layers[i];
-        if (layer.selected) selLayers.push(layer);
+        if (doc.layers[i].selected) {
+          selLayers.push(doc.layers[i]);
+        }
       }
 
-      var stepCount = ${stepCount};
+      if (selLayers.length === 0) {
+        alert("Please select a layer to apply onion skin.");
+        return;
+      }
+
       var OPACITY_MAP = ${JSON.stringify(OPACITY_MAP)};
+      var stepCount = ${stepCount};
 
       function onionSkinSingleStep(centerIndex, siblings, offset) {
         var opacity = OPACITY_MAP[offset];
@@ -73,5 +71,6 @@ window.toggleOnionSkinMode = function (stepCount = 1) {
     })();
   `;
 
+  console.log("Sending to Photopea:", script);
   window.parent.postMessage(script, "*");
 };
