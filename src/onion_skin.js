@@ -6,10 +6,10 @@ function toggleOnionSkinMode() {
 
       var selectedLayers = [];
 
-      // 🧅 Step 1: Collect selected layers and their parent anim_* folders
+      // Step 1: Gather selected layers inside anim_ folders
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
-        if (group.typename === "LayerSet" && group.name.startsWith("anim_")) {
+        if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
           for (var j = 0; j < group.layers.length; j++) {
             var layer = group.layers[j];
             if (layer.selected && layer.typename !== "LayerSet") {
@@ -21,44 +21,123 @@ function toggleOnionSkinMode() {
 
       if (selectedLayers.length === 0) return;
 
-      // 🧼 Step 2: Apply onion skin fresh
-      for (var i = 0; i < doc.layers.length; i++) {
-        var group = doc.layers[i];
-        if (group.typename !== "LayerSet" || !group.name.startsWith("anim_")) continue;
+      // Step 2: Reset previous onion skin state
+      if (window.onionSkinLog && Array.isArray(window.onionSkinLog)) {
+        for (var r = 0; r < window.onionSkinLog.length; r++) {
+          var entry = window.onionSkinLog[r];
 
-        // Check if any layer is selected in this group
-        var groupSelections = selectedLayers.filter(s => s.parent === group);
-
-        if (groupSelections.length > 0) {
-          group.visible = true; // ensure visible
-
-          var groupLayers = group.layers;
-
-          for (var j = 0; j < groupLayers.length; j++) {
-            var current = groupLayers[j];
-            if (current.typename === "LayerSet") continue;
-
-            var isSelected = groupSelections.some(s => s.layer === current);
-            var isSibling = groupSelections.some(s => {
-              var idx = groupLayers.indexOf(s.layer);
-              return groupLayers[idx - 1] === current || groupLayers[idx + 1] === current;
-            });
-
-            if (isSelected) {
-              current.opacity = 100; // keep as-is
-            } else if (isSibling) {
-              current.opacity = 40; // onion skin
-            } else {
-              current.opacity = 0; // fade rest
+          // Restore opacities
+          if (entry.affected) {
+            for (var x = 0; x < entry.affected.length; x++) {
+              try {
+                var rec = entry.affected[x];
+                if (rec.layer) rec.layer.opacity = rec.originalOpacity;
+              } catch (e) {}
             }
           }
-        } else {
-          group.visible = false; // hide unrelated folders
+
+          // Restore visibility
+          if (entry.hiddenGroups) {
+            for (var g = 0; g < entry.hiddenGroups.length; g++) {
+              try {
+                var gEntry = entry.hiddenGroups[g];
+                if (gEntry.group) gEntry.group.visible = gEntry.wasVisible;
+              } catch (e) {}
+            }
+          }
         }
       }
 
-      // 🐞 DEBUG: Print selected layer names
-      console.log("🧅 Onion Skin Applied for:", selectedLayers.map(s => s.layer.name));
+      // Step 3: Apply onion skin effect and create new log
+      var newLog = [];
+
+      // Get list of selected parent groups
+      var selectedParents = [];
+      for (var p = 0; p < selectedLayers.length; p++) {
+        selectedParents.push(selectedLayers[p].parent);
+      }
+
+      for (var i = 0; i < doc.layers.length; i++) {
+        var group = doc.layers[i];
+        if (group.typename !== "LayerSet") continue;
+
+        var isSelectedGroup = false;
+        for (var s = 0; s < selectedParents.length; s++) {
+          if (selectedParents[s] === group) {
+            isSelectedGroup = true;
+            break;
+          }
+        }
+
+        // Case A: This group has selected layers
+        if (isSelectedGroup) {
+          var groupLog = { parentName: group.name, affected: [] };
+
+          // Find selected layers within this group
+          var groupSelections = [];
+          for (var a = 0; a < selectedLayers.length; a++) {
+            if (selectedLayers[a].parent === group) {
+              groupSelections.push(selectedLayers[a].layer);
+            }
+          }
+
+          for (var j = 0; j < group.layers.length; j++) {
+            var layer = group.layers[j];
+            if (layer.typename === "LayerSet") continue;
+
+            var isSelected = false;
+            for (var k = 0; k < groupSelections.length; k++) {
+              if (groupSelections[k] === layer) {
+                isSelected = true;
+                break;
+              }
+            }
+
+            var isSibling = false;
+            for (var k = 0; k < groupSelections.length; k++) {
+              var selLayer = groupSelections[k];
+              var selIndex = -1;
+              for (var z = 0; z < group.layers.length; z++) {
+                if (group.layers[z] === selLayer) {
+                  selIndex = z;
+                  break;
+                }
+              }
+              if (group.layers[selIndex - 1] === layer || group.layers[selIndex + 1] === layer) {
+                isSibling = true;
+                break;
+              }
+            }
+
+            groupLog.affected.push({
+              layer: layer,
+              originalOpacity: layer.opacity
+            });
+
+            if (isSelected) {
+              layer.opacity = 100;
+            } else if (isSibling) {
+              layer.opacity = 40;
+            } else {
+              layer.opacity = 0;
+            }
+          }
+
+          newLog.push(groupLog);
+        }
+
+        // Case B: Other groups get hidden
+        else if (group.name.indexOf("anim_") === 0) {
+          newLog.push({
+            hiddenGroups: [{ group: group, wasVisible: group.visible }]
+          });
+          group.visible = false;
+        }
+      }
+
+      window.onionSkinLog = newLog;
+      // 🐞 DEBUG: Print the onion skin log to console
+      console.log("🧅 Updated Onion Skin Log:", window.onionSkinLog);
     })();
   `;
 
