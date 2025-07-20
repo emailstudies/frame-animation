@@ -8,58 +8,83 @@ const OPACITY_MAP = {
   5: 10,
 };
 
-window.applyOnionSkinMultiStep = function (stepCount = 1) {
+// Public function to trigger Onion Skin with multi-step support
+window.toggleOnionSkinMode = function (stepCount = 1) {
   if (stepCount < 1 || stepCount > MAX_ONION_STEPS) {
     alert("Step count must be between 1 and " + MAX_ONION_STEPS);
     return;
   }
 
-  const script = `
+  const script =
+    buildOnionSkinGlobals(stepCount) +
+    buildOnionSkinCore() +
+    buildOnionSkinMultistep() +
+    buildOnionSkinMainLoop();
+
+  window.parent.postMessage(script, "*");
+};
+
+// ----------------- Modular Script Builders -----------------
+
+function buildOnionSkinGlobals(stepCount) {
+  return `
     var doc = app.activeDocument;
-    var selLayers = app.activeDocument.activeLayers;
+    var selLayers = doc.activeLayers;
     var stepCount = ${stepCount};
     var OPACITY_MAP = ${JSON.stringify(OPACITY_MAP)};
+  `;
+}
 
-    function getLayerIndexByName(name, layers) {
-      for (var i = 0; i < layers.length; i++) {
-        if (layers[i].name === name && layers[i].typename !== "LayerSet") {
-          return i;
-        }
-      }
-      return -1;
-    }
+function buildOnionSkinCore() {
+  return `
+    function onionSkinSingleStep(centerIndex, siblings, offset) {
+      var opacity = OPACITY_MAP[offset];
 
-    function setSiblingOpacity(centerIndex, siblings, offset, opacity) {
       var before = siblings[centerIndex - offset];
       if (before && before.typename !== "LayerSet") {
         before.opacity = opacity;
       }
+
       var after = siblings[centerIndex + offset];
       if (after && after.typename !== "LayerSet") {
         after.opacity = opacity;
       }
     }
+  `;
+}
 
-    function applyOnionSkinToLayer(layerName, parentGroup, stepCount) {
+function buildOnionSkinMultistep() {
+  return `
+    function onionSkinMultiStep(layerName, parentGroup, stepCount) {
       var siblings = parentGroup.layers;
-      var centerIndex = getLayerIndexByName(layerName, siblings);
+      var centerIndex = -1;
+
+      for (var i = 0; i < siblings.length; i++) {
+        if (siblings[i].name === layerName && siblings[i].typename !== "LayerSet") {
+          centerIndex = i;
+          break;
+        }
+      }
+
       if (centerIndex === -1) return;
 
       for (var offset = 1; offset <= stepCount; offset++) {
-        var opacity = OPACITY_MAP[offset];
-        setSiblingOpacity(centerIndex, siblings, offset, opacity);
+        onionSkinSingleStep(centerIndex, siblings, offset);
       }
     }
+  `;
+}
 
+function buildOnionSkinMainLoop() {
+  return `
     for (var i = 0; i < selLayers.length; i++) {
       var layer = selLayers[i];
       if (layer.typename === "LayerSet") continue;
+
       var parent = layer.parent;
       if (!parent || parent.typename !== "LayerSet") continue;
 
-      applyOnionSkinToLayer(layer.name, parent, stepCount);
+      onionSkinMultiStep(layer.name, parent, stepCount);
     }
   `;
-
-  window.parent.postMessage(script, "*");
-};
+}
