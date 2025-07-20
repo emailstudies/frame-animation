@@ -1,77 +1,87 @@
-window.toggleOnionSkinMode = function (stepCount = 1) {
-  const OPACITY_MAP = {
-    1: 50,
-    2: 40,
-    3: 30,
-    4: 20,
-    5: 10,
-  };
+// onion_skin.js
+
+let onionSkinMode = false;
+let lastAffectedLayers = [];
+
+// 1. Toggle Onion Skin Mode
+window.toggleOnionSkinMode = function () {
+  onionSkinMode = !onionSkinMode;
+  alert("Onion Skin Mode: " + (onionSkinMode ? "ON" : "OFF"));
+
+  if (onionSkinMode) {
+    window.addEventListener("message", handleLayerSelection);
+  } else {
+    resetLastAffectedOpacities();
+    window.removeEventListener("message", handleLayerSelection);
+  }
+};
+
+// 2. Respond to layer selection
+function handleLayerSelection(e) {
+  if (!e.data || typeof e.data !== "object" || e.data.type !== "layerSelectionChanged") return;
 
   const script = `
-    (function () {
-      var doc = app.activeDocument;
+    var doc = app.activeDocument;
+    var sel = doc.activeLayer;
 
-      // Get selected layers manually
-      var selLayers = [];
-      for (var i = 0; i < doc.layers.length; i++) {
-        if (doc.layers[i].selected) {
-          selLayers.push(doc.layers[i]);
-        }
-      }
+    if (sel && sel.typename !== "LayerSet") {
+      var selName = sel.name;
+      var parent = sel.parent;
+      var affected = [];
 
-      if (selLayers.length === 0) {
-        alert("Please select a layer to apply onion skin.");
-        return;
-      }
-
-      var OPACITY_MAP = ${JSON.stringify(OPACITY_MAP)};
-      var stepCount = ${stepCount};
-
-      function onionSkinSingleStep(centerIndex, siblings, offset) {
-        var opacity = OPACITY_MAP[offset];
-
-        var before = siblings[centerIndex - offset];
-        if (before && before.typename !== "LayerSet") {
-          before.opacity = opacity;
-        }
-
-        var after = siblings[centerIndex + offset];
-        if (after && after.typename !== "LayerSet") {
-          after.opacity = opacity;
-        }
-      }
-
-      function onionSkinMultiStep(layerName, parentGroup, stepCount) {
-        var siblings = parentGroup.layers;
-        var centerIndex = -1;
+      if (parent && parent.typename === "LayerSet") {
+        var siblings = parent.layers;
+        var idx = -1;
 
         for (var i = 0; i < siblings.length; i++) {
-          if (siblings[i].name === layerName && siblings[i].typename !== "LayerSet") {
-            centerIndex = i;
+          if (siblings[i].name === selName && siblings[i].typename !== "LayerSet") {
+            idx = i;
             break;
           }
         }
 
-        if (centerIndex === -1) return;
+        if (idx > -1) {
+          // Reset old ones
+          var prevNames = doc.info.split("|#|");
+          for (var j = 0; j < siblings.length; j++) {
+            if (prevNames.indexOf(siblings[j].name) > -1) siblings[j].opacity = 100;
+          }
 
-        for (var offset = 1; offset <= stepCount; offset++) {
-          onionSkinSingleStep(centerIndex, siblings, offset);
+          // New onion skin targets
+          if (idx > 0) {
+            siblings[idx - 1].opacity = 40;
+            affected.push(siblings[idx - 1].name);
+          }
+          if (idx < siblings.length - 1) {
+            siblings[idx + 1].opacity = 40;
+            affected.push(siblings[idx + 1].name);
+          }
+
+          doc.info = affected.join("|#|");
         }
       }
-
-      for (var i = 0; i < selLayers.length; i++) {
-        var layer = selLayers[i];
-        if (layer.typename === "LayerSet") continue;
-
-        var parent = layer.parent;
-        if (!parent || parent.typename !== "LayerSet") continue;
-
-        onionSkinMultiStep(layer.name, parent, stepCount);
-      }
-    })();
+    }
   `;
 
-  console.log("Sending to Photopea:", script);
   window.parent.postMessage(script, "*");
-};
+}
 
+// 3. Reset all previously affected opacities
+function resetLastAffectedOpacities() {
+  const resetScript = `
+    var doc = app.activeDocument;
+    if (!doc.info) return;
+
+    var names = doc.info.split("|#|");
+    var all = doc.layers;
+
+    for (var i = 0; i < all.length; i++) {
+      if (names.indexOf(all[i].name) > -1) {
+        all[i].opacity = 100;
+      }
+    }
+
+    doc.info = "";
+  `;
+  window.parent.postMessage(resetScript, "*");
+}
