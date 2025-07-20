@@ -1,21 +1,19 @@
-// onion_skin.js
-
-// Store global mode and log
 window.onionSkinMode = false;
 window.onionSkinLog = null;
 
-// Toggle Onion Skin Live Mode
+// Enable or disable Onion Skin mode
 function toggleOnionSkinMode() {
   window.onionSkinMode = !window.onionSkinMode;
-  alert("Onion Skin Mode " + (window.onionSkinMode ? "Enabled" : "Disabled"));
 
   if (!window.onionSkinMode && window.onionSkinLog) {
-    applyResetFromLog(window.onionSkinLog);
+    resetPreviousOnionSkin();
     window.onionSkinLog = null;
   }
+
+  alert("Onion Skin Mode " + (window.onionSkinMode ? "Enabled" : "Disabled"));
 }
 
-// Called when a new layer is selected manually by user
+// Called when user selects a layer and Onion Skin mode is ON
 function handleLiveOnionSkin() {
   if (!window.onionSkinMode) return;
 
@@ -23,23 +21,19 @@ function handleLiveOnionSkin() {
     (function () {
       var doc = app.activeDocument;
       var sel = doc.activeLayer;
-
       if (!sel || sel.typename === "LayerSet") return;
+
       var parent = sel.parent;
       if (!parent || parent.typename !== "LayerSet") return;
 
       var siblings = parent.layers;
       var idx = -1;
       for (var i = 0; i < siblings.length; i++) {
-        if (siblings[i] == sel) {
-          idx = i;
-          break;
-        }
+        if (siblings[i] == sel) { idx = i; break; }
       }
-
       if (idx === -1) return;
 
-      // Reset previous if exists
+      // Restore previous affected layers
       if (window.onionSkinLog && window.onionSkinLog.affected) {
         var prevGroup = doc.layers.find(g => g.name === window.onionSkinLog.parentGroup);
         if (prevGroup && prevGroup.typename === "LayerSet") {
@@ -65,6 +59,7 @@ function handleLiveOnionSkin() {
         siblings[idx + 1].opacity = 40;
       }
 
+      // Save log
       window.onionSkinLog = {
         selectedLayer: sel.name,
         parentGroup: parent.name,
@@ -75,8 +70,11 @@ function handleLiveOnionSkin() {
   window.parent.postMessage(script, "*");
 }
 
-// Resets the logged layers to original opacity
-function applyResetFromLog(log) {
+// Reset opacity from last log
+function resetPreviousOnionSkin() {
+  const log = window.onionSkinLog;
+  if (!log) return;
+
   const script = `
     (function () {
       var doc = app.activeDocument;
@@ -84,10 +82,11 @@ function applyResetFromLog(log) {
       if (!group || group.typename !== "LayerSet") return;
 
       var layers = group.layers;
+      var affected = ${JSON.stringify(log.affected)};
       for (var i = 0; i < layers.length; i++) {
-        for (var j = 0; j < ${JSON.stringify(log.affected)}.length; j++) {
-          if (layers[i].name === ${JSON.stringify(log.affected)}[j].name) {
-            layers[i].opacity = ${JSON.stringify(log.affected)}[j].opacity;
+        for (var j = 0; j < affected.length; j++) {
+          if (layers[i].name === affected[j].name) {
+            layers[i].opacity = affected[j].opacity;
           }
         }
       }
@@ -96,6 +95,6 @@ function applyResetFromLog(log) {
   window.parent.postMessage(script, "*");
 }
 
-// Expose to app.js
+// Expose functions
 window.toggleOnionSkinMode = toggleOnionSkinMode;
 window.handleLiveOnionSkin = handleLiveOnionSkin;
