@@ -1,7 +1,7 @@
 // onion_skin.js
 let onionSkinLog = [];
 
-function handleOnionSkinClick() {
+function toggleOnionSkinMode() {
   const script = `
     (function () {
       if (!window.onionSkinLog) window.onionSkinLog = [];
