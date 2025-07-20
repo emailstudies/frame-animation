@@ -1,58 +1,80 @@
-let onionSkinLog = null;
+// onion_skin.js
+let onionSkinLog = [];
 
-function toggleOnionSkinMode() {
+function handleOnionSkinClick() {
   const script = `
     (function () {
+      if (!window.onionSkinLog) window.onionSkinLog = [];
+
       var doc = app.activeDocument;
-      var sel = doc.activeLayer;
-
-      if (!sel || sel.typename === "LayerSet") return;
-
-      var parent = sel.parent;
-      if (!parent || parent.typename !== "LayerSet") return;
-
-      var siblings = parent.layers;
-      var idx = -1;
-
-      for (var i = 0; i < siblings.length; i++) {
-        if (siblings[i] == sel) {
-          idx = i;
-          break;
+      var selLayers = [];
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (layer.selected && layer.typename !== "LayerSet") {
+          selLayers.push(layer);
         }
       }
 
-      if (idx === -1) return;
+      if (selLayers.length === 0) return;
 
-      // Step 1: Reset previously affected layers
-      if (window.onionSkinLog) {
-        var prev = window.onionSkinLog;
-        for (var j = 0; j < prev.affected.length; j++) {
-          var rec = prev.affected[j];
+      // Reset previous affected layers
+      for (var i = 0; i < window.onionSkinLog.length; i++) {
+        var entry = window.onionSkinLog[i];
+        for (var j = 0; j < entry.affected.length; j++) {
           try {
+            var rec = entry.affected[j];
             if (rec.layer) rec.layer.opacity = rec.originalOpacity;
           } catch (e) {}
         }
       }
+      window.onionSkinLog = []; // Clear previous log
 
-      // Step 2: Apply onion skin to new selection
-      var newLog = {
-        selectedName: sel.name,
-        parentName: parent.name,
-        affected: []
-      };
+      // Apply new onion skin
+      for (var s = 0; s < selLayers.length; s++) {
+        var sel = selLayers[s];
+        var parent = sel.parent;
+        if (!parent || parent.typename !== "LayerSet") continue;
 
-      if (idx > 0 && siblings[idx - 1].typename !== "LayerSet") {
-        newLog.affected.push({ layer: siblings[idx - 1], originalOpacity: siblings[idx - 1].opacity });
-        siblings[idx - 1].opacity = 40;
+        var siblings = parent.layers;
+        var idx = -1;
+
+        for (var i = 0; i < siblings.length; i++) {
+          if (siblings[i] == sel) {
+            idx = i;
+            break;
+          }
+        }
+
+        if (idx === -1) continue;
+
+        var logEntry = {
+          selectedLayer: sel.name,
+          parentName: parent.name,
+          affected: []
+        };
+
+        if (idx > 0 && siblings[idx - 1].typename !== "LayerSet") {
+          logEntry.affected.push({
+            layer: siblings[idx - 1],
+            originalOpacity: siblings[idx - 1].opacity
+          });
+          siblings[idx - 1].opacity = 40;
+        }
+
+        if (idx < siblings.length - 1 && siblings[idx + 1].typename !== "LayerSet") {
+          logEntry.affected.push({
+            layer: siblings[idx + 1],
+            originalOpacity: siblings[idx + 1].opacity
+          });
+          siblings[idx + 1].opacity = 40;
+        }
+
+        window.onionSkinLog.push(logEntry);
       }
-
-      if (idx < siblings.length - 1 && siblings[idx + 1].typename !== "LayerSet") {
-        newLog.affected.push({ layer: siblings[idx + 1], originalOpacity: siblings[idx + 1].opacity });
-        siblings[idx + 1].opacity = 40;
-      }
-
-      window.onionSkinLog = newLog;
     })();
   `;
+
   window.parent.postMessage(script, "*");
 }
+
+window.handleOnionSkinClick = handleOnionSkinClick; // Expose to app.js
