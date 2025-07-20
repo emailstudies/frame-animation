@@ -1,25 +1,29 @@
-function handleUpdateLayerNumbers() {
-  const script = `
-    var doc = app.activeDocument;
+const script = `
+var doc = app.activeDocument;
 
-    for (var i = 0; i < doc.layers.length; i++) {
-      var folder = doc.layers[i];
-      if (!folder.isGroup || !folder.name.startsWith("anim_")) continue;
+for (var i = 0; i < doc.layers.length; i++) {
+  var folder = doc.layers[i];
 
-      var layers = folder.layers.filter(l => !l.isGroup);
-      var max = layers.length;
-      if (max === 0) continue;
+  if (!folder.isGroup || folder.name.indexOf("anim_") !== 0) continue;
 
-      var baseName = layers[max - 1].name;
+  var frameLayers = [];
 
-      for (var j = 0; j < max; j++) {
-        var frameNum = j + 1;
-        layers[j].name = frameNum + "/" + max + " " + baseName;
-      }
-    }
+  for (var j = 0; j < folder.layers.length; j++) {
+    var layer = folder.layers[j];
+    if (!layer.isGroup) frameLayers.push(layer); // only push non-folder layers
+  }
 
-    alert("Layer Numbers Updated");
-  `;
+  var max = frameLayers.length;
+  if (max === 0) continue;
 
-  window.parent.postMessage(script, "*");
+  var baseName = frameLayers[max - 1].name; // bottom-most frame layer
+
+  for (var k = 0; k < max; k++) {
+    var frameNum = k + 1;
+    frameLayers[k].name = frameNum + "/" + max + " " + baseName;
+  }
 }
+
+alert("Layer Numbers Updated");
+`;
+window.parent.postMessage(script, "*");
