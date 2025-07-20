@@ -1,4 +1,4 @@
-function applyOnionSkinOnce() {
+function toggleOnionSkinMode() {
   const script = `
     var doc = app.activeDocument;
     var sel = doc.activeLayer;
