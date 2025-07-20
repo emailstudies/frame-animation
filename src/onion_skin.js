@@ -40,7 +40,10 @@ function toggleOnionSkinMode() {
         var group = doc.layers[s];
         if (group.typename === "LayerSet" && group.name.startsWith("anim_")) {
 
-          var selectedInGroup = selectedLayers.filter(sl => sl.parent === group);
+          var selectedInGroup = selectedLayers.filter(function(sl) {
+            return sl.parent === group;
+          });
+
           var groupLog = {
             parentName: group.name,
             affected: []
@@ -104,4 +107,3 @@ function toggleOnionSkinMode() {
 
   window.parent.postMessage(script, "*");
 }
-
