@@ -40,9 +40,12 @@ function toggleOnionSkinMode() {
         var group = doc.layers[s];
         if (group.typename === "LayerSet" && group.name.startsWith("anim_")) {
 
-          var selectedInGroup = selectedLayers.filter(function(sl) {
-            return sl.parent === group;
-          });
+          var selectedInGroup = [];
+          for (var x = 0; x < selectedLayers.length; x++) {
+            if (selectedLayers[x].parent === group) {
+              selectedInGroup.push(selectedLayers[x]);
+            }
+          }
 
           var groupLog = {
             parentName: group.name,
@@ -60,7 +63,7 @@ function toggleOnionSkinMode() {
               if (layer === selected) {
                 isSibling = true;
 
-                // 👈 Check immediate previous
+                // 👈 Previous sibling
                 if (k > 0 && siblings[k - 1].typename !== "LayerSet") {
                   groupLog.affected.push({
                     layer: siblings[k - 1],
@@ -69,7 +72,7 @@ function toggleOnionSkinMode() {
                   siblings[k - 1].opacity = 40;
                 }
 
-                // 👉 Check immediate next
+                // 👉 Next sibling
                 if (k < siblings.length - 1 && siblings[k + 1].typename !== "LayerSet") {
                   groupLog.affected.push({
                     layer: siblings[k + 1],
@@ -80,7 +83,7 @@ function toggleOnionSkinMode() {
               }
             }
 
-            // 🔅 Make all other non-siblings invisible (opacity 0)
+            // 🔅 Make all non-selected/non-sibling layers invisible (opacity 0)
             if (!isSibling && layer.typename !== "LayerSet") {
               groupLog.affected.push({
                 layer: layer,
