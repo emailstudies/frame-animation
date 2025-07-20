@@ -20,7 +20,7 @@ function toggleOnionSkinMode() {
 
       if (selectedLayers.length === 0) return;
 
-      // 🧼 Step 2: Reset old onion skin if exists
+      // 🧼 Step 2: Reset old onion skin if it exists
       if (window.onionSkinLog && Array.isArray(window.onionSkinLog)) {
         for (var a = 0; a < window.onionSkinLog.length; a++) {
           var entry = window.onionSkinLog[a];
@@ -35,18 +35,11 @@ function toggleOnionSkinMode() {
 
       var newLog = [];
 
-      // 🔁 Step 3: Apply onion skin and collect log
+      // 🔁 Step 3: Loop through anim folders and apply onion skin
       for (var s = 0; s < doc.layers.length; s++) {
         var group = doc.layers[s];
         if (group.typename === "LayerSet" && group.name.startsWith("anim_")) {
-
-          var selectedInGroup = [];
-          for (var x = 0; x < selectedLayers.length; x++) {
-            if (selectedLayers[x].parent === group) {
-              selectedInGroup.push(selectedLayers[x]);
-            }
-          }
-
+          var selectedInGroup = selectedLayers.filter(sl => sl.parent === group);
           var groupLog = {
             parentName: group.name,
             affected: []
@@ -56,14 +49,15 @@ function toggleOnionSkinMode() {
 
           for (var k = 0; k < siblings.length; k++) {
             var layer = siblings[k];
-            var isSibling = false;
+            var isSiblingOrSelected = false;
 
+            // 🟢 Check if this is the selected layer
             for (var si = 0; si < selectedInGroup.length; si++) {
               var selected = selectedInGroup[si].layer;
               if (layer === selected) {
-                isSibling = true;
+                isSiblingOrSelected = true;
 
-                // 👈 Previous sibling
+                // 👈 Apply to previous layer
                 if (k > 0 && siblings[k - 1].typename !== "LayerSet") {
                   groupLog.affected.push({
                     layer: siblings[k - 1],
@@ -72,7 +66,7 @@ function toggleOnionSkinMode() {
                   siblings[k - 1].opacity = 40;
                 }
 
-                // 👉 Next sibling
+                // 👉 Apply to next layer
                 if (k < siblings.length - 1 && siblings[k + 1].typename !== "LayerSet") {
                   groupLog.affected.push({
                     layer: siblings[k + 1],
@@ -80,11 +74,13 @@ function toggleOnionSkinMode() {
                   });
                   siblings[k + 1].opacity = 40;
                 }
+
+                break;
               }
             }
 
-            // 🔅 Make all non-selected/non-sibling layers invisible (opacity 0)
-            if (!isSibling && layer.typename !== "LayerSet") {
+            // 🔅 Make all other non-sibling, non-selected layers invisible
+            if (!isSiblingOrSelected && layer.typename !== "LayerSet") {
               groupLog.affected.push({
                 layer: layer,
                 originalOpacity: layer.opacity
@@ -99,12 +95,11 @@ function toggleOnionSkinMode() {
         }
       }
 
-      // 📝 Store log globally
+      // 📝 Store the updated log globally
       window.onionSkinLog = newLog;
 
       // 🐞 DEBUG: Print the onion skin log to console
       console.log("🧅 Updated Onion Skin Log:", window.onionSkinLog);
-
     })();
   `;
 
