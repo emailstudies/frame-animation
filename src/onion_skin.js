@@ -74,3 +74,4 @@ window.toggleOnionSkinMode = function (stepCount = 1) {
   console.log("Sending to Photopea:", script);
   window.parent.postMessage(script, "*");
 };
+
