@@ -58,31 +58,33 @@ function toggleOnionSkinMode() {
           affected: []
         };
 
-        // Previous layer
-        if (idx > 0 && siblings[idx - 1].typename !== "LayerSet") {
-          entryLog.affected.push({
-            layer: siblings[idx - 1],
-            originalOpacity: siblings[idx - 1].opacity
-          });
-          siblings[idx - 1].opacity = 40;
-        }
+        for (var n = 0; n < siblings.length; n++) {
+          var sib = siblings[n];
 
-        // Next layer
-        if (idx < siblings.length - 1 && siblings[idx + 1].typename !== "LayerSet") {
-          entryLog.affected.push({
-            layer: siblings[idx + 1],
-            originalOpacity: siblings[idx + 1].opacity
-          });
-          siblings[idx + 1].opacity = 40;
+          // Skip the selected layer itself
+          if (sib == sel || sib.typename === "LayerSet") continue;
+
+          var originalOpacity = sib.opacity;
+
+          if (n === idx - 1 || n === idx + 1) {
+            // Immediate prev or next
+            sib.opacity = 40;
+            entryLog.affected.push({ layer: sib, originalOpacity: originalOpacity });
+          } else {
+            // All other siblings get fully dimmed
+            sib.opacity = 0;
+            entryLog.affected.push({ layer: sib, originalOpacity: originalOpacity });
+          }
         }
 
         newLog.push(entryLog);
       }
 
+      // Store updated log
       window.onionSkinLog = newLog;
 
       // 🐞 DEBUG: Print the onion skin log to console
-      console.log("\ud83e\udd45 Updated Onion Skin Log:", window.onionSkinLog);
+      console.log("🧅 Updated Onion Skin Log:", window.onionSkinLog);
     })();
   `;
 
