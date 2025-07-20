@@ -1,4 +1,4 @@
-async function handleUpdateLayerNumbers() {
+function handleUpdateLayerNumbers() {
   const script = `
     var doc = app.activeDocument;
 
@@ -20,5 +20,6 @@ async function handleUpdateLayerNumbers() {
 
     alert("Layer Numbers Updated");
   `;
-  await Photopea.runScript(script);
+
+  window.parent.postMessage(script, "*");
 }
