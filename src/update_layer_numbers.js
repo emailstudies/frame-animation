@@ -9,7 +9,6 @@ function handleUpdateLayerNumbers() {
 
       var frameLayers = [];
 
-      // Collect all non-folder layers
       for (var j = 0; j < folder.layers.length; j++) {
         var layer = folder.layers[j];
         if (!layer.isGroup) {
@@ -20,13 +19,17 @@ function handleUpdateLayerNumbers() {
       var max = frameLayers.length;
       if (max === 0) continue;
 
-      // ✅ Base name is from the bottommost layer (last in stack)
+      // Base name from bottom layer
       var baseName = frameLayers[max - 1].name;
 
-      // ✅ Rename top to bottom: 3/3, 2/3, 1/3, etc.
       for (var k = 0; k < max; k++) {
         var frameNum = max - k;
-        frameLayers[k].name = frameNum + "/" + max + " " + baseName;
+        var renameLayer = frameLayers[k];
+        try {
+          renameLayer.name = frameNum + "/" + max + " " + baseName;
+        } catch (e) {
+          // skip any rename that fails silently
+        }
       }
     }
 
