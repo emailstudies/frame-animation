@@ -1,16 +1,15 @@
-// onion_skin.js
-
 let onionSkinMode = false;
 
 window.toggleOnionSkinMode = function () {
   onionSkinMode = !onionSkinMode;
-  alert(onionSkinMode ? "Onion Skin Mode ON" : "OFF");
+  console.log(onionSkinMode ? "Onion Skin Mode ON" : "OFF");
 
   if (!onionSkinMode) {
     resetPreviousOnionSkin();
   }
 };
 
+// Live tracking every click
 document.addEventListener("click", () => {
   if (!onionSkinMode) return;
 
@@ -32,7 +31,7 @@ document.addEventListener("click", () => {
         }
 
         if (idx >= 0) {
-          // Restore opacities from previous onion skin info
+          // Restore opacities from previous log
           if (doc.info && doc.info.length > 0) {
             try {
               var log = JSON.parse(doc.info);
@@ -50,7 +49,11 @@ document.addEventListener("click", () => {
           }
 
           // Apply onion skin to new siblings and record log
-          var log = { parent: parent.name, affected: [] };
+          var log = {
+            parent: parent.name,
+            selected: { name: sel.name },
+            affected: []
+          };
 
           var prev = siblings[idx - 1];
           var next = siblings[idx + 1];
@@ -70,7 +73,6 @@ document.addEventListener("click", () => {
       }
     }
   `;
-
   window.parent.postMessage(script, "*");
 });
 
