@@ -1,30 +1,26 @@
-// onion_skin.js
-
-window.onionSkinMode = false;
-window.onionSkinLog = null;
-window.onionSkinInterval = null;
+let onionSkinLog = null;
+let onionSkinInterval = null;
+let lastSelectedLayer = null;
+let lastCheck = 0;
 
 function toggleOnionSkinMode() {
-  window.onionSkinMode = !window.onionSkinMode;
-
-  if (window.onionSkinMode) {
-    // Start watching for selection changes every 700ms
-    window.onionSkinInterval = setInterval(watchSelectionChange, 700);
-    console.log("Onion Skin Mode Enabled");
+  if (onionSkinInterval) {
+    clearInterval(onionSkinInterval);
+    onionSkinInterval = null;
+    clearPreviousOnionSkin();
+    onionSkinLog = null;
+    console.log("🧅 Onion Skin Mode Disabled");
   } else {
-    // Turn off and reset previous opacities
-    clearInterval(window.onionSkinInterval);
-    window.onionSkinInterval = null;
-    resetPreviousOnionSkin();
-    window.onionSkinLog = null;
-    console.log("Onion Skin Mode Disabled");
+    onionSkinInterval = setInterval(watchSelectionChange, 400); // Fast, but throttled
+    console.log("🧅 Onion Skin Mode Enabled");
   }
 }
 
-// Poll selection change
-let lastSelectedLayer = null;
-
 function watchSelectionChange() {
+  const now = Date.now();
+  if (now - lastCheck < 200) return; // Debounce every 200ms
+  lastCheck = now;
+
   const script = `
     (function () {
       var doc = app.activeDocument;
@@ -33,19 +29,19 @@ function watchSelectionChange() {
       sel.name;
     })();
   `;
-  window.addEventListener("message", (e) => {
+  window.addEventListener("message", function handler(e) {
     if (typeof e.data === "string") {
-      const current = e.data;
-      if (current !== lastSelectedLayer) {
-        lastSelectedLayer = current;
-        handleLiveOnionSkin(); // Update skinning
+      window.removeEventListener("message", handler);
+      const selected = e.data;
+      if (selected !== lastSelectedLayer) {
+        lastSelectedLayer = selected;
+        handleLiveOnionSkin();
       }
     }
-  }, { once: true });
+  });
   window.parent.postMessage(script, "*");
 }
 
-// Apply Onion Skin + Logging
 function handleLiveOnionSkin() {
   const script = `
     (function () {
@@ -53,71 +49,87 @@ function handleLiveOnionSkin() {
       var sel = doc.activeLayer;
       if (!sel || sel.typename === "LayerSet") return;
 
-      var parent = sel.parent;
-      if (!parent || parent.typename !== "LayerSet") return;
-
-      var siblings = parent.layers;
-      var idx = -1;
-      for (var i = 0; i < siblings.length; i++) {
-        if (siblings[i] == sel) {
-          idx = i; break;
+      // 1. Reset previous siblings' opacities using onionSkinLog
+      ${onionSkinLog ? `
+      var prevGroup = null;
+      for (var i = 0; i < doc.layerSets.length; i++) {
+        if (doc.layerSets[i].name === ${JSON.stringify(onionSkinLog.parentGroup)}) {
+          prevGroup = doc.layerSets[i];
+          break;
         }
       }
-      if (idx === -1) return;
-
-      // Reset from previous log
-      if (window.onionSkinLog && window.onionSkinLog.affected && window.onionSkinLog.parentGroup) {
-        var prevGroup = doc.layers.find(g => g.name === window.onionSkinLog.parentGroup);
-        if (prevGroup && prevGroup.typename === "LayerSet") {
-          var prevLayers = prevGroup.layers;
-          for (var j = 0; j < prevLayers.length; j++) {
-            for (var k = 0; k < window.onionSkinLog.affected.length; k++) {
-              if (prevLayers[j].name === window.onionSkinLog.affected[k].name) {
-                prevLayers[j].opacity = window.onionSkinLog.affected[k].opacity;
-              }
+      if (prevGroup) {
+        var prevLayers = prevGroup.layers;
+        var logged = ${JSON.stringify(onionSkinLog.affectedLayers)};
+        for (var i = 0; i < prevLayers.length; i++) {
+          for (var j = 0; j < logged.length; j++) {
+            if (prevLayers[i].name === logged[j].name) {
+              prevLayers[i].opacity = logged[j].opacity;
             }
           }
         }
       }
+      ` : ''}
 
-      // Apply new onion skin
+      // 2. Apply onion skin to siblings of newly selected layer
+      var parent = sel.parent;
+      if (!parent || parent.typename !== "LayerSet") return;
+
+      var siblings = parent.layers;
+      var centerIdx = -1;
+      for (var i = 0; i < siblings.length; i++) {
+        if (siblings[i] == sel) {
+          centerIdx = i;
+          break;
+        }
+      }
+      if (centerIdx === -1) return;
+
       var affected = [];
-      if (idx > 0 && siblings[idx - 1].typename !== "LayerSet") {
-        affected.push({ name: siblings[idx - 1].name, opacity: siblings[idx - 1].opacity });
-        siblings[idx - 1].opacity = 40;
-      }
-      if (idx < siblings.length - 1 && siblings[idx + 1].typename !== "LayerSet") {
-        affected.push({ name: siblings[idx + 1].name, opacity: siblings[idx + 1].opacity });
-        siblings[idx + 1].opacity = 40;
+
+      if (centerIdx > 0 && siblings[centerIdx - 1].typename !== "LayerSet") {
+        affected.push({ name: siblings[centerIdx - 1].name, opacity: siblings[centerIdx - 1].opacity });
+        siblings[centerIdx - 1].opacity = 40;
       }
 
-      window.onionSkinLog = {
-        selectedLayer: sel.name,
-        parentGroup: parent.name,
-        affected: affected
-      };
+      if (centerIdx < siblings.length - 1 && siblings[centerIdx + 1].typename !== "LayerSet") {
+        affected.push({ name: siblings[centerIdx + 1].name, opacity: siblings[centerIdx + 1].opacity });
+        siblings[centerIdx + 1].opacity = 40;
+      }
+
+      // Log new state
+      window.parent.postMessage({
+        type: "onionSkinLog",
+        data: {
+          selectedLayer: sel.name,
+          parentGroup: parent.name,
+          affectedLayers: affected
+        }
+      }, "*");
     })();
   `;
   window.parent.postMessage(script, "*");
 }
 
-// Reset opacities from log
-function resetPreviousOnionSkin() {
-  const log = window.onionSkinLog;
-  if (!log) return;
-
+function clearPreviousOnionSkin() {
   const script = `
     (function () {
       var doc = app.activeDocument;
-      var group = doc.layers.find(g => g.name === ${JSON.stringify(log.parentGroup)});
-      if (!group || group.typename !== "LayerSet") return;
+      var group = null;
+      for (var i = 0; i < doc.layerSets.length; i++) {
+        if (doc.layerSets[i].name === ${JSON.stringify(onionSkinLog?.parentGroup)}) {
+          group = doc.layerSets[i];
+          break;
+        }
+      }
+      if (!group) return;
 
-      var layers = group.layers;
-      var affected = ${JSON.stringify(log.affected)};
-      for (var i = 0; i < layers.length; i++) {
-        for (var j = 0; j < affected.length; j++) {
-          if (layers[i].name === affected[j].name) {
-            layers[i].opacity = affected[j].opacity;
+      var logged = ${JSON.stringify(onionSkinLog?.affectedLayers || [])};
+      var siblings = group.layers;
+      for (var i = 0; i < siblings.length; i++) {
+        for (var j = 0; j < logged.length; j++) {
+          if (siblings[i].name === logged[j].name) {
+            siblings[i].opacity = logged[j].opacity;
           }
         }
       }
@@ -126,6 +138,12 @@ function resetPreviousOnionSkin() {
   window.parent.postMessage(script, "*");
 }
 
-// Expose to global
+// Capture log message from Photopea script
+window.addEventListener("message", (e) => {
+  if (e.data?.type === "onionSkinLog") {
+    onionSkinLog = e.data.data;
+  }
+});
+
+// Expose to app.js
 window.toggleOnionSkinMode = toggleOnionSkinMode;
-window.handleLiveOnionSkin = handleLiveOnionSkin;
