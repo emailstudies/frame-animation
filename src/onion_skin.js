@@ -8,7 +8,7 @@ const OPACITY_MAP = {
   5: 10,
 };
 
-// Public function to trigger Onion Skin with multi-step support
+// Public entry function
 window.toggleOnionSkinMode = function (stepCount = 1) {
   if (stepCount < 1 || stepCount > MAX_ONION_STEPS) {
     alert("Step count must be between 1 and " + MAX_ONION_STEPS);
@@ -24,12 +24,19 @@ window.toggleOnionSkinMode = function (stepCount = 1) {
   window.parent.postMessage(script, "*");
 };
 
-// ----------------- Modular Script Builders -----------------
+// --- Script Builders (modular, but flattened before sending to Photopea) ---
 
 function buildOnionSkinGlobals(stepCount) {
   return `
     var doc = app.activeDocument;
-    var selLayers = doc.activeLayers;
+
+    // Get selected layers manually
+    var selLayers = [];
+    for (var i = 0; i < doc.layers.length; i++) {
+      var layer = doc.layers[i];
+      if (layer.selected) selLayers.push(layer);
+    }
+
     var stepCount = ${stepCount};
     var OPACITY_MAP = ${JSON.stringify(OPACITY_MAP)};
   `;
