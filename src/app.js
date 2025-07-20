@@ -7,8 +7,8 @@ document.getElementById("onionSkinBtn").onclick = toggleOnionSkinMode; //single 
 
 // Onion Skin toggle mode
 /*document.getElementById("onionSkinBtn").onclick = () => {
-  window.toggleOnionSkinMode();*/
-};
+  window.toggleOnionSkinMode();
+};*/
 document.getElementById("exportGifBtn").onclick = () => alert("Feature coming soon!");
 
 // onion skin
