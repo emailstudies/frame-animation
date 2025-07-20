@@ -4,12 +4,17 @@ document.getElementById("createAnimBtn").onclick = handleCreateFolder;
 document.getElementById("updateLayerNumbersBtn").onclick = handleUpdateLayerNumbers;
 
 document.getElementById("onionSkinBtn").onclick = () => {
+  window.toggleOnionSkinMode();
+};
+
+/*document.getElementById("onionSkinBtn").onclick = () => {
   if (!window.onionSkinMode) {
     window.toggleOnionSkinMode(); // Enable mode
   } else {
     window.handleLiveOnionSkin(); // Apply on newly selected layer
   }
-};
+}; 
+*/
 
 // document.getElementById("onionSkinBtn").onclick = toggleOnionSkinMode; //single step
 
