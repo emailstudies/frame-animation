@@ -1,4 +1,4 @@
-window.applyOnionSkinMultiStep = function (stepCount = 1) {
+window.toggleOnionSkinMode = function (stepCount = 1) {
   const OPACITY_MAP = {
     1: 50,
     2: 40,
