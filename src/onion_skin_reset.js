@@ -33,7 +33,7 @@ function resetOnionSkin() {
         }
       }
 
-      alert("🧼 Onion Skin Reset: Topmost layer of each anim_* folder is now visible.");
+      alert("Onion Skin reset for all anim_ folders. In each, only top most layer at 100% opacity; all other layers at 0% opacity");
     })();
   `;
 
