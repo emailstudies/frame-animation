@@ -8,8 +8,9 @@ function toggleOnionSkinMode() {
       }
 
       var selectedByParent = {}; // { parentName: [selectedLayerIndexes] }
+      var hasLockedLayer = false;
 
-      // Step 1: Collect selected layers grouped by parent anim_* folder
+      // Step 1: Collect selected layers and check for locked layers
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
         if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
@@ -20,11 +21,22 @@ function toggleOnionSkinMode() {
                 alert("Only individual layers can be selected for Onion Skin.");
                 return;
               }
+
+              // Check if layer or its parent is locked
+              if (layer.locked || group.locked) {
+                hasLockedLayer = true;
+              }
+
               if (!selectedByParent[group.name]) selectedByParent[group.name] = [];
               selectedByParent[group.name].push(j);
             }
           }
         }
+      }
+
+      if (hasLockedLayer) {
+        alert("Onion Skin cannot run on locked layers or folders. Please unlock them first.");
+        return;
       }
 
       var parentNames = Object.keys(selectedByParent);
@@ -63,7 +75,7 @@ function toggleOnionSkinMode() {
           }
         }
       }
-
+      
       console.log("🧅 Onion Skin applied for multiple selections.");
     })();
   `;
