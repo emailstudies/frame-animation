@@ -1,4 +1,4 @@
-function toggleOnionSkinMode() {
+function handleOnionSkinClick() {
   const script = `
     (function () {
       var doc = app.activeDocument;
@@ -9,7 +9,7 @@ function toggleOnionSkinMode() {
 
       var selectedByParent = {}; // { parentName: [selectedLayerIndexes] }
 
-      // Step 1: Validate selections and check for locked layers or folders
+      // Step 1: Validate selected layers + check locked state (only selected + parents)
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
 
@@ -18,15 +18,26 @@ function toggleOnionSkinMode() {
             var layer = group.layers[j];
 
             if (layer.selected) {
-              // ❌ If it's a group or folder, reject
+              // Reject folders
               if (layer.typename === "LayerSet") {
                 alert("Only individual layers can be selected for Onion Skin.");
                 return;
               }
 
-              // ❌ Reject if layer OR parent group is locked
-              if (layer.locked || group.locked) {
-                alert("Onion Skin cannot run on locked layers or folders. Please unlock them first.");
+              // 🔒 Try writing to layer and parent only
+              try {
+                var orig = layer.opacity;
+                layer.opacity = orig; // no change — just triggers error if locked
+              } catch (e) {
+                alert("One of the selected layers is locked. Please unlock it to use Onion Skin.");
+                return;
+              }
+
+              try {
+                var test = group.opacity;
+                group.opacity = test;
+              } catch (e) {
+                alert("One of the selected layer's parent folders is locked. Please unlock it to use Onion Skin.");
                 return;
               }
 
@@ -43,7 +54,7 @@ function toggleOnionSkinMode() {
         return;
       }
 
-      // Step 2: Loop through each anim folder and apply onion skin
+      // Step 2: Apply onion skin
       for (var p = 0; p < doc.layers.length; p++) {
         var group = doc.layers[p];
         if (group.typename !== "LayerSet" || group.name.indexOf("anim_") !== 0) continue;
@@ -53,7 +64,7 @@ function toggleOnionSkinMode() {
 
         for (var i = 0; i < layers.length; i++) {
           var layer = layers[i];
-          if (layer.typename === "LayerSet" || layer.locked) continue;
+          if (layer.typename === "LayerSet") continue;
 
           var isSelected = false;
           var isSibling = false;
@@ -64,17 +75,21 @@ function toggleOnionSkinMode() {
             if (i === selIdx - 1 || i === selIdx + 1) isSibling = true;
           }
 
-          if (isSelected) {
-            layer.opacity = 100;
-          } else if (isSibling) {
-            layer.opacity = 40;
-          } else {
-            layer.opacity = 0;
+          try {
+            if (isSelected) {
+              layer.opacity = 100;
+            } else if (isSibling) {
+              layer.opacity = 40;
+            } else {
+              layer.opacity = 0;
+            }
+          } catch (e) {
+            console.log("🔒 Skipped locked layer during opacity set:", layer.name);
           }
         }
       }
 
-      console.log("🧅 Onion Skin applied for multiple selections.");
+      console.log("🧅 Onion Skin applied.");
     })();
   `;
 
