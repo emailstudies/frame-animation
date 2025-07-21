@@ -6,7 +6,7 @@ function toggleOnionSkinMode() {
 
       var selectedLayers = [];
 
-      // Step 1: Find selected layers inside anim_* folders
+      // Step 1: Collect selected layers inside anim_* folders
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
         if (group && group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
@@ -26,7 +26,6 @@ function toggleOnionSkinMode() {
         for (var a = 0; a < window.onionSkinLog.length; a++) {
           var entry = window.onionSkinLog[a];
 
-          // Reset affected layers
           for (var b = 0; b < entry.affected.length; b++) {
             var rec = entry.affected[b];
             try {
@@ -38,7 +37,6 @@ function toggleOnionSkinMode() {
             } catch (e) {}
           }
 
-          // Reset hidden anim folders
           if (entry.hiddenGroups && Array.isArray(entry.hiddenGroups)) {
             for (var h = 0; h < entry.hiddenGroups.length; h++) {
               try {
@@ -50,65 +48,96 @@ function toggleOnionSkinMode() {
         }
       }
 
-      // Step 3: Apply onion skin and update log
+      // Step 3: Apply new onion skin
       var newLog = [];
 
-      for (var k = 0; k < selectedLayers.length; k++) {
-        var sel = selectedLayers[k].layer;
-        var parent = selectedLayers[k].parent;
+      // Track which folders were selected
+      var handledGroups = [];
+
+      for (var x = 0; x < selectedLayers.length; x++) {
+        var selLayer = selectedLayers[x].layer;
+        var parent = selectedLayers[x].parent;
+
+        if (handledGroups.indexOf(parent) !== -1) continue; // Skip if already handled
+        handledGroups.push(parent);
+
         var siblings = parent.layers;
 
         var entryLog = {
-          selectedLayer: sel.name,
           parentName: parent.name,
+          selectedLayers: [],
           affected: [],
           hiddenGroups: []
         };
 
-        // Apply to siblings only, skip nested groups
+        // 1. Go layer by layer in the parent folder
         for (var s = 0; s < siblings.length; s++) {
-          var sib = siblings[s];
-          if (!sib || sib.typename === "LayerSet") continue;
+          var layer = siblings[s];
+          if (!layer || layer.typename === "LayerSet" || layer.locked) continue;
 
-          if (sib === sel) {
-            entryLog.affected.push({
-              layer: sib,
-              type: "opacity",
-              originalOpacity: sib.opacity
-            });
-            sib.opacity = 100;
+          let isSelected = false;
+          let isSibling = false;
+
+          for (var z = 0; z < selectedLayers.length; z++) {
+            if (selectedLayers[z].layer === layer && selectedLayers[z].parent === parent) {
+              isSelected = true;
+              break;
+            }
+          }
+
+          if (!isSelected) {
+            // Now check if it's a sibling of any selected layer
+            for (var q = 0; q < selectedLayers.length; q++) {
+              if (selectedLayers[q].parent !== parent) continue;
+              var indexSel = -1;
+              for (var k = 0; k < siblings.length; k++) {
+                if (siblings[k] === selectedLayers[q].layer) {
+                  indexSel = k;
+                  break;
+                }
+              }
+              if (layer === siblings[indexSel - 1] || layer === siblings[indexSel + 1]) {
+                isSibling = true;
+                break;
+              }
+            }
+          }
+
+          entryLog.affected.push({
+            layer: layer,
+            type: "opacity",
+            originalOpacity: layer.opacity
+          });
+
+          if (isSelected) {
+            entryLog.selectedLayers.push(layer.name);
+            layer.opacity = 100;
+          } else if (isSibling) {
+            layer.opacity = 40;
           } else {
-            entryLog.affected.push({
-              layer: sib,
-              type: "opacity",
-              originalOpacity: sib.opacity
-            });
-            sib.opacity = 40;
+            layer.opacity = 0;
           }
         }
 
-        // Hide unrelated anim_* folders
+        // 2. Hide all other anim_* folders not in handledGroups
         for (var g = 0; g < doc.layers.length; g++) {
-          var animGroup = doc.layers[g];
+          var group = doc.layers[g];
           if (
-            animGroup &&
-            animGroup.typename === "LayerSet" &&
-            animGroup.name.indexOf("anim_") === 0 &&
-            animGroup !== parent &&
-            animGroup.visible
+            group &&
+            group.typename === "LayerSet" &&
+            group.name.indexOf("anim_") === 0 &&
+            handledGroups.indexOf(group) === -1 &&
+            group.visible
           ) {
-            entryLog.hiddenGroups.push(animGroup);
-            animGroup.visible = false;
+            entryLog.hiddenGroups.push(group);
+            group.visible = false;
           }
         }
 
         newLog.push(entryLog);
       }
 
-      // Save new log globally
       window.onionSkinLog = newLog;
-
-      // 🧪 Debug Log
       console.log("\\ud83e\\udd45 Onion Skin Log Updated:", window.onionSkinLog);
     })();
   `;
