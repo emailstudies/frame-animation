@@ -25,7 +25,7 @@ function resetOnionSkin() {
         }
       }
 
-      alert("✅ Onion skin reset. The **first frame** of each of the " + count + " animation folders is now visible.");
+      alert("✅ Onion skin reset. The first frame of each of the " + count + " animation folders is now visible.");
     })();
   `;
 
