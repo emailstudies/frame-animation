@@ -3,9 +3,9 @@ function handleUpdateLayerNumbers() {
     var doc = app.activeDocument;
     var foundAnimFolder = false;
 
-    // Utility to strip previous numbering and cue (e.g., "3/10 ● Ball" -> "Ball")
+    // Strip previous format: "● 5/5 Ball" or "○ 3/5 Ball"
     function cleanBaseName(name) {
-      var match = name.match(/^\\d+\\/\\d+\\s+[●○]\\s+(.*)$/);
+      var match = name.match(/^[●○]\\s+\\d+\\/\\d+\\s+(.*)$/);
       return match ? match[1] : name;
     }
 
@@ -27,26 +27,25 @@ function handleUpdateLayerNumbers() {
         var max = frameLayers.length;
         if (max === 0) continue;
 
-        // Clean base name from last layer
         var originalName = frameLayers[max - 1].name;
         var baseName = cleanBaseName(originalName);
 
         for (var k = 0; k < max; k++) {
           var frameNum = max - k;
           var layer = frameLayers[k];
-          var cue = "●"; // assume filled
+          var cue = "●";
 
           try {
             var b = layer.bounds;
             if (b[0] === 0 && b[1] === 0 && b[2] === 0 && b[3] === 0) {
-              cue = "○"; // empty if bounds are all zero
+              cue = "○";
             }
           } catch (e) {
-            cue = "○"; // fallback if bounds can't be read
+            cue = "○";
           }
 
           try {
-            layer.name = frameNum + "/" + max + " " + cue + " " + baseName;
+            layer.name = cue + " " + frameNum + "/" + max + " " + baseName;
           } catch (e) {}
         }
       }
