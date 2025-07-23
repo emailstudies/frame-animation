@@ -1,21 +1,32 @@
 function previewGif() {
+  // Ask Photopea to send us the current PSD structure
   window.parent.postMessage({ type: "getPSD" }, "*");
 }
 
-window.onmessage = function (event) {
-  const psd = event.data;
-  if (!psd || !psd.children) {
-    alert("No PSD data received");
-    return;
-  }
+// Listen for PSD data from Photopea
+window.addEventListener("message", function (event) {
+  if (event.data && event.data.type === "getPSD") {
+    const psd = event.data.data;
 
+    if (!psd || !psd.children) {
+      alert("❌ No PSD data received or PSD is empty");
+      return;
+    }
+
+    // ✅ PSD received! Proceed to preview the frames
+    console.log("✅ PSD received", psd);
+    startFramePreview(psd);
+  }
+});
+
+function startFramePreview(psd) {
   const canvas = document.getElementById("previewCanvas");
   const ctx = canvas.getContext("2d");
 
   const animFolder = psd.children.find(f => f.name.startsWith("anim_") && f.type === "group");
 
   if (!animFolder) {
-    alert("No anim_* folder found");
+    alert("❌ No anim_* folder found");
     return;
   }
 
@@ -24,7 +35,7 @@ window.onmessage = function (event) {
   );
 
   if (frameLayers.length < 2) {
-    alert("Need at least 2 visible, unlocked layers with thumbnails");
+    alert("❌ Need at least 2 visible, unlocked layers with thumbnails");
     return;
   }
 
@@ -40,13 +51,17 @@ window.onmessage = function (event) {
       loaded++;
       if (loaded === images.length) {
         let current = 0;
+        const fps = 24;
+        const delay = 1000 / fps;
+
         setInterval(() => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(images[current], 0, 0);
           current = (current + 1) % images.length;
-        }, 1000 / 24);
-        alert("Preview started");
+        }, delay);
+
+        alert("✅ Preview started at 24 FPS");
       }
     };
   });
-};
+}
