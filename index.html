@@ -33,15 +33,6 @@
 <body>
   <h2>Photopea Frame Animation Plugin</h2>
 
-  <!-- for canvas -->
-  
-  <button onclick="previewGif()">▶️ Preview</button>
-  <canvas id="previewCanvas" width="500" height="500" style="border:1 px solid #ccc;"></canvas>
-   <!-- the upper block -->
-
-
-
-
   <!-- Phase 1: Add Animation -->
   <div class="section">
     <h3>1. Add Animation</h3>
@@ -71,10 +62,13 @@
 
   <!-- Phase 4: Export GIF (placeholder) -->
   <div class="section">
-    <h3>4. Preview GIF</h3>
-    <button id="previewGifBtn">Coming Soon</button>
+  <h3>3. Onion Skin</h3>
+  <div style="display: flex; gap: 20 px;">
+    <button id="previewAllBtn">Preview All</button>
+    <button id="previewSelectedBtn">Preview Selected</button>
   </div>
-
+</div>
+  
   <!-- Plugin Scripts -->
   <script src="src/create_anim_folder.js"></script>
   <script src="src/update_layer_numbers.js"></script>
