@@ -1,65 +1,54 @@
 function previewGif() {
-  const script = `
-    (function () {
-      var doc = app.activeDocument;
-      if (!doc) {
-        alert("No active document.");
-        return;
-      }
+  Photopea.read("getPSD").then((psd) => {
+    const canvas = document.getElementById("previewCanvas");
+    const ctx = canvas.getContext("2d");
 
-      var fps = 24;
-      var delay = 1000 / fps;
-      var frameIndex = 0;
-      var animFolder = null;
+    // 1. Find first anim_* folder
+    const animFolder = psd.children.find(f => f.name.startsWith("anim_") && f.type === "group");
 
-      // Get the first anim_* folder
-      for (var i = 0; i < doc.layers.length; i++) {
-        var layer = doc.layers[i];
-        if (layer.typename === "LayerSet" && layer.name.startsWith("anim_")) {
-          animFolder = layer;
-          break;
+    if (!animFolder) {
+      alert("❌ No animation folder found.");
+      return;
+    }
+
+    // 2. Get visible, unlocked layers
+    const frameLayers = animFolder.children.filter(l => l.type === "layer" && !l.locked && l.visible && l.thumbnail);
+
+    if (frameLayers.length < 2) {
+      alert("❌ Need at least 2 visible, unlocked layers with thumbnails.");
+      return;
+    }
+
+    // 3. Convert thumbnails to Image objects
+    const frameImages = frameLayers.map(layer => {
+      const img = new Image();
+      img.src = "data:image/png;base64," + layer.thumbnail;
+      return img;
+    });
+
+    // 4. Wait for all images to load
+    let loadedCount = 0;
+    frameImages.forEach(img => {
+      img.onload = () => {
+        loadedCount++;
+        if (loadedCount === frameImages.length) {
+          startCanvasAnimation(frameImages);
         }
-      }
+      };
+    });
 
-      if (!animFolder) {
-        alert("No animation folder found.");
-        return;
-      }
+    function startCanvasAnimation(frames) {
+      let current = 0;
+      const fps = 24;
+      const delay = 1000 / fps;
 
-      var frames = [];
-      for (var j = 0; j < animFolder.layers.length; j++) {
-        var subLayer = animFolder.layers[j];
-        if (subLayer.typename !== "LayerSet" && !subLayer.locked && subLayer.visible) {
-          frames.push(subLayer);
-        }
-      }
+      setInterval(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(frames[current], 0, 0);
+        current = (current + 1) % frames.length;
+      }, delay);
 
-      if (frames.length < 2) {
-        alert("Need at least 2 visible and unlocked frame layers.");
-        return;
-      }
-
-      // Hide all frames initially
-      for (var f = 0; f < frames.length; f++) {
-        frames[f].visible = false;
-      }
-
-      // Store interval ID globally in app object
-      if (!app._framePreviewIntervalId) {
-        app._framePreviewIntervalId = setInterval(function () {
-          // Hide all
-          for (var f = 0; f < frames.length; f++) {
-            frames[f].visible = false;
-          }
-          // Show current
-          frames[frameIndex].visible = true;
-          frameIndex = (frameIndex + 1) % frames.length;
-        }, delay);
-        alert("▶️ Preview started at 24 FPS.");
-      } else {
-        alert("⚠️ Preview already running.");
-      }
-    })();
-  `;
-  window.parent.postMessage(script, "*");
+      alert("✅ Preview started on canvas at 24 FPS.");
+    }
+  });
 }
