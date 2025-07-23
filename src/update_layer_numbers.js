@@ -3,8 +3,8 @@ function handleUpdateLayerNumbers() {
     var doc = app.activeDocument;
     var foundAnimFolder = false;
 
-    // Strip previous format: "● 5/5 Ball" or "○ 3/5 Ball"
-    function cleanBaseName(name) {
+    // Strip previous cue/number prefix, like "● 3/3 Layer 3" → "Layer 3"
+    function stripPrefix(name) {
       var match = name.match(/^[●○]\\s+\\d+\\/\\d+\\s+(.*)$/);
       return match ? match[1] : name;
     }
@@ -12,11 +12,10 @@ function handleUpdateLayerNumbers() {
     for (var i = 0; i < doc.layers.length; i++) {
       var folder = doc.layers[i];
 
-      if (folder.name && folder.name.startsWith("anim_") && folder.typename === "LayerSet") {
+      if (folder.typename === "LayerSet" && folder.name.startsWith("anim_")) {
         foundAnimFolder = true;
 
         var frameLayers = [];
-
         for (var j = 0; j < folder.layers.length; j++) {
           var layer = folder.layers[j];
           if (layer.typename !== "LayerSet") {
@@ -27,25 +26,24 @@ function handleUpdateLayerNumbers() {
         var max = frameLayers.length;
         if (max === 0) continue;
 
-        var originalName = frameLayers[max - 1].name;
-        var baseName = cleanBaseName(originalName);
-
         for (var k = 0; k < max; k++) {
-          var frameNum = max - k;
+          var frameNum = k + 1; // Top to bottom = 1 to max
           var layer = frameLayers[k];
-          var cue = "●";
 
+          var cue = "●";
           try {
             var b = layer.bounds;
-            if (b[0] === 0 && b[1] === 0 && b[2] === 0 && b[3] === 0) {
+            if (b[0] == 0 && b[1] == 0 && b[2] == 0 && b[3] == 0) {
               cue = "○";
             }
           } catch (e) {
             cue = "○";
           }
 
+          var originalName = stripPrefix(layer.name);
+
           try {
-            layer.name = cue + " " + frameNum + "/" + max + " " + baseName;
+            layer.name = cue + " " + frameNum + "/" + max + " " + originalName;
           } catch (e) {}
         }
       }
@@ -57,6 +55,5 @@ function handleUpdateLayerNumbers() {
       alert("No anim folder exists. To update layer numbers, at least one anim folder must exist.");
     }
   `;
-
   window.parent.postMessage(script, "*");
 }
