@@ -1,0 +1,39 @@
+var doc = app.activeDocument;
+var fps = 24;
+var delay = 1000 / fps;
+var frameIndex = 0;
+
+// Get all frames inside one anim folder (e.g., anim_ball)
+var animFolder = doc.layers.find(l => l.name.startsWith("anim_") && l.type == "layerSection");
+
+if (!animFolder) {
+  alert("No animation folder found.");
+  return;
+}
+
+// Only include unlocked, visible layers
+var frames = animFolder.layers.filter(l => l.type == "layer" && !l.locked && l.visible);
+
+if (frames.length < 2) {
+  alert("Need at least 2 frames to preview.");
+  return;
+}
+
+// Hide all frames first
+frames.forEach(f => f.visible = false);
+
+function showFrame(index) {
+  // Hide all
+  frames.forEach(f => f.visible = false);
+  // Show only the current frame
+  frames[index].visible = true;
+}
+
+// Start flipping
+var flipInterval = setInterval(() => {
+  showFrame(frameIndex);
+  frameIndex = (frameIndex + 1) % frames.length;
+}, delay);
+
+// Optional: stop after a few seconds
+// setTimeout(() => clearInterval(flipInterval), 5000);
