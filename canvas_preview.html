@@ -1,59 +1,40 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>GIF Preview</title>
-  <style>
-    body {
-      margin: 0;
-      background: #111;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
+<script>
+  window.addEventListener("message", (event) => {
+    console.log("📨 Message received:", event.data);
+
+    if (event.data?.type === "frameImages") {
+      const frames = event.data.frames;
+      console.log("✅ Frame count:", frames.length);
+      console.log("📦 First frame data (preview):", frames[0]?.data?.slice(0, 100));
+
+      const canvas = document.getElementById("previewCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const images = frames.map(f => {
+        const img = new Image();
+        img.src = "data:image/png;base64," + f.data;
+        img.onload = () => console.log("✅ Loaded image:", img.width, img.height);
+        img.onerror = () => console.error("❌ Failed to load image");
+        return img;
+      });
+
+      let loaded = 0;
+      images.forEach(img => {
+        img.onload = () => {
+          loaded++;
+          if (loaded === images.length) {
+            canvas.width = images[0].width || 512;
+            canvas.height = images[0].height || 512;
+
+            let i = 0;
+            setInterval(() => {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(images[i], 0, 0);
+              i = (i + 1) % images.length;
+            }, 1000 / 24);
+          }
+        };
+      });
     }
-    canvas {
-      border: 2px solid #ccc;
-      background: white;
-    }
-  </style>
-</head>
-<body>
-  <canvas id="previewCanvas" width="512" height="512"></canvas>
-
-  <script>
-    window.addEventListener("message", (event) => {
-      if (event.data?.type === "frameImages") {
-        const frames = event.data.frames;
-        const canvas = document.getElementById("previewCanvas");
-        const ctx = canvas.getContext("2d");
-
-        const images = frames.map(f => {
-          const img = new Image();
-          img.src = "data:image/png;base64," + f.data;
-          return img;
-        });
-
-        let loaded = 0;
-        images.forEach(img => {
-          img.onload = () => {
-            loaded++;
-            if (loaded === images.length) {
-              // Adjust canvas to image size
-              canvas.width = images[0].width;
-              canvas.height = images[0].height;
-
-              // Play loop
-              let i = 0;
-              setInterval(() => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(images[i], 0, 0);
-                i = (i + 1) % images.length;
-              }, 1000 / 24);
-            }
-          };
-        });
-      }
-    });
-  </script>
-</body>
-</html>
+  });
+</script>
