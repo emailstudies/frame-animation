@@ -1,0 +1,62 @@
+<!-- canvas_preview.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GIF Preview</title>
+  <style>
+    body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #222; }
+    canvas { border: 1px solid #999; background: white; }
+  </style>
+</head>
+<body>
+  <canvas id="previewCanvas" width="512" height="512"></canvas>
+  <script>
+    window.addEventListener("message", (event) => {
+      const psd = event.data;
+      if (!psd || !psd.children) {
+        alert("No PSD data received");
+        return;
+      }
+
+      const animFolder = psd.children.find(f => f.name.startsWith("anim_") && f.type === "group");
+      if (!animFolder) {
+        alert("No anim_* folder found");
+        return;
+      }
+
+      const frameLayers = animFolder.children.filter(
+        l => l.type === "layer" && !l.locked && l.visible && l.thumbnail
+      );
+
+      const canvas = document.getElementById("previewCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const images = frameLayers.map(l => {
+        const img = new Image();
+        img.src = "data:image/png;base64," + l.thumbnail;
+        return img;
+      });
+
+      let loaded = 0;
+      images.forEach(img => {
+        img.onload = () => {
+          loaded++;
+          if (loaded === images.length) {
+            let i = 0;
+            const fps = 24;
+            const delay = 1000 / fps;
+            canvas.width = images[0].width;
+            canvas.height = images[0].height;
+
+            setInterval(() => {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(images[i], 0, 0);
+              i = (i + 1) % images.length;
+            }, delay);
+          }
+        };
+      });
+    });
+  </script>
+</body>
+</html>
