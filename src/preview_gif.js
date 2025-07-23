@@ -4,7 +4,10 @@ function previewGif() {
   const script = `
     (function () {
       var doc = app.activeDocument;
-      if (!doc) return;
+      if (!doc) {
+        alert("No active document.");
+        return;
+      }
 
       var animGroup = null;
       for (var i = 0; i < doc.layers.length; i++) {
@@ -25,17 +28,20 @@ function previewGif() {
         animGroup.layers[j].visible = false;
       }
 
-      // Save each layer to OE and push into result
       var results = [];
       for (var k = 0; k < animGroup.layers.length; k++) {
         var layer = animGroup.layers[k];
-        if (layer.typename !== "ArtLayer" || layer.locked || !layer.visible) continue;
+        if (layer.typename !== "ArtLayer") continue;
 
-        layer.visible = true;
-        app.activeDocument.activeLayer = layer;
-        var png = app.activeDocument.saveToOE("png");  // ⚠️ synchronous in this context
-        results.push({ name: layer.name, data: png });
-        layer.visible = false;
+        try {
+          layer.visible = true;
+          app.activeDocument.activeLayer = layer;
+          var png = app.activeDocument.saveToOE("png");
+          results.push({ name: layer.name, data: png });
+          layer.visible = false;
+        } catch (e) {
+          alert("⚠️ Failed to render layer: " + layer.name + "\\n" + e);
+        }
       }
 
       if (animGroup.layers.length > 0) {
