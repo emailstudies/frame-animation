@@ -3,10 +3,31 @@ function handleUpdateLayerNumbers() {
     var doc = app.activeDocument;
     var foundAnimFolder = false;
 
-    // Remove any existing cue/number prefix, e.g., "● 3/5 Layer 1" → "Layer 1"
+    // Remove ". 1/5 " prefix
     function stripPrefix(name) {
-      var match = name.match(/^[●○]\\s+\\d+\\/\\d+\\s+(.*)$/);
+      var match = name.match(/^\\.\\s+\\d+\\/\\d+\\s+(.*)$/);
       return match ? match[1] : name;
+    }
+
+    // Extract "copy", "copy1", "copy 2", "copy_final", "copy(3)", etc.
+    function extractCopySuffix(name) {
+      var copyPattern = /\\b(copy[\\w()\\-]*)\\b/i;
+      var match = name.match(copyPattern);
+
+      if (match) {
+        var copyChunk = match[1].trim();
+        var cleaned = name.replace(copyPattern, "").trim();
+        return {
+          hasCopy: true,
+          copyLabel: copyChunk,
+          cleanedName: cleaned
+        };
+      } else {
+        return {
+          hasCopy: false,
+          cleanedName: name
+        };
+      }
     }
 
     for (var i = 0; i < doc.layers.length; i++) {
@@ -27,30 +48,28 @@ function handleUpdateLayerNumbers() {
         if (max === 0) continue;
 
         for (var k = 0; k < max; k++) {
-          var frameNum = max - k; // Visually bottom = frame 1
+          var frameNum = max - k;
           var layer = frameLayers[k];
 
-          var cue = "●";
-          try {
-            var b = layer.bounds;
-            if (b[0] == 0 && b[1] == 0 && b[2] == 0 && b[3] == 0) {
-              cue = "○";
-            }
-          } catch (e) {
-            cue = "○";
+          var original = stripPrefix(layer.name);
+          var result = extractCopySuffix(original);
+
+          var newName = ". " + frameNum + "/" + max + " ";
+          if (result.hasCopy) {
+            newName += result.copyLabel + " " + result.cleanedName;
+          } else {
+            newName += result.cleanedName;
           }
 
-          var originalName = stripPrefix(layer.name);
-
           try {
-            layer.name = cue + " " + frameNum + "/" + max + " " + originalName;
+            layer.name = newName;
           } catch (e) {}
         }
       }
     }
 
     if (foundAnimFolder) {
-      alert("Layer numbers + visual cue updated.");
+      alert("Layer numbers updated.");
     } else {
       alert("No anim folder exists. To update layer numbers, at least one anim folder must exist.");
     }
