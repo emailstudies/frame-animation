@@ -24,31 +24,28 @@
     window.addEventListener("message", (event) => {
       if (event.data?.type === "frameImages") {
         const frames = event.data.frames;
-        alert("✅ Received " + frames.length + " frame(s)");
-
         const canvas = document.getElementById("previewCanvas");
         const ctx = canvas.getContext("2d");
 
-        const images = [];
-        let loaded = 0;
-
-        frames.forEach((f, i) => {
+        const images = frames.map(f => {
           const img = new Image();
           img.src = "data:image/png;base64," + f.data;
+          return img;
+        });
+
+        let loaded = 0;
+        images.forEach(img => {
           img.onload = () => {
             loaded++;
-            images[i] = img;
-            if (loaded === frames.length) {
-              // Adjust canvas size to image
-              canvas.width = img.width;
-              canvas.height = img.height;
+            if (loaded === images.length) {
+              canvas.width = images[0].width;
+              canvas.height = images[0].height;
 
-              // Play animation loop
-              let frameIndex = 0;
+              let i = 0;
               setInterval(() => {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(images[frameIndex], 0, 0);
-                frameIndex = (frameIndex + 1) % images.length;
+                ctx.drawImage(images[i], 0, 0);
+                i = (i + 1) % images.length;
               }, 1000 / 24);
             }
           };
