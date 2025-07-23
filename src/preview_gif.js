@@ -1,16 +1,15 @@
 function previewGif() {
   const previewWindow = window.open("canvas_preview.html", "_blank");
 
-  // Build a script to run inside Photopea
   const script = `
-    (async function () {
+    (function () {
       var doc = app.activeDocument;
       if (!doc) return;
 
       var animGroup = null;
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
-        if (group.typename === "LayerSet" && group.name.startsWith("anim_")) {
+        if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
           animGroup = group;
           break;
         }
@@ -21,38 +20,39 @@ function previewGif() {
         return;
       }
 
-      var result = [];
+      // Hide all layers
       for (var j = 0; j < animGroup.layers.length; j++) {
-        var layer = animGroup.layers[j];
-        if (layer.typename === "ArtLayer" && !layer.locked && layer.visible) {
-          // Hide all other layers
-          for (var k = 0; k < animGroup.layers.length; k++) {
-            animGroup.layers[k].visible = false;
-          }
-          layer.visible = true;
-          app.activeDocument.activeLayer = layer;
-
-          var data = await app.activeDocument.saveToOE("png");
-          result.push({ name: layer.name, data: data });
-
-          layer.visible = false;
-        }
+        animGroup.layers[j].visible = false;
       }
 
-      app.activeDocument.activeLayer = animGroup.layers[0];
-      animGroup.layers[0].visible = true;
+      // Save each layer to OE and push into result
+      var results = [];
+      for (var k = 0; k < animGroup.layers.length; k++) {
+        var layer = animGroup.layers[k];
+        if (layer.typename !== "ArtLayer" || layer.locked || !layer.visible) continue;
 
-      window.postMessage({ type: "frameImages", frames: result }, "*");
+        layer.visible = true;
+        app.activeDocument.activeLayer = layer;
+        var png = app.activeDocument.saveToOE("png");  // ⚠️ synchronous in this context
+        results.push({ name: layer.name, data: png });
+        layer.visible = false;
+      }
+
+      if (animGroup.layers.length > 0) {
+        animGroup.layers[0].visible = true;
+        app.activeDocument.activeLayer = animGroup.layers[0];
+      }
+
+      window.postMessage({ type: "frameImages", frames: results }, "*");
     })();
   `;
 
   window.parent.postMessage(script, "*");
 
-  // Handle image frame data and forward it to the preview window
-  window.addEventListener("message", function handleMessage(e) {
+  window.addEventListener("message", function handle(e) {
     if (e.data?.type === "frameImages") {
       previewWindow.postMessage({ type: "frameImages", frames: e.data.frames }, "*");
-      window.removeEventListener("message", handleMessage);
+      window.removeEventListener("message", handle);
     }
   });
 }
