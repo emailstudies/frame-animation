@@ -1,62 +1,64 @@
 function previewGif() {
   const script = `
-    (function () {
-      var doc = app.activeDocument;
-      if (!doc) {
-        alert("No active document.");
+    var doc = app.activeDocument;
+    if (!doc) {
+      alert("No document open.");
+      return;
+    }
+
+    // Find the first anim_ folder
+    var animFolder = null;
+    for (var i = 0; i < doc.layers.length; i++) {
+      var layer = doc.layers[i];
+      if (layer.typename === "LayerSet" && layer.name.startsWith("anim_")) {
+        animFolder = layer;
+        break;
+      }
+    }
+
+    if (!animFolder) {
+      alert("No animation folder (anim_*) found.");
+      return;
+    }
+
+    var visibleStates = [];
+    for (var i = 0; i < animFolder.layers.length; i++) {
+      visibleStates.push(animFolder.layers[i].visible);
+      animFolder.layers[i].visible = false;
+    }
+
+    var frames = [];
+    var frameCount = animFolder.layers.length;
+
+    function collectFrame(index) {
+      if (index >= frameCount) {
+        // Restore visibility
+        for (var i = 0; i < animFolder.layers.length; i++) {
+          animFolder.layers[i].visible = visibleStates[i];
+        }
+
+        alert("✅ Frame data collected: " + frames.length + " image(s)");
+
+        var newWin = window.open("canvas_preview.html", "_blank");
+        setTimeout(() => {
+          newWin.postMessage({ type: "frameImages", frames: frames }, "*");
+        }, 500);
         return;
       }
 
-      var animGroup = null;
+      var layer = animFolder.layers[frameCount - 1 - index]; // top-to-bottom order
+      layer.visible = true;
+      app.activeDocument.activeLayer = layer;
 
-      // Find the first anim_* folder
-      for (var i = 0; i < doc.layers.length; i++) {
-        var group = doc.layers[i];
-        if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
-          animGroup = group;
-          break;
-        }
-      }
+      app.activeDocument.saveToOE("png").then(function(png) {
+        frames.push({ name: layer.name, data: png });
+        layer.visible = false;
+        collectFrame(index + 1);
+      });
+    }
 
-      if (!animGroup) {
-        alert("❌ No anim_* folder found.");
-        return;
-      }
-
-      // Hide all layers first
-      for (var j = 0; j < animGroup.layers.length; j++) {
-        animGroup.layers[j].visible = false;
-      }
-
-      var results = [];
-      for (var k = 0; k < animGroup.layers.length; k++) {
-        var layer = animGroup.layers[k];
-        if (layer.typename !== "ArtLayer") continue;
-
-        try {
-          layer.visible = true;
-          app.activeDocument.activeLayer = layer;
-
-          // Save to PNG
-          var png = app.activeDocument.saveToOE("png");
-          results.push(png);  // Just store PNG string for now
-          layer.visible = false;
-        } catch (e) {
-          alert("Error saving layer: " + layer.name + "\\n" + e);
-        }
-      }
-
-      if (results.length > 0) {
-        // DEBUG: show how many frames we captured
-        prompt("✅ Frame data collected:", results.length + " image(s)");
-      } else {
-        alert("❌ No frames collected.");
-      }
-
-      // No postMessage yet — we're testing just inside Photopea
-    })();
+    collectFrame(0);
   `;
 
-  // Send script to Photopea
   window.parent.postMessage(script, "*");
 }
