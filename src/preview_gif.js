@@ -1,6 +1,4 @@
 function previewGif() {
-  const previewWindow = window.open("canvas_preview.html", "_blank");
-
   const script = `
     (function () {
       var doc = app.activeDocument;
@@ -10,6 +8,8 @@ function previewGif() {
       }
 
       var animGroup = null;
+
+      // Find the first anim_* folder
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
         if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
@@ -23,7 +23,7 @@ function previewGif() {
         return;
       }
 
-      // Hide all layers
+      // Hide all layers first
       for (var j = 0; j < animGroup.layers.length; j++) {
         animGroup.layers[j].visible = false;
       }
@@ -36,29 +36,27 @@ function previewGif() {
         try {
           layer.visible = true;
           app.activeDocument.activeLayer = layer;
+
+          // Save to PNG
           var png = app.activeDocument.saveToOE("png");
-          results.push({ name: layer.name, data: png });
+          results.push(png);  // Just store PNG string for now
           layer.visible = false;
         } catch (e) {
-          alert("⚠️ Failed to render layer: " + layer.name + "\\n" + e);
+          alert("Error saving layer: " + layer.name + "\\n" + e);
         }
       }
 
-      if (animGroup.layers.length > 0) {
-        animGroup.layers[0].visible = true;
-        app.activeDocument.activeLayer = animGroup.layers[0];
+      if (results.length > 0) {
+        // DEBUG: show how many frames we captured
+        prompt("✅ Frame data collected:", results.length + " image(s)");
+      } else {
+        alert("❌ No frames collected.");
       }
 
-      window.postMessage({ type: "frameImages", frames: results }, "*");
+      // No postMessage yet — we're testing just inside Photopea
     })();
   `;
 
+  // Send script to Photopea
   window.parent.postMessage(script, "*");
-
-  window.addEventListener("message", function handle(e) {
-    if (e.data?.type === "frameImages") {
-      previewWindow.postMessage({ type: "frameImages", frames: e.data.frames }, "*");
-      window.removeEventListener("message", handle);
-    }
-  });
 }
