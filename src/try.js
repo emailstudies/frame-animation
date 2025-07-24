@@ -1,62 +1,65 @@
 function exportGif() {
   const script = `
-    (function () {
-      try {
-        var doc = app.activeDocument;
-        if (!doc || doc.layers.length < 2) {
-          alert("❌ Need at least two layers.");
-          return;
+(function () {
+  if (!app || !app.activeDocument) {
+    alert("No active document.");
+    return;
+  }
+
+  var doc = app.activeDocument;
+
+  // Check for existing preview folder
+  var existingPreview = doc.layerSets.find(f => f.name === "anim_preview");
+  if (existingPreview) {
+    alert("⚠️ 'anim_preview' folder already exists. Please delete or rename it before running this again.");
+    return;
+  }
+
+  // Get all folders starting with "anim" and not locked
+  var animFolders = doc.layerSets.filter(f => f.name.toLowerCase().startsWith("anim") && !f.allLocked);
+
+  if (animFolders.length === 0) {
+    alert("❌ No 'anim' folders found.");
+    return;
+  }
+
+  // Determine the max number of layers across all anim folders
+  var maxFrames = Math.max(...animFolders.map(f => f.artLayers.length));
+
+  // Create preview folder
+  var previewFolder = doc.layerSets.add();
+  previewFolder.name = "anim_preview";
+
+  for (var i = 0; i < maxFrames; i++) {
+    var layersToMerge = [];
+
+    for (var j = 0; j < animFolders.length; j++) {
+      var folder = animFolders[j];
+
+      if (folder.artLayers.length > i) {
+        var frameLayer = folder.artLayers[folder.artLayers.length - 1 - i]; // layers in reverse order
+        if (!frameLayer.allLocked) {
+          var dup = frameLayer.duplicate();
+          dup.visible = true;
+          layersToMerge.push(dup);
         }
-
-        var layersToMerge = [];
-
-        for (var i = 0; i < doc.layers.length; i++) {
-          var layer = doc.layers[i];
-          if (
-            !layer.locked &&
-            layer.visible &&
-            layer.typename !== "LayerSet"
-          ) {
-            layersToMerge.push(layer);
-            if (layersToMerge.length === 2) break;
-          }
-        }
-
-        if (layersToMerge.length < 2) {
-          alert("❌ Could not find two unlocked, visible layers to merge.");
-          return;
-        }
-
-        console.log("🧪 Found layers to merge:", layersToMerge[0].name, layersToMerge[1].name);
-
-        // Select using putIndex (safer than putIdentifier for this case)
-        var selDesc = new ActionDescriptor();
-        var selList = new ActionList();
-
-        for (var j = 0; j < layersToMerge.length; j++) {
-          var ref = new ActionReference();
-          ref.putIndex(charIDToTypeID("Lyr "), layersToMerge[j].itemIndex);
-          selList.putReference(ref);
-        }
-
-        selDesc.putList(charIDToTypeID("null"), selList);
-        selDesc.putBoolean(charIDToTypeID("MkVs"), false);
-        executeAction(charIDToTypeID("slct"), selDesc, DialogModes.NO);
-
-        // Merge selected layers
-        executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
-
-        // Rename the merged result
-        if (doc.activeLayer) {
-          doc.activeLayer.name = "_a_MergedLayer";
-        }
-
-        alert("✅ Merged: " + doc.activeLayer.name);
-      } catch (e) {
-        alert("❌ Error: " + e);
-        console.log(e);
       }
-    })();
-  `;
+    }
+
+    if (layersToMerge.length > 0) {
+      app.activeDocument.activeLayer = layersToMerge[0];
+      for (var k = 1; k < layersToMerge.length; k++) {
+        layersToMerge[k].move(layersToMerge[0], ElementPlacement.PLACEAFTER);
+      }
+
+      var merged = app.activeDocument.mergeVisibleLayers();
+      merged.name = "_a_Frame " + (i + 1);
+      merged.move(previewFolder, ElementPlacement.INSIDE);
+    }
+  }
+
+  alert("✅ Preview ready in 'anim_preview'. Use File > Export As > GIF to export.");
+})();`.trim();
+
   window.parent.postMessage(script, "*");
 }
