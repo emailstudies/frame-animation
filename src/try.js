@@ -11,41 +11,36 @@ function exportGif() {
     var animFolders = [];
     for (var i = 0; i < doc.layerSets.length; i++) {
       var g = doc.layerSets[i];
-      if (!g.locked && g.name.startsWith("anim_")) {
+      if (g.name.startsWith("anim_")) {
         animFolders.push(g);
       }
     }
 
     if (animFolders.length === 0) {
-      alert("❌ No animation folders (anim_*) found.");
+      alert("❌ No folders found starting with 'anim_'.");
       return;
     }
 
-    console.log("📁 Found anim folders:");
-    animFolders.forEach(f => console.log("—", f.name));
-
-    // 2. Determine max frame count
-    var maxFrames = 0;
+    // 2. Map each folder's visible layers (top-to-bottom UI order)
     var folderFrames = [];
+    var maxFrames = 0;
 
     for (var i = 0; i < animFolders.length; i++) {
       var folder = animFolders[i];
-      var layers = [];
+      var frames = [];
 
       for (var j = folder.layers.length - 1; j >= 0; j--) {
         var layer = folder.layers[j];
-        if (layer && layer.visible && !layer.locked) {
-          console.log("🔎 Layer candidate:", layer.name, "| locked:", layer.locked, "| visible:", layer.visible);
-          layers.push(layer);
+        if (layer && layer.visible) {
+          frames.push(layer);
         }
       }
 
-      console.log("📄", folder.name + ":", layers.length, "layers");
-      if (layers.length > maxFrames) maxFrames = layers.length;
-      folderFrames.push(layers);
+      folderFrames.push(frames);
+      if (frames.length > maxFrames) maxFrames = frames.length;
     }
 
-    // 3. Build frameMap: array of arrays [ [f1 layers], [f2 layers], ... ]
+    // 3. Frame map → array of arrays per frame index
     var frameMap = [];
     for (var f = 0; f < maxFrames; f++) {
       var frame = [];
@@ -54,66 +49,58 @@ function exportGif() {
         if (layer) frame.push(layer);
       }
       frameMap.push(frame);
-      console.log("🧩 Frame", f + 1 + ":", frame.map(l => l.name).join(", "));
     }
 
-    // 4. Create new doc for anim_preview
+    // 4. Create new PSD for preview
     var newDoc = app.documents.add(doc.width, doc.height, doc.resolution, "anim_preview", NewDocumentMode.RGB);
     app.activeDocument = newDoc;
 
-    // 5. For each frame, duplicate and merge layers into _a_Frame N
+    // 5. Loop over frameMap and duplicate+merge
     for (var f = 0; f < frameMap.length; f++) {
-      var layerSet = frameMap[f];
-      var dupLayers = [];
+      var layerIDs = [];
 
-      for (var i = 0; i < layerSet.length; i++) {
-        var l = layerSet[i];
+      for (var i = 0; i < frameMap[f].length; i++) {
+        var original = frameMap[f][i];
         try {
-          var dup = l.duplicate(newDoc);
-          dupLayers.push(dup);
-          console.log("🔁 Duplicated to new doc:", l.name, "→", dup.id);
+          // Duplicate using ActionDescriptor
+          var dupDesc = new ActionDescriptor();
+          var ref = new ActionReference();
+          ref.putIdentifier(charIDToTypeID("Lyr "), original.id);
+          dupDesc.putReference(charIDToTypeID("null"), ref);
+          dupDesc.putInteger(charIDToTypeID("Vrsn"), 5);
+          executeAction(charIDToTypeID("Dplc"), dupDesc, DialogModes.NO);
+
+          var duplicated = app.activeDocument.activeLayer;
+          layerIDs.push(duplicated.id);
         } catch (e) {
-          console.log("❌ Duplication failed:", l.name);
+          alert("❌ Failed to duplicate: " + original.name);
         }
       }
 
-      if (dupLayers.length > 0) {
-        // Select all duplicated layers
-        newDoc.activeLayer = dupLayers[0];
-        for (var i = 1; i < dupLayers.length; i++) {
-          dupLayers[i].selected = true;
-        }
-
-        // Use Action Descriptor to merge
-        var idMrg2 = charIDToTypeID("Mrg2");
-        executeAction(idMrg2, undefined, DialogModes.NO);
-
-        var merged = newDoc.activeLayer;
-        if (merged && merged.id !== undefined) {
-          merged.name = "_a_Frame " + (f + 1);
-          console.log("🎞️ Merged Layer Created:", merged.name);
-
-          // Make sure it's selected before move
-          newDoc.activeLayer = merged;
-
-          // Move to top (we're in a clean doc)
-          var desc = new ActionDescriptor();
+      // Select and merge layers
+      if (layerIDs.length > 0) {
+        var selectDesc = new ActionDescriptor();
+        var list = new ActionList();
+        for (var i = 0; i < layerIDs.length; i++) {
           var ref = new ActionReference();
-          ref.putIdentifier(charIDToTypeID("Lyr "), merged.id);
-          desc.putReference(charIDToTypeID("null"), ref);
+          ref.putIdentifier(charIDToTypeID("Lyr "), layerIDs[i]);
+          list.putReference(ref);
+        }
+        selectDesc.putList(charIDToTypeID("null"), list);
+        executeAction(charIDToTypeID("slct"), selectDesc, DialogModes.NO);
 
-          var toRef = new ActionReference();
-          toRef.putIndex(charIDToTypeID("Lyr "), 1);
-          desc.putReference(charIDToTypeID("T   "), toRef);
-          desc.putBoolean(charIDToTypeID("Adjs"), false);
-          desc.putInteger(charIDToTypeID("Vrsn"), 5);
+        // Merge
+        executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
 
-          executeAction(charIDToTypeID("move"), desc, DialogModes.NO);
+        // Rename
+        var merged = app.activeDocument.activeLayer;
+        if (merged && merged.name) {
+          merged.name = "_a_Frame " + (f + 1);
         }
       }
     }
 
-    alert("✅ Merged " + frameMap.length + " frames into new PSD 'anim_preview'.");
+    alert("✅ Preview created with " + frameMap.length + " frames.");
   })();
   `;
   window.parent.postMessage(script.trim(), "*");
