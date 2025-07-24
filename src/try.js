@@ -1,4 +1,4 @@
-function handleExportGif() {
+function exportGif() {
   const script = `
   (function () {
     var doc = app.activeDocument;
