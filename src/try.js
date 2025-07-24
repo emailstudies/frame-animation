@@ -1,97 +1,115 @@
 function exportGif() {
   const script = `
-  (function () {
-    var doc = app.activeDocument;
-    if (!doc) {
-      alert("❌ No active document.");
-      return;
-    }
-
-    // Step 1: Find all anim_* folders
-    var animFolders = [];
-    for (var i = 0; i < doc.layerSets.length; i++) {
-      var g = doc.layerSets[i];
-      if (!g.locked && g.name.startsWith("anim_")) {
-        animFolders.push(g);
-        console.log("📁 Found anim folder:", g.name);
+    (function () {
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("❌ No active document.");
+        return;
       }
-    }
-    if (animFolders.length === 0) {
-      alert("❌ No anim_* folders found.");
-      return;
-    }
 
-    // Step 2: Determine max frame count and build frame map
-    var frameMap = []; // Array of arrays, one per frame
-    var maxFrames = 0;
-
-    for (var i = 0; i < animFolders.length; i++) {
-      var group = animFolders[i];
-      var visibleLayers = group.layers.filter(l => l && !l.locked && l.visible);
-
-      for (var f = 0; f < visibleLayers.length; f++) {
-        if (!frameMap[f]) frameMap[f] = [];
-        frameMap[f].push(visibleLayers[f]);
-      }
-      if (visibleLayers.length > maxFrames) maxFrames = visibleLayers.length;
-      console.log("📄", group.name + ":", visibleLayers.length, "layers");
-    }
-
-    if (maxFrames === 0) {
-      alert("❌ No visible layers found inside anim_* folders.");
-      return;
-    }
-
-    // Step 3: Create new document
-    var newDoc = app.documents.add(doc.width, doc.height, doc.resolution, "anim_preview", NewDocumentMode.RGB);
-    app.activeDocument = newDoc;
-
-    // Step 4: For each frame, duplicate & merge corresponding layers
-    for (var f = 0; f < frameMap.length; f++) {
-      var layerIDs = [];
-
-      for (var j = 0; j < frameMap[f].length; j++) {
-        var originalLayer = frameMap[f][j];
-        if (!originalLayer) continue;
-
-        // Switch to original doc
-        app.activeDocument = doc;
-        originalLayer.visible = true;
-
-        // Duplicate to new document
-        var dup = originalLayer.duplicate(app.documents["anim_preview"], ElementPlacement.PLACEATBEGINNING);
-
-        if (dup) {
-          app.activeDocument = newDoc;
-          layerIDs.push(dup.id);
-          console.log("🔁 Duplicated:", dup.name, "→ ID", dup.id);
+      // Setup reusable helpers once
+      if (typeof __frameMergeHelpers__ === 'undefined') {
+        function findAnimFolders() {
+          return doc.layers.filter(l => l.name.startsWith("anim_") && l.layers);
         }
-      }
 
-      // Merge the layers for this frame
-      if (layerIDs.length > 0) {
-        var desc = new ActionDescriptor();
-        var list = new ActionList();
-        for (var i = 0; i < layerIDs.length; i++) {
+        function getOrCreateAnimPreviewFolder() {
+          var exists = doc.layers.find(l => l.name === "anim_preview" && l.layers);
+          if (exists) return exists;
+
+          var desc = new ActionDescriptor();
           var ref = new ActionReference();
-          ref.putIdentifier(charIDToTypeID("Lyr "), layerIDs[i]);
-          list.putReference(ref);
+          ref.putClass(stringIDToTypeID("layerSection"));
+          desc.putReference(charIDToTypeID("null"), ref);
+          var nameDesc = new ActionDescriptor();
+          nameDesc.putString(charIDToTypeID("Nm  "), "anim_preview");
+          desc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
+          executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+          return doc.layers[0]; // top-most
         }
-        desc.putList(charIDToTypeID("null"), list);
-        desc.putBoolean(charIDToTypeID("MkVs"), false);
-        executeAction(charIDToTypeID("slct"), desc, DialogModes.NO);
 
-        // Merge selected layers
-        executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
-        var merged = app.activeDocument.activeLayer;
-        merged.name = "_a_Frame " + (f + 1);
-        console.log("🎞️ Merged Frame:", merged.name);
+        function duplicateLayerById(layerId) {
+          var desc = new ActionDescriptor();
+          var ref = new ActionReference();
+          ref.putIdentifier(charIDToTypeID("Lyr "), layerId);
+          desc.putReference(charIDToTypeID("null"), ref);
+          executeAction(charIDToTypeID("Dplc"), desc, DialogModes.NO);
+          return doc.activeLayer;
+        }
+
+        function selectLayersById(ids) {
+          var desc = new ActionDescriptor();
+          var list = new ActionList();
+          for (var i = 0; i < ids.length; i++) {
+            var ref = new ActionReference();
+            ref.putIdentifier(charIDToTypeID("Lyr "), ids[i]);
+            list.putReference(ref);
+          }
+          desc.putList(charIDToTypeID("null"), list);
+          desc.putBoolean(charIDToTypeID("MkVs"), false);
+          executeAction(charIDToTypeID("slct"), desc, DialogModes.NO);
+        }
+
+        function mergeSelectedLayers() {
+          executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
+          return doc.activeLayer;
+        }
+
+        function moveLayerToGroup(layerId, groupId) {
+          var desc = new ActionDescriptor();
+          var ref = new ActionReference();
+          ref.putIdentifier(charIDToTypeID("Lyr "), layerId);
+          desc.putReference(charIDToTypeID("null"), ref);
+          var toRef = new ActionReference();
+          toRef.putIdentifier(charIDToTypeID("Lyr "), groupId);
+          desc.putReference(charIDToTypeID("T   "), toRef);
+          desc.putBoolean(charIDToTypeID("Adjs"), false);
+          desc.putInteger(charIDToTypeID("Vrsn"), 5);
+          executeAction(charIDToTypeID("move"), desc, DialogModes.NO);
+        }
+
+        __frameMergeHelpers__ = {
+          findAnimFolders,
+          getOrCreateAnimPreviewFolder,
+          duplicateLayerById,
+          selectLayersById,
+          mergeSelectedLayers,
+          moveLayerToGroup
+        };
       }
-    }
 
-    alert("✅ All frames merged into 'anim_preview' document.");
-  })();
+      // Main merge routine (can run multiple times)
+      var folders = __frameMergeHelpers__.findAnimFolders();
+      if (folders.length < 2) {
+        alert("❌ Need at least two anim_* folders.");
+        return;
+      }
+
+      var maxFrames = folders.reduce((m, f) => Math.max(m, f.layers.length), 0);
+      var previewGroup = __frameMergeHelpers__.getOrCreateAnimPreviewFolder();
+
+      for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
+        var idsToMerge = [];
+
+        for (var i = 0; i < folders.length; i++) {
+          var folder = folders[i];
+          var layer = folder.layers[frameIndex] || folder.layers[0];
+          if (!layer || layer.locked) continue;
+          var dup = __frameMergeHelpers__.duplicateLayerById(layer.id);
+          idsToMerge.push(dup.id);
+        }
+
+        if (idsToMerge.length === 0) continue;
+
+        __frameMergeHelpers__.selectLayersById(idsToMerge);
+        var merged = __frameMergeHelpers__.mergeSelectedLayers();
+        merged.name = "_a_Frame " + (frameIndex + 1);
+        __frameMergeHelpers__.moveLayerToGroup(merged.id, previewGroup.id);
+      }
+
+      console.log("✅ All frames merged into 'anim_preview'");
+    })();
   `;
 
-  window.parent.postMessage(script.trim(), "*");
+  window.parent.postMessage(script, "*");
 }
