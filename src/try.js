@@ -1,4 +1,4 @@
-function exportGif() {
+function handleExportGif() {
   const script = `
   (function () {
     var doc = app.activeDocument;
@@ -17,6 +17,7 @@ function exportGif() {
         animNames.push(g.name);
       }
     }
+
     console.log("📁 Found anim folders:");
     for (var i = 0; i < animNames.length; i++) {
       console.log("—", animNames[i]);
@@ -27,26 +28,7 @@ function exportGif() {
       return;
     }
 
-    // 2️⃣ Check if anim_preview already exists
-    for (var i = 0; i < doc.layerSets.length; i++) {
-      if (doc.layerSets[i].name === "anim_preview") {
-        alert("⚠️ 'anim_preview' already exists. Please delete it first.");
-        return;
-      }
-    }
-
-    // 3️⃣ Create anim_preview folder
-    var desc = new ActionDescriptor();
-    var ref = new ActionReference();
-    ref.putClass(stringIDToTypeID("layerSection"));
-    desc.putReference(charIDToTypeID("null"), ref);
-    var nameDesc = new ActionDescriptor();
-    nameDesc.putString(charIDToTypeID("Nm  "), "anim_preview");
-    desc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
-    executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
-    var previewFolder = doc.layerSets.getByName("anim_preview");
-
-    // 4️⃣ Build reversed layer map (top-to-bottom = index 0 = Frame 1)
+    // 2️⃣ Build reversed frame map
     var reversedMap = [];
     var maxFrames = 0;
 
@@ -73,23 +55,15 @@ function exportGif() {
       if (layers.length > maxFrames) maxFrames = layers.length;
 
       console.log("📄 " + group.name + ":", layers.length, "layers");
-      for (var n = 0; n < layers.length; n++) {
-        console.log("   •", layers[n].name);
-      }
     }
 
-    // 5️⃣ Create frameMap (array of [frameIndex] = [layer1, layer2, ...])
+    // 3️⃣ Build frame map by index
     var frameMap = [];
     for (var i = 0; i < maxFrames; i++) {
       var frame = [];
       for (var j = 0; j < reversedMap.length; j++) {
         var l = reversedMap[j][i];
-        if (
-          l &&
-          typeof l === "object" &&
-          l.visible !== false &&
-          !l.locked
-        ) {
+        if (l && typeof l === "object" && !l.locked && l.visible !== false) {
           frame.push(l);
         }
       }
@@ -102,6 +76,42 @@ function exportGif() {
       frameMap.push(frame);
     }
 
+    if (frameMap.length === 0) {
+      alert("❌ No valid frames to export.");
+      return;
+    }
+
+    // 4️⃣ Create new document
+    var newDocDesc = new ActionDescriptor();
+    var docRef = new ActionReference();
+    docRef.putClass(charIDToTypeID("Dcmn"));
+    newDocDesc.putReference(charIDToTypeID("null"), docRef);
+
+    var newDocOptions = new ActionDescriptor();
+    newDocOptions.putString(charIDToTypeID("Nm  "), "Animation Preview");
+    newDocOptions.putUnitDouble(charIDToTypeID("Wdth"), charIDToTypeID("#Rlt"), app.activeDocument.width);
+    newDocOptions.putUnitDouble(charIDToTypeID("Hght"), charIDToTypeID("#Rlt"), app.activeDocument.height);
+    newDocOptions.putUnitDouble(charIDToTypeID("Rslt"), charIDToTypeID("#Rsl"), 72);
+    newDocOptions.putEnumerated(charIDToTypeID("Md  "), charIDToTypeID("Md  "), charIDToTypeID("RGBM"));
+    newDocOptions.putInteger(charIDToTypeID("Dpth"), 8);
+    newDocDesc.putObject(charIDToTypeID("Usng"), charIDToTypeID("Dcmn"), newDocOptions);
+
+    executeAction(charIDToTypeID("Mk  "), newDocDesc, DialogModes.NO);
+    var newDoc = app.activeDocument;
+
+    // 5️⃣ Create anim_preview folder in new doc
+    var desc = new ActionDescriptor();
+    var ref = new ActionReference();
+    ref.putClass(stringIDToTypeID("layerSection"));
+    desc.putReference(charIDToTypeID("null"), ref);
+
+    var nameDesc = new ActionDescriptor();
+    nameDesc.putString(charIDToTypeID("Nm  "), "anim_preview");
+    desc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
+    executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+
+    var previewFolder = newDoc.layerSets.getByName("anim_preview");
+
     // 6️⃣ Merge and move each frame
     for (var frameIndex = 0; frameIndex < frameMap.length; frameIndex++) {
       var originals = frameMap[frameIndex];
@@ -109,9 +119,9 @@ function exportGif() {
 
       for (var i = 0; i < originals.length; i++) {
         try {
-          var dup = originals[i].duplicate();
+          var dup = originals[i].duplicate(newDoc);
           duplicatedIDs.push(dup.id);
-          console.log("🔁 Duplicated:", originals[i].name, "→", dup.id);
+          console.log("🔁 Duplicated to new doc:", originals[i].name, "→", dup.id);
         } catch (err) {
           console.log("⚠️ Duplicate failed for", originals[i] ? originals[i].name : "Unknown", err);
         }
@@ -135,7 +145,7 @@ function exportGif() {
         mergeDesc.putList(charIDToTypeID("null"), mergeList);
         executeAction(stringIDToTypeID("mergeLayersNew"), mergeDesc, DialogModes.NO);
 
-        var merged = doc.activeLayer;
+        var merged = newDoc.activeLayer;
         merged.name = "_a_Frame " + (frameIndex + 1);
         console.log("🎞️ Merged Layer Created:", merged.name);
       } catch (err) {
@@ -162,7 +172,7 @@ function exportGif() {
       }
     }
 
-    alert("✅ Merged " + frameMap.length + " frames into 'anim_preview'. Check console for details.");
+    alert("✅ Preview exported to new document. Check 'anim_preview' folder.");
   })();
   `;
 
