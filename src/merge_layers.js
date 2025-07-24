@@ -1,5 +1,5 @@
 function previewGif() {
-  duplicateBeforeMerge(); // Step 1: duplicate 1-layer folders to max length
+  duplicateBeforeMerge(); // ✅ Corrected function name
 
   const script = `
     (function () {
@@ -39,44 +39,43 @@ function previewGif() {
       var previewDoc = app.documents.add(width, height, res, "Animation Preview", NewDocumentMode.RGB);
       app.activeDocument = previewDoc;
 
-      // Step 5: Create 'anim_preview' folder
-      var previewFolder = previewDoc.layerSets.add();
-      previewFolder.name = "anim_preview";
+      // Step 5: Create anim_preview folder
+      var previewGroup = previewDoc.layerSets.add();
+      previewGroup.name = "anim_preview";
 
-      // Step 6: Loop through each frame index
+      // Step 6: Loop through frames and merge
       for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
         var layersToMerge = [];
 
         for (var j = 0; j < animFolders.length; j++) {
           var folder = animFolders[j];
           if (frameIndex < folder.layers.length) {
-            var srcLayer = folder.layers[frameIndex];
-            if (srcLayer) {
-              var dup = srcLayer.duplicate(previewDoc);
+            var layerToCopy = folder.layers[frameIndex];
+            if (layerToCopy) {
+              var dup = layerToCopy.duplicate(previewDoc); // Duplicate into new document
               layersToMerge.push(dup);
             }
           }
         }
 
         if (layersToMerge.length > 0) {
-          // Make sure layers are active and merged in correct order (bottom to top)
-          previewDoc.activeLayer = layersToMerge[layersToMerge.length - 1];
+          // Select all layers to merge (bottom to top)
+          app.activeDocument.activeLayer = layersToMerge[layersToMerge.length - 1];
           for (var k = layersToMerge.length - 2; k >= 0; k--) {
-            previewDoc.activeLayer = previewDoc.activeLayer.merge(layersToMerge[k]);
+            app.activeDocument.activeLayer = app.activeDocument.activeLayer.merge(layersToMerge[k]);
           }
 
-          var merged = previewDoc.activeLayer;
+          var merged = app.activeDocument.activeLayer;
           merged.name = "_a_Frame " + (frameIndex + 1);
 
-          // Move merged layer into anim_preview folder
-          previewFolder.artLayers.add(merged);
+          // Move to anim_preview group
+          previewGroup.artLayers.add(merged);
         }
       }
 
-      alert("✅ Merged preview created in new tab with " + maxFrames + " frames.");
+      alert("✅ Preview created: " + maxFrames + " merged frames.");
     })();
   `;
 
   window.parent.postMessage(script, "*");
 }
-
