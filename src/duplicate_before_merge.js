@@ -1,4 +1,4 @@
-function previewGif() {
+function duplicateBeforeMerge() {
   const script = `
     (function () {
       var doc = app.activeDocument;
