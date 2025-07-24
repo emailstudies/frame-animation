@@ -70,7 +70,7 @@ function previewGif() {
       executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
       var previewGroup = newDoc.layerSets[0];
 
-      // Step 6: For each frame group, duplicate → merge → name → move
+      // Step 6: For each frame group, duplicate → merge → rename → move into previewGroup
       for (var f = 0; f < frameGroups.length; f++) {
         var dupes = [];
         for (var i = 0; i < frameGroups[f].length; i++) {
@@ -101,5 +101,6 @@ function previewGif() {
     })();
   `.trim();
 
-  window.parent.postMessage({ type: "script", script: script }, "*");
+  // ✅ Send script string directly
+  window.parent.postMessage(script, "*");
 }
