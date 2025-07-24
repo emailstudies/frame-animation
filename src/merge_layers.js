@@ -7,42 +7,50 @@ function previewGif() {
         return;
       }
 
-      // Step 1: Get all anim_* folders
-      var animFolders = doc.layers.filter(function(layer) {
-        return (
+      // Step 1: Collect all anim_* folders manually
+      var animFolders = [];
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (
           layer.kind === "group" &&
           layer.name.startsWith("anim_") &&
           !layer.locked &&
           layer.visible
-        );
-      });
+        ) {
+          animFolders.push(layer);
+        }
+      }
 
       if (animFolders.length === 0) {
         alert("❌ No anim_* folders found.");
         return;
       }
 
-      // Step 2: Determine max frames
-      var maxFrames = 0;
-      for (var i = 0; i < animFolders.length; i++) {
-        if (animFolders[i].layers.length > maxFrames) {
-          maxFrames = animFolders[i].layers.length;
+      // Step 2: Check for existing anim_preview
+      var existingPreview = null;
+      for (var i = 0; i < doc.layers.length; i++) {
+        if (doc.layers[i].name === "anim_preview") {
+          existingPreview = doc.layers[i];
+          break;
         }
       }
 
-      // Step 3: Check if anim_preview already exists
-      var existingPreview = doc.layers.find(function(layer) {
-        return layer.name === "anim_preview";
-      });
       if (existingPreview) {
         alert("⚠️ 'anim_preview' already exists. Delete it to re-run.");
         return;
       }
 
+      // Step 3: Find max number of frames
+      var maxFrames = 0;
+      for (var i = 0; i < animFolders.length; i++) {
+        var count = animFolders[i].layers.length;
+        if (count > maxFrames) maxFrames = count;
+      }
+
       // Step 4: Create anim_preview folder
       var previewGroup = doc.createLayerGroup("anim_preview");
 
-      // Step 5: Loop through each frame index
+      // Step 5: Merge corresponding frame layers
       for (var i = 0; i < maxFrames; i++) {
         var layersToMerge = [];
 
@@ -55,7 +63,6 @@ function previewGif() {
           }
         }
 
-        // Step 6: Merge this frame's layers
         if (layersToMerge.length > 0) {
           doc.activeLayers = layersToMerge;
           var merged = doc.activeLayer.merge();
@@ -68,6 +75,6 @@ function previewGif() {
     })();
   `;
 
-  // ✅ CORRECT POSTMESSAGE CALL
+  // ✅ Send to Photopea
   window.parent.postMessage(script, "*");
 }
