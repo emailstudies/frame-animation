@@ -7,7 +7,7 @@ function previewGif() {
         return;
       }
 
-      // Step 1: Get all anim_* folders except anim_preview
+      // Step 1: Collect all anim_* folders (ignore anim_preview and locked)
       var animFolders = [];
       for (var i = 0; i < doc.layerSets.length; i++) {
         var group = doc.layerSets[i];
@@ -21,17 +21,31 @@ function previewGif() {
         return;
       }
 
-      // Step 2: Determine max number of frames
+      // Step 2: Find max frame count
       var maxFrames = 0;
       for (var i = 0; i < animFolders.length; i++) {
-        maxFrames = Math.max(maxFrames, animFolders[i].layers.length);
+        var folder = animFolders[i];
+        if (folder.layers.length > maxFrames) maxFrames = folder.layers.length;
       }
 
-      // Step 3: Create new document for preview
+      // Step 3: Create array of frameGroups[i] = [frame i from each anim folder]
+      var frameGroups = [];
+      for (var f = 0; f < maxFrames; f++) {
+        var frameSet = [];
+        for (var a = 0; a < animFolders.length; a++) {
+          var folder = animFolders[a];
+          var layerCount = folder.layers.length;
+          var index = layerCount - 1 - f; // top-down
+          var layer = folder.layers[index >= 0 ? index : 0]; // fallback to first if out of bounds
+          frameSet.push(layer);
+        }
+        frameGroups.push(frameSet);
+      }
+
+      // Step 4: Create new document and anim_preview folder
       app.runMenuItem("newDocument");
       var newDoc = app.activeDocument;
 
-      // Step 4: Create anim_preview folder
       var desc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -43,41 +57,34 @@ function previewGif() {
 
       var previewGroup = newDoc.layerSets[0];
 
-      // Step 5: For each frame index
-      for (var f = 0; f < maxFrames; f++) {
-        var tempDuplicates = [];
+      // Step 5: For each frame group, duplicate -> merge -> name -> move
+      for (var f = 0; f < frameGroups.length; f++) {
+        var frameSet = frameGroups[f];
+        var dupes = [];
 
-        // Step 6: Grab corresponding frame from each anim folder
-        for (var j = 0; j < animFolders.length; j++) {
-          var folder = animFolders[j];
-          var layerCount = folder.layers.length;
-          var frameIndex = layerCount - 1 - f; // Top-down (UI order)
-
-          var frameLayer = folder.layers[frameIndex >= 0 ? frameIndex : 0]; // fallback
-          if (frameLayer) {
-            var dup = frameLayer.duplicate();
-            tempDuplicates.push(dup);
-          }
+        for (var i = 0; i < frameSet.length; i++) {
+          var dup = frameSet[i].duplicate();
+          dupes.push(dup);
         }
 
-        // Step 7: Deselect everything in newDoc
-        for (var k = 0; k < newDoc.layers.length; k++) {
-          newDoc.layers[k].selected = false;
+        // Deselect all in newDoc
+        for (var d = 0; d < newDoc.layers.length; d++) {
+          newDoc.layers[d].selected = false;
         }
 
-        // Step 8: Select all duplicates
-        for (var m = 0; m < tempDuplicates.length; m++) {
-          tempDuplicates[m].selected = true;
+        // Select all dupes
+        for (var s = 0; s < dupes.length; s++) {
+          dupes[s].selected = true;
         }
 
-        // Step 9: Merge and name
+        // Merge and rename
         newDoc.mergeLayers();
         var merged = newDoc.activeLayer;
         merged.name = "_a_Frame " + (f + 1);
         merged.move(previewGroup, ElementPlacement.INSIDE);
       }
 
-      alert("✅ Preview frames merged into 'anim_preview' in new tab.");
+      alert("✅ Preview created with " + frameGroups.length + " frames.");
     })();
   `.trim();
 
