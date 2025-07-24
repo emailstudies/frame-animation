@@ -1,88 +1,55 @@
-var input = prompt('Enter onion skin opacity (0–100) or type "reset" to disable onion skin:', "30");
-
-if (input !== null) {
-  var doc = app.activeDocument;
-  var flatLayers = [];
-  var ignoredLayers = new Set();
-  var ignoredFolderName = "dnd";
-
-  // Find "dnd" group and all children
-  function collectIgnoredLayers(layersList) {
-    for (var i = 0; i < layersList.length; i++) {
-      var layer = layersList[i];
-      if (layer.name === ignoredFolderName && layer.layers) {
-        addAllNested(layer);
-      } else if (layer.layers) {
-        collectIgnoredLayers(layer.layers);
+function previewGif() {
+  const script = `
+    (function () {
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No active document.");
+        return;
       }
-    }
-  }
 
-  function addAllNested(group) {
-    ignoredLayers.add(group);
-    for (var i = 0; i < group.layers.length; i++) {
-      ignoredLayers.add(group.layers[i]);
-      if (group.layers[i].layers) {
-        addAllNested(group.layers[i]);
-      }
-    }
-  }
-
-  // Flatten layers except ignored
-  function flattenLayers(layersList) {
-    for (var i = 0; i < layersList.length; i++) {
-      var layer = layersList[i];
-      if (ignoredLayers.has(layer)) continue;
-      if (layer.layers) flattenLayers(layer.layers);
-      else flatLayers.push(layer);
-    }
-  }
-
-  collectIgnoredLayers(doc.layers);
-  flattenLayers(doc.layers);
-
-  if (input.toLowerCase() === "reset") {
-    function resetLayers(layersList) {
-      for (var i = 0; i < layersList.length; i++) {
-        var l = layersList[i];
-        if (!ignoredLayers.has(l)) {
-          l.visible = true;
-          l.opacity = 100;
-        }
-        if (l.layers) resetLayers(l.layers);
-      }
-    }
-    resetLayers(doc.layers);
-    alert("All layers reset (excluding 'dnd' and its children).");
-  } else {
-    var opacity = parseInt(input);
-    if (isNaN(opacity) || opacity < 0 || opacity > 100) {
-      alert("Enter a number between 0–100 or type 'reset'.");
-    } else {
-      var activeLayer = doc.activeLayer;
-      var activeIndex = -1;
-
-      for (var i = 0; i < flatLayers.length; i++) {
-        if (flatLayers[i] === activeLayer) {
-          activeIndex = i;
-          break;
+      var animFolders = [];
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (layer.typename === "LayerSet" && layer.name.startsWith("anim")) {
+          animFolders.push(layer);
         }
       }
 
-      for (var j = 0; j < flatLayers.length; j++) {
-        var l = flatLayers[j];
-        if (j === activeIndex) {
-          l.visible = true;
-          l.opacity = 100;
-        } else if (j === activeIndex - 1 || j === activeIndex + 1) {
-          l.visible = true;
-          l.opacity = opacity;
-        } else {
-          l.visible = false;
+      if (animFolders.length === 0) {
+        alert("No anim_* folders found.");
+        return;
+      }
+
+      // Step 1: Find max number of layers across all anim_* folders
+      var maxFrames = 0;
+      for (var i = 0; i < animFolders.length; i++) {
+        var count = animFolders[i].layers.length;
+        if (count > maxFrames) {
+          maxFrames = count;
         }
       }
 
-      alert('"dnd" folder and its children skipped. Onion skin applied.');
-    }
-  }
+      if (maxFrames <= 1) {
+        alert("All folders have 1 or fewer layers. No duplication needed.");
+        return;
+      }
+
+      // Step 2: Duplicate in folders that have exactly 1 layer
+      for (var i = 0; i < animFolders.length; i++) {
+        var folder = animFolders[i];
+        if (folder.layers.length === 1) {
+          var baseLayer = folder.layers[0];
+          for (var j = 1; j < maxFrames; j++) {
+            var dup = baseLayer.duplicate();
+            folder.insertLayer(dup); // insert at top
+          }
+          console.log("Duplicated layer in " + folder.name + " to " + maxFrames + " layers.");
+        }
+      }
+
+      alert("✅ Single-layer folders duplicated to match max frame count (" + maxFrames + ").");
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
 }
