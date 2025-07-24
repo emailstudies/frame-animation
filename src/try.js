@@ -7,66 +7,43 @@ function exportGif() {
         return;
       }
 
-      // Step 1: Collect anim_* folders (unlocked, visible groups)
-      var animFolders = [];
-      for (var i = 0; i < doc.layers.length; i++) {
-        var layer = doc.layers[i];
-        if (
-          layer.name.indexOf("anim_") === 0 &&
-          layer.typename === "LayerSet" &&
-          !layer.locked &&
-          layer.visible
-        ) {
-          animFolders.push(layer);
-        }
-      }
-
+      // Step 1: Find anim_* folders
+      var animFolders = doc.layers.filter(l => l.name.indexOf("anim_") === 0 && l.layers && !l.locked);
       if (animFolders.length === 0) {
         alert("❌ No anim_* folders found.");
         return;
       }
 
-      // Step 2: Check if anim_preview already exists
+      // Step 2: Check if anim_preview exists
       for (var i = 0; i < doc.layers.length; i++) {
-        if (
-          doc.layers[i].typename === "LayerSet" &&
-          doc.layers[i].name === "anim_preview"
-        ) {
+        if (doc.layers[i].name === "anim_preview" && doc.layers[i].layers) {
           alert("⚠️ 'anim_preview' already exists. Delete it to re-run.");
           return;
         }
       }
 
-      // Step 3: Get max frame count
-      var maxFrames = 0;
-      for (var i = 0; i < animFolders.length; i++) {
-        if (animFolders[i].layers.length > maxFrames) {
-          maxFrames = animFolders[i].layers.length;
-        }
-      }
-
-      // Step 4: Create anim_preview folder
+      // Step 3: Create anim_preview folder
       var desc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
       desc.putReference(charIDToTypeID("null"), ref);
-
       var nameDesc = new ActionDescriptor();
       nameDesc.putString(charIDToTypeID("Nm  "), "anim_preview");
       desc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
-
       executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
       var previewGroup = doc.layers[0];
 
-      // Step 5: Merge frame layers
+      // Step 4: Get max frame count
+      var maxFrames = Math.max(...animFolders.map(f => f.layers.length));
+
+      // Step 5: For each frame, duplicate corresponding layers, merge, and move
       for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
         var dupIds = [];
 
-        for (var j = 0; j < animFolders.length; j++) {
-          var folder = animFolders[j];
-          var layer = folder.layers[frameIndex] || folder.layers[0];
-
-          if (!layer || layer.locked || !layer.visible) continue;
+        for (var i = 0; i < animFolders.length; i++) {
+          var folder = animFolders[i];
+          var layer = folder.layers[frameIndex] || folder.layers[0]; // fallback
+          if (!layer || layer.locked) continue;
 
           // Duplicate layer by ID
           var dupDesc = new ActionDescriptor();
@@ -79,12 +56,12 @@ function exportGif() {
 
         if (dupIds.length === 0) continue;
 
-        // Select all duplicated layers
+        // Select all duplicates
         var selDesc = new ActionDescriptor();
         var selList = new ActionList();
-        for (var s = 0; s < dupIds.length; s++) {
+        for (var j = 0; j < dupIds.length; j++) {
           var selRef = new ActionReference();
-          selRef.putIdentifier(charIDToTypeID("Lyr "), dupIds[s]);
+          selRef.putIdentifier(charIDToTypeID("Lyr "), dupIds[j]);
           selList.putReference(selRef);
         }
         selDesc.putList(charIDToTypeID("null"), selList);
@@ -96,7 +73,7 @@ function exportGif() {
         var merged = doc.activeLayer;
         merged.name = "_a_Frame " + (frameIndex + 1);
 
-        // Move merged layer into previewGroup
+        // Move merged layer into anim_preview
         var moveDesc = new ActionDescriptor();
         var moveRef = new ActionReference();
         moveRef.putIdentifier(charIDToTypeID("Lyr "), merged.id);
