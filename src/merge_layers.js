@@ -7,52 +7,32 @@ function previewGif() {
   }
 
   var doc = app.activeDocument;
+  var selected = [];
 
-  // Step 1: Get the first two anim_* folders
-  var animFolders = [];
-  for (var i = 0; i < doc.layerSets.length; i++) {
-    var folder = doc.layerSets[i];
-    if (folder.name.toLowerCase().startsWith("anim")) {
-      animFolders.push(folder);
+  // Grab selected layers (must be 2)
+  for (var i = 0; i < doc.layers.length; i++) {
+    var layer = doc.layers[i];
+    if (layer.selected) {
+      selected.push(layer);
     }
   }
 
-  if (animFolders.length < 2) {
-    alert("❌ Need at least 2 anim_* folders.");
+  if (selected.length !== 2) {
+    alert("❌ Please select exactly two layers to merge.");
     return;
   }
 
-  var folder1 = animFolders[0];
-  var folder2 = animFolders[1];
+  // Duplicate each
+  var dup1 = selected[0].duplicate();
+  var dup2 = selected[1].duplicate();
 
-  var maxFrames = Math.max(folder1.artLayers.length, folder2.artLayers.length);
+  // Merge dup1 and dup2
+  doc.activeLayer = dup2; // make top layer active
+  var merged = dup2.merge(dup1); // merge with the one below
 
-  for (var i = 0; i < maxFrames; i++) {
-    var layersToMerge = [];
-
-    if (i < folder1.artLayers.length) {
-      var l1 = folder1.artLayers[folder1.artLayers.length - 1 - i].duplicate();
-      layersToMerge.push(l1);
-    }
-
-    if (i < folder2.artLayers.length) {
-      var l2 = folder2.artLayers[folder2.artLayers.length - 1 - i].duplicate();
-      layersToMerge.push(l2);
-    }
-
-    if (layersToMerge.length > 0) {
-      app.activeDocument.activeLayer = layersToMerge[layersToMerge.length - 1];
-      for (var j = layersToMerge.length - 2; j >= 0; j--) {
-        app.activeDocument.activeLayer = app.activeDocument.activeLayer.merge(layersToMerge[j]);
-      }
-
-      var merged = app.activeDocument.activeLayer;
-      merged.name = "_test_Frame " + (i + 1);
-    }
-  }
-
-  alert("✅ Test merged " + maxFrames + " frames from two anim folders.");
-})();`.trim();
+  merged.name = "Merged_Layer_Test";
+  alert("✅ Merged two layers without affecting originals.");
+})();`;
 
   window.parent.postMessage(script, "*");
 }
