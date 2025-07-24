@@ -1,76 +1,86 @@
 function previewGif() {
-  // Plugin-side first: pad layers (async allowed here)
-  duplicateBeforeMerge().then(() => {
-    // Now send the actual merge script (sync only)
-    const script = `
-      (function () {
-        var doc = app.activeDocument;
-        if (!doc) {
-          alert("No active document.");
-          return;
+  duplicateBeforeMerge(); // still runs in browser context
+
+  const script = `
+    (function () {
+      // Step 1: Get anim_* folders
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No active document.");
+        return;
+      }
+
+      var animFolders = [];
+      for (var i = 0; i < doc.layers.length; i++) {
+        var l = doc.layers[i];
+        if (l.typename === "LayerSet" && l.name.startsWith("anim")) {
+          animFolders.push(l);
         }
+      }
 
-        var animFolders = [];
-        for (var i = 0; i < doc.layers.length; i++) {
-          var layer = doc.layers[i];
-          if (layer.typename === "LayerSet" && layer.name.indexOf("anim") === 0) {
-            animFolders.push(layer);
-          }
+      if (animFolders.length === 0) {
+        alert("❌ No anim_* folders found.");
+        return;
+      }
+
+      // Step 2: Find max frame count
+      var maxFrames = 0;
+      for (var i = 0; i < animFolders.length; i++) {
+        if (animFolders[i].layers.length > maxFrames) {
+          maxFrames = animFolders[i].layers.length;
         }
+      }
 
-        if (animFolders.length === 0) {
-          alert("❌ No anim_* folders found.");
-          return;
-        }
+      // Step 3: Create new document
+      var w = doc.width;
+      var h = doc.height;
+      var r = doc.resolution;
+      var previewDoc = app.documents.add(w, h, r, "anim_preview_doc", NewDocumentMode.RGB);
+      app.activeDocument = previewDoc;
 
-        var maxFrames = 0;
-        for (var i = 0; i < animFolders.length; i++) {
-          var count = 0;
-          for (var j = 0; j < animFolders[i].layers.length; j++) {
-            if (!animFolders[i].layers[j].allLocked) count++;
-          }
-          if (count > maxFrames) maxFrames = count;
-        }
+      // Step 4: Create anim_preview group using action descriptor
+      var groupDesc = new ActionDescriptor();
+      var ref = new ActionReference();
+      ref.putClass(stringIDToTypeID("layerSection"));
+      groupDesc.putReference(charIDToTypeID("null"), ref);
+      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-        var width = doc.width;
-        var height = doc.height;
-        var res = doc.resolution;
-        var previewDoc = app.documents.add(width, height, res, "Animation Preview", NewDocumentMode.RGB);
-        app.activeDocument = previewDoc;
+      // Rename the new group
+      var newGroup = app.activeDocument.activeLayer;
+      newGroup.name = "anim_preview";
 
-        var previewGroup = previewDoc.layerSets.add();
-        previewGroup.name = "anim_preview";
+      // Step 5: For each frame index
+      for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
+        var layersToMerge = [];
 
-        for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
-          var tempGroup = previewDoc.layerSets.add();
-          tempGroup.name = "temp_merge_" + frameIndex;
-
-          for (var j = 0; j < animFolders.length; j++) {
-            var folder = animFolders[j];
-            var unlocked = [];
-            for (var k = 0; k < folder.layers.length; k++) {
-              if (!folder.layers[k].allLocked) unlocked.push(folder.layers[k]);
+        for (var j = 0; j < animFolders.length; j++) {
+          var folder = animFolders[j];
+          if (frameIndex < folder.layers.length) {
+            var layer = folder.layers[frameIndex];
+            if (layer) {
+              var dup = layer.duplicate(previewDoc);
+              layersToMerge.push(dup);
             }
-
-            if (frameIndex < unlocked.length) {
-              var layerToCopy = unlocked[frameIndex];
-              if (layerToCopy) {
-                var dup = layerToCopy.duplicate(previewDoc);
-                dup.move(tempGroup, ElementPlacement.INSIDE);
-              }
-            }
           }
-
-          previewDoc.activeLayer = tempGroup;
-          tempGroup.merge();
-
-          previewDoc.activeLayer.name = "_a_Frame " + (frameIndex + 1);
-          previewDoc.activeLayer.move(previewGroup, ElementPlacement.INSIDE);
         }
 
-        alert("✅ Preview created with " + maxFrames + " merged frames.");
-      })();
-    `;
-    window.parent.postMessage(script, "*");
-  });
+        if (layersToMerge.length > 0) {
+          // Merge layers from bottom to top
+          app.activeDocument.activeLayer = layersToMerge[layersToMerge.length - 1];
+          for (var k = layersToMerge.length - 2; k >= 0; k--) {
+            app.activeDocument.activeLayer = app.activeDocument.activeLayer.merge(layersToMerge[k]);
+          }
+
+          // Rename and move to group
+          var merged = app.activeDocument.activeLayer;
+          merged.name = "_a_Frame " + (frameIndex + 1);
+          merged.move(newGroup, ElementPlacement.PLACEATBEGINNING);
+        }
+      }
+
+      alert("✅ Preview created in new tab.");
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
 }
