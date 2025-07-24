@@ -9,14 +9,18 @@ function exportGif() {
 
     // 1️⃣ Collect anim_* folders
     var animFolders = [];
+    var animNames = [];
     for (var i = 0; i < doc.layerSets.length; i++) {
       var g = doc.layerSets[i];
-      if (g && typeof g.name === "string" && g.name.startsWith("anim_") && !g.locked) {
+      if (g && typeof g.name === "string" && g.name.indexOf("anim_") === 0 && !g.locked) {
         animFolders.push(g);
+        animNames.push(g.name);
       }
     }
-
-    console.log("📁 Found anim folders:", animFolders.map(f => f.name));
+    console.log("📁 Found anim folders:");
+    for (var i = 0; i < animNames.length; i++) {
+      console.log("—", animNames[i]);
+    }
 
     if (animFolders.length === 0) {
       alert("❌ No anim_* folders found.");
@@ -42,28 +46,30 @@ function exportGif() {
     executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
     var previewFolder = doc.layerSets.getByName("anim_preview");
 
-    // 4️⃣ Build frameMap[]
-    var frameMap = [];
+    // 4️⃣ Build reversed layer map (top-to-bottom = index 0 = Frame 1)
+    var reversedMap = [];
     var maxFrames = 0;
-    var reversedMap = animFolders.map(f => {
+
+    for (var f = 0; f < animFolders.length; f++) {
+      var group = animFolders[f];
       var layers = [];
-      for (var j = f.layers.length - 1; j >= 0; j--) {
-        var l = f.layers[j];
-        if (
-          l &&
-          typeof l === "object" &&
-          l.hasOwnProperty("locked") &&
-          l.hasOwnProperty("visible") &&
-          !l.locked
-        ) {
+      for (var j = group.layers.length - 1; j >= 0; j--) {
+        var l = group.layers[j];
+        if (l && typeof l === "object" && l.hasOwnProperty("locked") && !l.locked) {
           layers.push(l);
         }
       }
-      console.log("📄", f.name, "=>", layers.map(l => l.name));
+      reversedMap.push(layers);
       if (layers.length > maxFrames) maxFrames = layers.length;
-      return layers;
-    });
 
+      console.log("📄 " + group.name + ":", layers.length, "layers");
+      for (var n = 0; n < layers.length; n++) {
+        console.log("   •", layers[n].name);
+      }
+    }
+
+    // 5️⃣ Create frameMap (array of [frameIndex] = [layer1, layer2, ...])
+    var frameMap = [];
     for (var i = 0; i < maxFrames; i++) {
       var frame = [];
       for (var j = 0; j < reversedMap.length; j++) {
@@ -79,52 +85,58 @@ function exportGif() {
           frame.push(l);
         }
       }
-      console.log("🧩 Frame", i + 1, "layers:", frame.map(l => l.name));
+
+      var names = [];
+      for (var k = 0; k < frame.length; k++) {
+        names.push(frame[k].name);
+      }
+      console.log("🧩 Frame " + (i + 1) + ":", names.join(", "));
       frameMap.push(frame);
     }
 
-    // 5️⃣ Merge and move each frame
+    // 6️⃣ Merge and move each frame
     for (var frameIndex = 0; frameIndex < frameMap.length; frameIndex++) {
       var originals = frameMap[frameIndex];
       var duplicatedIDs = [];
 
+      // Duplicate all layers in this frame
       for (var i = 0; i < originals.length; i++) {
         try {
           var dup = originals[i].duplicate();
           duplicatedIDs.push(dup.id);
-          console.log("🔁 Duplicated:", originals[i].name, "→ ID:", dup.id);
+          console.log("🔁 Duplicated:", originals[i].name, "→", dup.id);
         } catch (err) {
-          console.log("⚠️ Duplicate failed for", originals[i]?.name, err);
+          console.log("⚠️ Duplicate failed for", originals[i] ? originals[i].name : "Unknown", err);
         }
       }
 
-      if (duplicatedIDs.length === 0) continue;
-
-      // ✅ Select duplicated layers
-      try {
-        var selList = new ActionList();
-        for (var i = 0; i < duplicatedIDs.length; i++) {
-          var ref = new ActionReference();
-          ref.putIdentifier(charIDToTypeID("Lyr "), duplicatedIDs[i]);
-          selList.putReference(ref);
-        }
-
-        var selDesc = new ActionDescriptor();
-        selDesc.putList(charIDToTypeID("null"), selList);
-        selDesc.putBoolean(charIDToTypeID("MkVs"), false);
-        executeAction(charIDToTypeID("slct"), selDesc, DialogModes.NO);
-        console.log("✅ Selected for merging:", duplicatedIDs);
-      } catch (err) {
-        console.log("⚠️ Selection failed", err);
+      if (duplicatedIDs.length === 0) {
+        console.log("⚠️ No layers to merge in Frame " + (frameIndex + 1));
         continue;
       }
 
-      // ✅ Merge selected layers
-      var merged = app.activeDocument.mergeLayers();
-      merged.name = "_a_Frame " + (frameIndex + 1);
-      console.log("🎞️ Merged Layer Created:", merged.name);
+      // ✅ Merge via Action Descriptor
+      try {
+        var mergeList = new ActionList();
+        for (var m = 0; m < duplicatedIDs.length; m++) {
+          var ref = new ActionReference();
+          ref.putIdentifier(charIDToTypeID("Lyr "), duplicatedIDs[m]);
+          mergeList.putReference(ref);
+        }
 
-      // ✅ Move to anim_preview
+        var mergeDesc = new ActionDescriptor();
+        mergeDesc.putList(charIDToTypeID("null"), mergeList);
+        executeAction(stringIDToTypeID("mergeLayersNew"), mergeDesc, DialogModes.NO);
+
+        var merged = doc.activeLayer;
+        merged.name = "_a_Frame " + (frameIndex + 1);
+        console.log("🎞️ Merged Layer Created:", merged.name);
+      } catch (err) {
+        console.log("⚠️ Merge failed:", err);
+        continue;
+      }
+
+      // ✅ Move merged layer into anim_preview
       try {
         var moveRef = new ActionReference();
         moveRef.putIdentifier(charIDToTypeID("Lyr "), merged.id);
@@ -143,7 +155,7 @@ function exportGif() {
       }
     }
 
-    alert("✅ All frames merged into 'anim_preview'. Check console for details.");
+    alert("✅ Merged " + frameMap.length + " frames into 'anim_preview'. Check console for details.");
   })();
   `;
 
