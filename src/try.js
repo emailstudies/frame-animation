@@ -7,11 +7,11 @@ function exportGif() {
       return;
     }
 
-    // 🔍 Find all anim_* folders
+    // 🔍 Collect all folders starting with 'anim_'
     var animFolders = [];
     for (var i = 0; i < doc.layerSets.length; i++) {
       var g = doc.layerSets[i];
-      if (!g.locked && g.name.startsWith("anim_")) {
+      if (g && g.name && g.name.startsWith("anim_") && !g.locked) {
         animFolders.push(g);
       }
     }
@@ -21,17 +21,10 @@ function exportGif() {
       return;
     }
 
-    // 🧮 Max frame count
-    var maxFrames = 0;
-    for (var i = 0; i < animFolders.length; i++) {
-      var unlockedLayers = animFolders[i].layers.filter(l => !l.locked);
-      if (unlockedLayers.length > maxFrames) maxFrames = unlockedLayers.length;
-    }
-
-    // 🚫 Check if preview already exists
+    // 🚫 Check if anim_preview already exists
     for (var i = 0; i < doc.layerSets.length; i++) {
       var g = doc.layerSets[i];
-      if (g.name === "anim_preview") {
+      if (g && g.name === "anim_preview") {
         alert("⚠️ 'anim_preview' already exists. Delete it first.");
         return;
       }
@@ -49,13 +42,33 @@ function exportGif() {
 
     var previewFolder = doc.layerSets.getByName("anim_preview");
 
-    // 🧪 Merge per frame index
+    // 🧮 Find max number of unlocked layers (frames)
+    var maxFrames = 0;
+    for (var i = 0; i < animFolders.length; i++) {
+      var folder = animFolders[i];
+      var layers = folder.layers;
+      if (!layers) continue;
+
+      var unlockedCount = 0;
+      for (var j = 0; j < layers.length; j++) {
+        var lyr = layers[j];
+        if (lyr && !lyr.locked) unlockedCount++;
+      }
+
+      if (unlockedCount > maxFrames) maxFrames = unlockedCount;
+    }
+
+    // 🔁 Merge frame-wise
     for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
       var layersToMerge = [];
 
       for (var j = 0; j < animFolders.length; j++) {
         var folder = animFolders[j];
-        var layer = folder.layers[frameIndex];
+        if (folder.locked) continue;
+        var layers = folder.layers;
+        if (!layers || frameIndex >= layers.length) continue;
+
+        var layer = layers[frameIndex];
         if (layer && !layer.locked && layer.visible) {
           var dup = layer.duplicate();
           layersToMerge.push(dup);
