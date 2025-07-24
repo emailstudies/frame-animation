@@ -53,12 +53,22 @@ function exportGif() {
     for (var f = 0; f < animFolders.length; f++) {
       var group = animFolders[f];
       var layers = [];
+
       for (var j = group.layers.length - 1; j >= 0; j--) {
         var l = group.layers[j];
-        if (l && typeof l === "object" && l.hasOwnProperty("locked") && !l.locked) {
+        if (!l) continue;
+
+        console.log("🔎 Layer candidate:", l.name, "| locked:", l.locked, "| visible:", l.visible);
+
+        if (
+          typeof l === "object" &&
+          !l.locked &&
+          l.visible !== false
+        ) {
           layers.push(l);
         }
       }
+
       reversedMap.push(layers);
       if (layers.length > maxFrames) maxFrames = layers.length;
 
@@ -77,9 +87,7 @@ function exportGif() {
         if (
           l &&
           typeof l === "object" &&
-          l.hasOwnProperty("locked") &&
-          l.hasOwnProperty("visible") &&
-          l.visible &&
+          l.visible !== false &&
           !l.locked
         ) {
           frame.push(l);
@@ -99,7 +107,6 @@ function exportGif() {
       var originals = frameMap[frameIndex];
       var duplicatedIDs = [];
 
-      // Duplicate all layers in this frame
       for (var i = 0; i < originals.length; i++) {
         try {
           var dup = originals[i].duplicate();
