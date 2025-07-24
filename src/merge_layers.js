@@ -1,58 +1,49 @@
 function previewGif() {
   const script = `
 (function () {
-  var doc = app.activeDocument;
+  var originalDoc = app.activeDocument;
+  var frameLayers = [];
+  var lockedStatus = [];
+  var visibilityStatus = [];
 
-  function createLayer(name) {
-    var desc = new ActionDescriptor();
-    var ref = new ActionReference();
-    ref.putClass(stringIDToTypeID("layer"));
-    desc.putReference(charIDToTypeID("null"), ref);
-    executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
-    app.activeDocument.activeLayer.name = name;
-  }
-
-  // Create 3 layers for animation
-  createLayer("Frame_3");
-  createLayer("Frame_2");
-  createLayer("Frame_1");
-
-  // Hide all layers except Frame_1
-  for (var i = 0; i < doc.layers.length; i++) {
-    var layer = doc.layers[i];
-    layer.visible = (layer.name === "Frame_1");
-  }
-
-  alert("🎬 Created 3 frames. Showing Frame_1 only.");
-})();`.trim();
-
-  window.parent.postMessage(script, "*");
-}
-
-function showFrameByName(name = "Frame_1") {
-  const script = `
-(function () {
-  var doc = app.activeDocument;
-  var found = false;
-
-  for (var i = 0; i < doc.layers.length; i++) {
-    var layer = doc.layers[i];
+  // Step 1: Collect all Frame_ layers
+  for (var i = originalDoc.layers.length - 1; i >= 0; i--) {
+    var layer = originalDoc.layers[i];
     if (layer.name.startsWith("Frame_")) {
-      layer.visible = (layer.name === "${name}");
-      if (layer.visible) found = true;
+      frameLayers.push(layer);
+      lockedStatus.push(layer.allLocked);
+      visibilityStatus.push(layer.visible);
     }
   }
 
-  alert(found ? "🖼️ Showing: ${name}" : "❌ Frame not found: ${name}");
-})();`.trim();
+  if (frameLayers.length === 0) {
+    alert("⚠️ No layers starting with 'Frame_' found.");
+    return;
+  }
 
-  window.parent.postMessage(script, "*");
-}
+  // Step 2: Create new doc with same dimensions
+  var width = originalDoc.width;
+  var height = originalDoc.height;
+  var previewDoc = app.documents.add(width, height, 72, "Animation Preview", NewDocumentMode.RGB);
 
-function exportGif() {
-  const script = `
-(function () {
-  alert("📤 Plugin working: Please export manually via File > Export As > GIF.");
+  // Step 3: Duplicate each layer into preview doc with _a_ prefix
+  for (var i = 0; i < frameLayers.length; i++) {
+    var originalLayer = frameLayers[i];
+    app.activeDocument = originalDoc;
+    app.activeDocument.activeLayer = originalLayer;
+
+    var duplicated = originalLayer.duplicate(previewDoc);
+
+    // Clean name: strip _a_ if already present
+    var cleanName = originalLayer.name.replace(/^_a_/, "");
+    duplicated.name = "_a_" + cleanName;
+
+    duplicated.visible = visibilityStatus[i];
+    if (lockedStatus[i]) duplicated.allLocked = true;
+  }
+
+  // Step 4: Switch to preview doc
+  app.activeDocument = previewDoc;
 })();`.trim();
 
   window.parent.postMessage(script, "*");
