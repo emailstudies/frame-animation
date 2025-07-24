@@ -1,86 +1,59 @@
 function previewGif() {
-  duplicateBeforeMerge(); // still runs in browser context
-
   const script = `
-    (function () {
-      // Step 1: Get anim_* folders
-      var doc = app.activeDocument;
-      if (!doc) {
-        alert("No active document.");
-        return;
-      }
+(function () {
+  var doc = app.activeDocument;
 
-      var animFolders = [];
-      for (var i = 0; i < doc.layers.length; i++) {
-        var l = doc.layers[i];
-        if (l.typename === "LayerSet" && l.name.startsWith("anim")) {
-          animFolders.push(l);
-        }
-      }
+  function createLayer(name) {
+    var desc = new ActionDescriptor();
+    var ref = new ActionReference();
+    ref.putClass(stringIDToTypeID("layer"));
+    desc.putReference(charIDToTypeID("null"), ref);
+    executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+    app.activeDocument.activeLayer.name = name;
+  }
 
-      if (animFolders.length === 0) {
-        alert("❌ No anim_* folders found.");
-        return;
-      }
+  // Create 3 layers for animation
+  createLayer("Frame_3");
+  createLayer("Frame_2");
+  createLayer("Frame_1");
 
-      // Step 2: Find max frame count
-      var maxFrames = 0;
-      for (var i = 0; i < animFolders.length; i++) {
-        if (animFolders[i].layers.length > maxFrames) {
-          maxFrames = animFolders[i].layers.length;
-        }
-      }
+  // Hide all layers except Frame_1
+  for (var i = 0; i < doc.layers.length; i++) {
+    var layer = doc.layers[i];
+    layer.visible = (layer.name === "Frame_1");
+  }
 
-      // Step 3: Create new document
-      var w = doc.width;
-      var h = doc.height;
-      var r = doc.resolution;
-      var previewDoc = app.documents.add(w, h, r, "anim_preview_doc", NewDocumentMode.RGB);
-      app.activeDocument = previewDoc;
+  alert("🎬 Created 3 frames. Showing Frame_1 only.");
+})();`.trim();
 
-      // Step 4: Create anim_preview group using action descriptor
-      var groupDesc = new ActionDescriptor();
-      var ref = new ActionReference();
-      ref.putClass(stringIDToTypeID("layerSection"));
-      groupDesc.putReference(charIDToTypeID("null"), ref);
-      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
+  window.parent.postMessage(script, "*");
+}
 
-      // Rename the new group
-      var newGroup = app.activeDocument.activeLayer;
-      newGroup.name = "anim_preview";
+function showFrameByName(name = "Frame_1") {
+  const script = `
+(function () {
+  var doc = app.activeDocument;
+  var found = false;
 
-      // Step 5: For each frame index
-      for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
-        var layersToMerge = [];
+  for (var i = 0; i < doc.layers.length; i++) {
+    var layer = doc.layers[i];
+    if (layer.name.startsWith("Frame_")) {
+      layer.visible = (layer.name === "${name}");
+      if (layer.visible) found = true;
+    }
+  }
 
-        for (var j = 0; j < animFolders.length; j++) {
-          var folder = animFolders[j];
-          if (frameIndex < folder.layers.length) {
-            var layer = folder.layers[frameIndex];
-            if (layer) {
-              var dup = layer.duplicate(previewDoc);
-              layersToMerge.push(dup);
-            }
-          }
-        }
+  alert(found ? "🖼️ Showing: ${name}" : "❌ Frame not found: ${name}");
+})();`.trim();
 
-        if (layersToMerge.length > 0) {
-          // Merge layers from bottom to top
-          app.activeDocument.activeLayer = layersToMerge[layersToMerge.length - 1];
-          for (var k = layersToMerge.length - 2; k >= 0; k--) {
-            app.activeDocument.activeLayer = app.activeDocument.activeLayer.merge(layersToMerge[k]);
-          }
+  window.parent.postMessage(script, "*");
+}
 
-          // Rename and move to group
-          var merged = app.activeDocument.activeLayer;
-          merged.name = "_a_Frame " + (frameIndex + 1);
-          merged.move(newGroup, ElementPlacement.PLACEATBEGINNING);
-        }
-      }
-
-      alert("✅ Preview created in new tab.");
-    })();
-  `;
+function exportGif() {
+  const script = `
+(function () {
+  alert("📤 Plugin working: Please export manually via File > Export As > GIF.");
+})();`.trim();
 
   window.parent.postMessage(script, "*");
 }
