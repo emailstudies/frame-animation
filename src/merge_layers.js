@@ -1,6 +1,8 @@
 function previewGif() {
   const script = `
     (function () {
+      console.log("🚀 Starting previewGif()...");
+
       var doc = app.activeDocument;
       if (!doc) {
         alert("❌ No active document.");
@@ -8,11 +10,17 @@ function previewGif() {
       }
 
       // Step 1: Collect all anim_* folders (ignore anim_preview and locked)
+      console.log("🔍 Collecting anim_* folders...");
       var animFolders = [];
       for (var i = 0; i < doc.layerSets.length; i++) {
         var group = doc.layerSets[i];
-        if (group.name.startsWith("anim_") && group.name !== "anim_preview" && !group.allLocked) {
+        if (
+          group.name.startsWith("anim_") &&
+          group.name !== "anim_preview" &&
+          !group.allLocked
+        ) {
           animFolders.push(group);
+          console.log("✅ Found folder:", group.name);
         }
       }
 
@@ -24,28 +32,34 @@ function previewGif() {
       // Step 2: Find max frame count
       var maxFrames = 0;
       for (var i = 0; i < animFolders.length; i++) {
-        var folder = animFolders[i];
-        if (folder.layers.length > maxFrames) maxFrames = folder.layers.length;
+        var len = animFolders[i].layers.length;
+        if (len > maxFrames) maxFrames = len;
       }
+      console.log("📊 Max frame count:", maxFrames);
 
-      // Step 3: Create array of frameGroups[i] = [frame i from each anim folder]
+      // Step 3: Create frameGroups[i] = [layer i from each anim folder]
+      console.log("📦 Building frame groups...");
       var frameGroups = [];
       for (var f = 0; f < maxFrames; f++) {
-        var frameSet = [];
+        var group = [];
         for (var a = 0; a < animFolders.length; a++) {
           var folder = animFolders[a];
-          var layerCount = folder.layers.length;
-          var index = layerCount - 1 - f; // top-down
-          var layer = folder.layers[index >= 0 ? index : 0]; // fallback to first if out of bounds
-          frameSet.push(layer);
+          var count = folder.layers.length;
+          var index = count - 1 - f;
+          var layer = folder.layers[index >= 0 ? index : count - 1];
+          group.push(layer);
+          console.log("🧩 Frame", f + 1, "→", folder.name, "→", layer.name);
         }
-        frameGroups.push(frameSet);
+        frameGroups.push(group);
       }
 
-      // Step 4: Create new document and anim_preview folder
-      app.runMenuItem("newDocument");
+      // Step 4: Create new document
+      console.log("📄 Creating new document...");
+      app.runMenuItem(stringIDToTypeID("newDocument"));
       var newDoc = app.activeDocument;
 
+      // Step 5: Create 'anim_preview' group
+      console.log("📁 Creating anim_preview folder...");
       var desc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -54,16 +68,13 @@ function previewGif() {
       nameDesc.putString(charIDToTypeID("Nm  "), "anim_preview");
       desc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
       executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
-
       var previewGroup = newDoc.layerSets[0];
 
-      // Step 5: For each frame group, duplicate -> merge -> name -> move
+      // Step 6: For each frame group, duplicate → merge → name → move
       for (var f = 0; f < frameGroups.length; f++) {
-        var frameSet = frameGroups[f];
         var dupes = [];
-
-        for (var i = 0; i < frameSet.length; i++) {
-          var dup = frameSet[i].duplicate();
+        for (var i = 0; i < frameGroups[f].length; i++) {
+          var dup = frameGroups[f][i].duplicate();
           dupes.push(dup);
         }
 
@@ -72,21 +83,23 @@ function previewGif() {
           newDoc.layers[d].selected = false;
         }
 
-        // Select all dupes
+        // Select the duplicates
         for (var s = 0; s < dupes.length; s++) {
           dupes[s].selected = true;
         }
 
-        // Merge and rename
         newDoc.mergeLayers();
         var merged = newDoc.activeLayer;
         merged.name = "_a_Frame " + (f + 1);
         merged.move(previewGroup, ElementPlacement.INSIDE);
+
+        console.log("🖼️ Merged Frame", f + 1, "as:", merged.name);
       }
 
-      alert("✅ Preview created with " + frameGroups.length + " frames.");
+      alert("✅ Preview created with " + frameGroups.length + " merged frames.");
+      console.log("🏁 Finished previewGif().");
     })();
   `.trim();
 
-  window.parent.postMessage(script, "*");
+  window.parent.postMessage({ type: "script", script: script }, "*");
 }
