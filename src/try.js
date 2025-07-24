@@ -42,52 +42,61 @@ function exportGif() {
 
     var previewFolder = doc.layerSets.getByName("anim_preview");
 
-    // 🧮 Find max number of unlocked layers (frames)
+    // 🧮 Get max frame count
     var maxFrames = 0;
+    var reversedLayersMap = [];
+
     for (var i = 0; i < animFolders.length; i++) {
       var folder = animFolders[i];
       var layers = folder.layers;
       if (!layers) continue;
 
-      var unlockedCount = 0;
+      var unlocked = [];
       for (var j = 0; j < layers.length; j++) {
         var lyr = layers[j];
-        if (lyr && !lyr.locked) unlockedCount++;
+        if (lyr && !lyr.locked) unlocked.push(lyr);
       }
 
-      if (unlockedCount > maxFrames) maxFrames = unlockedCount;
+      var reversed = unlocked.slice().reverse(); // Top to bottom
+      reversedLayersMap.push(reversed);
+
+      if (reversed.length > maxFrames) maxFrames = reversed.length;
     }
 
-    // 🔁 Merge frame-wise
+    // 🔁 Merge corresponding frames
     for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
       var layersToMerge = [];
 
-      for (var j = 0; j < animFolders.length; j++) {
-        var folder = animFolders[j];
-        if (folder.locked) continue;
-        var layers = folder.layers;
-        if (!layers || frameIndex >= layers.length) continue;
+      for (var j = 0; j < reversedLayersMap.length; j++) {
+        var layerList = reversedLayersMap[j];
+        if (frameIndex >= layerList.length) continue;
 
-        var layer = layers[frameIndex];
-        if (layer && !layer.locked && layer.visible) {
+        var layer = layerList[frameIndex];
+        if (layer && layer.visible && !layer.locked) {
           var dup = layer.duplicate();
           layersToMerge.push(dup);
         }
       }
 
       if (layersToMerge.length > 0) {
-        app.activeDocument.activeLayer = layersToMerge[0];
-        for (var i = 1; i < layersToMerge.length; i++) {
-          layersToMerge[i].selected = true;
+        // ✅ Select each layer using ActionDescriptor
+        var selRef = new ActionReference();
+        for (var i = 0; i < layersToMerge.length; i++) {
+          selRef.putIdentifier(charIDToTypeID("Lyr "), layersToMerge[i].id);
         }
+        var selDesc = new ActionDescriptor();
+        selDesc.putReference(charIDToTypeID("null"), selRef);
+        selDesc.putBoolean(charIDToTypeID("MkVs"), false); // don't make visible
+        executeAction(charIDToTypeID("slct"), selDesc, DialogModes.NO);
 
+        // ✅ Merge and rename
         var merged = app.activeDocument.mergeLayers();
         merged.name = "_a_Frame " + (frameIndex + 1);
         merged.move(previewFolder, ElementPlacement.PLACEATEND);
       }
     }
 
-    alert("✅ Merged " + maxFrames + " frames into 'anim_preview'.");
+    alert("✅ Merged " + maxFrames + " frame(s) into 'anim_preview'.");
   })();
   `;
 
