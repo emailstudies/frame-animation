@@ -1,38 +1,39 @@
 function previewGif() {
   const script = `
-(function () {
-  if (!app || !app.activeDocument) {
-    alert("No active document.");
-    return;
-  }
+    (function () {
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No active document.");
+        return;
+      }
 
-  var doc = app.activeDocument;
-  var selected = [];
+      // Step 1: Deselect all
+      app.activeDocument.activeLayer = doc.layers[0];
+      for (var i = 0; i < doc.layers.length; i++) doc.layers[i].selected = false;
 
-  // Grab selected layers (must be 2)
-  for (var i = 0; i < doc.layers.length; i++) {
-    var layer = doc.layers[i];
-    if (layer.selected) {
-      selected.push(layer);
-    }
-  }
+      // Step 2: Select two top layers
+      if (doc.layers.length < 2) {
+        alert("❌ Need at least 2 layers.");
+        return;
+      }
 
-  if (selected.length !== 2) {
-    alert("❌ Please select exactly two layers to merge.");
-    return;
-  }
+      var top = doc.layers[0];
+      var below = doc.layers[1];
+      top.selected = true;
+      below.selected = true;
 
-  // Duplicate each
-  var dup1 = selected[0].duplicate();
-  var dup2 = selected[1].duplicate();
+      // Step 3: Duplicate selection to a new document
+      app.runMenuItem("newDocFromLayers"); // This opens new doc with merged selection
 
-  // Merge dup1 and dup2
-  doc.activeLayer = dup2; // make top layer active
-  var merged = dup2.merge(dup1); // merge with the one below
-
-  merged.name = "Merged_Layer_Test";
-  alert("✅ Merged two layers without affecting originals.");
-})();`;
+      // Step 4: Flatten it and rename
+      var newDoc = app.activeDocument;
+      if (newDoc) {
+        newDoc.flatten();
+        newDoc.layers[0].name = "Merged_Layer_Descriptor_Test";
+        alert("✅ Successfully merged two layers in a new document.");
+      }
+    })();
+  `;
 
   window.parent.postMessage(script, "*");
 }
