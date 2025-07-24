@@ -1,37 +1,47 @@
 function exportGif() {
-  const script =
-    '(async function () {\n' +
-    '  let doc = app.activeDocument;\n' +
-    '  let folderNames = doc.layers.filter(l => l.type === "group").map(l => l.name);\n' +
-    '  function getFolderLayers(name) {\n' +
-    '    let group = doc.layers.find(l => l.name === name && l.type === "group");\n' +
-    '    return group ? group.layers.slice().reverse() : [];\n' +
-    '  }\n' +
-    '  let folders = folderNames.map(getFolderLayers);\n' +
-    '  let frameCount = Math.min(...folders.map(f => f.length));\n' +
-    '  let mergedGroup = await doc.createLayerGroup("Merged_Frames");\n' +
-    '  for (let i = 0; i < frameCount; i++) {\n' +
-    '    doc.layers.forEach(l => {\n' +
-    '      if (l.type === "group") l.layers.forEach(sublayer => sublayer.visible = false);\n' +
-    '    });\n' +
-    '    folders.forEach(folder => {\n' +
-    '      if (folder[i]) folder[i].visible = true;\n' +
-    '    });\n' +
-    '    app.redraw();\n' +
-    '    await app.runMenuCommand("rasterizeVisible");\n' +
-    '    let frameLayer = doc.activeLayer;\n' +
-    '    frameLayer.name = "Frame_" + (i + 1);\n' +
-    '    await frameLayer.move(mergedGroup);\n' +
-    '  }\n' +
-    '  alert("✅ Merged frames created.");\n' +
-    '})();';
+  const script = `
+(function () {
+  var doc = app.activeDocument;
 
-  window.parent.postMessage(script, "*");
-}
+  function createLayer(name) {
+    var desc = new ActionDescriptor();
+    var ref = new ActionReference();
+    ref.putClass(stringIDToTypeID("layer"));
+    desc.putReference(charIDToTypeID("null"), ref);
+    executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+    app.activeDocument.activeLayer.name = name;
+  }
 
-function exportGif() {
-  const script =
-    'await app.runMenuCommand("toTimeline");\n' +
-    'await app.runMenuCommand("exportAsGif");';
+  // Step 1: Create 3 layers for animation
+  createLayer("Frame_3");
+  createLayer("Frame_2");
+  createLayer("Frame_1");
+
+  // Step 2: Hide all layers except Frame_1
+  for (var i = 0; i < doc.layers.length; i++) {
+    var layer = doc.layers[i];
+    layer.visible = (layer.name === "Frame_1");
+  }
+
+  // Step 3: Start fake playback loop
+  var frameNames = ["Frame_1", "Frame_2", "Frame_3"];
+  var frameCount = frameNames.length;
+  var current = 0;
+
+  function showNextFrame() {
+    for (var i = 0; i < doc.layers.length; i++) {
+      var layer = doc.layers[i];
+      if (layer.name.startsWith("Frame_")) {
+        layer.visible = (layer.name === frameNames[current]);
+      }
+    }
+
+    current = (current + 1) % frameCount;
+    app.scheduleTask("showNextFrame()", 500, false); // 500ms delay
+  }
+
+  app.scheduleTask("showNextFrame()", 0, false);
+})();`.trim();
+
   window.parent.postMessage(script, "*");
 }
