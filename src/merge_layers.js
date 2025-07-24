@@ -8,55 +8,50 @@ function previewGif() {
 
   var doc = app.activeDocument;
 
-  // Step 1: Collect anim_* folders
+  // Step 1: Get the first two anim_* folders
   var animFolders = [];
   for (var i = 0; i < doc.layerSets.length; i++) {
     var folder = doc.layerSets[i];
-    if (folder.name.toLowerCase().startsWith("anim") && !folder.allLocked) {
+    if (folder.name.toLowerCase().startsWith("anim")) {
       animFolders.push(folder);
     }
   }
 
-  if (animFolders.length === 0) {
-    alert("❌ No 'anim_*' folders found.");
+  if (animFolders.length < 2) {
+    alert("❌ Need at least 2 anim_* folders.");
     return;
   }
 
-  // Step 2: Find max number of frames
-  var maxFrames = 0;
-  for (var i = 0; i < animFolders.length; i++) {
-    maxFrames = Math.max(maxFrames, animFolders[i].artLayers.length);
+  var folder1 = animFolders[0];
+  var folder2 = animFolders[1];
+
+  var maxFrames = Math.max(folder1.artLayers.length, folder2.artLayers.length);
+
+  for (var i = 0; i < maxFrames; i++) {
+    var layersToMerge = [];
+
+    if (i < folder1.artLayers.length) {
+      var l1 = folder1.artLayers[folder1.artLayers.length - 1 - i].duplicate();
+      layersToMerge.push(l1);
+    }
+
+    if (i < folder2.artLayers.length) {
+      var l2 = folder2.artLayers[folder2.artLayers.length - 1 - i].duplicate();
+      layersToMerge.push(l2);
+    }
+
+    if (layersToMerge.length > 0) {
+      app.activeDocument.activeLayer = layersToMerge[layersToMerge.length - 1];
+      for (var j = layersToMerge.length - 2; j >= 0; j--) {
+        app.activeDocument.activeLayer = app.activeDocument.activeLayer.merge(layersToMerge[j]);
+      }
+
+      var merged = app.activeDocument.activeLayer;
+      merged.name = "_test_Frame " + (i + 1);
+    }
   }
 
-  // Step 3: Create a new document
-  var w = doc.width;
-  var h = doc.height;
-  var res = doc.resolution;
-  var previewDoc = app.documents.add(w, h, res, "Merged Preview", NewDocumentMode.RGB);
-  app.activeDocument = previewDoc;
-
-  // Step 4: Create 'anim_preview' group
-  var groupDesc = new ActionDescriptor();
-  var ref = new ActionReference();
-  ref.putClass(stringIDToTypeID("layerSection"));
-  groupDesc.putReference(charIDToTypeID("null"), ref);
-  executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
-
-  var previewGroup = app.activeDocument.activeLayer;
-  previewGroup.name = "anim_preview";
-
-  // Step 5: Create a dummy layer for test (we'll use this pattern to insert real ones)
-  var desc = new ActionDescriptor();
-  var ref = new ActionReference();
-  ref.putClass(stringIDToTypeID("layer"));
-  desc.putReference(charIDToTypeID("null"), ref);
-  executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
-
-  var testLayer = app.activeDocument.activeLayer;
-  testLayer.name = "_a_Frame 1";
-  testLayer.move(previewGroup, ElementPlacement.PLACEATBEGINNING);
-
-  alert("✅ Test frame layer created inside 'anim_preview' group.");
+  alert("✅ Test merged " + maxFrames + " frames from two anim folders.");
 })();`.trim();
 
   window.parent.postMessage(script, "*");
