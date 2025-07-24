@@ -6,12 +6,12 @@ function exportGif() {
     return;
   }
 
-  var doc = app.activeDocument;
+  var originalDoc = app.activeDocument;
 
   // Step 1: Find anim_* folders
   var animFolders = [];
-  for (var i = 0; i < doc.layers.length; i++) {
-    var layer = doc.layers[i];
+  for (var i = 0; i < originalDoc.layers.length; i++) {
+    var layer = originalDoc.layers[i];
     if (
       layer.name.indexOf("anim_") === 0 &&
       typeof layer.layers !== "undefined" &&
@@ -26,32 +26,50 @@ function exportGif() {
     return;
   }
 
-  // Step 2: Create new document
-  var width = doc.width;
-  var height = doc.height;
-  var resolution = doc.resolution;
-  var newDoc = app.documents.add(width, height, resolution, "Animation Preview");
+  // Step 2: Create a new document
+  var width = originalDoc.width;
+  var height = originalDoc.height;
+  var resolution = originalDoc.resolution;
+  var newDoc = app.documents.add(width, height, resolution, "anim_preview_doc");
 
-  // Step 3: Copy each anim_* folder and rename its inner layers
+  // Remove the default empty layer
+  if (newDoc.layers.length === 1 && !newDoc.layers[0].layers) {
+    newDoc.layers[0].remove();
+  }
+
+  // Step 3: For each anim folder
   for (var i = 0; i < animFolders.length; i++) {
-    var folder = animFolders[i];
-    var dupFolder = folder.duplicate();
-    newDoc.layers[0].remove(); // Remove default blank layer
+    var sourceFolder = animFolders[i];
 
-    newDoc.activeLayer = newDoc.layers[0];
-    dupFolder.move(newDoc, ElementPlacement.PLACEATBEGINNING);
+    // Create a new folder in the new document
+    app.activeDocument = newDoc;
+    var desc = new ActionDescriptor();
+    var ref = new ActionReference();
+    ref.putClass(stringIDToTypeID("layerSection"));
+    desc.putReference(charIDToTypeID("null"), ref);
+    var nameDesc = new ActionDescriptor();
+    nameDesc.putString(charIDToTypeID("Nm  "), sourceFolder.name);
+    desc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), nameDesc);
+    executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
+    var newFolder = newDoc.layers[0];
 
-    // Rename all inner layers
-    for (var j = 0; j < dupFolder.layers.length; j++) {
-      var layer = dupFolder.layers[j];
-      if (!layer.locked) {
-        layer.name = "_a_" + layer.name;
-      }
+    // Step 4: Copy each layer manually
+    for (var j = 0; j < sourceFolder.layers.length; j++) {
+      var layer = sourceFolder.layers[j];
+      if (layer.locked || layer.typename === "LayerSet") continue;
+
+      app.activeDocument = originalDoc;
+      originalDoc.activeLayer = layer;
+      var dup = layer.duplicate();
+      dup.name = "_a_" + layer.name;
+
+      app.activeDocument = newDoc;
+      dup.move(newFolder, ElementPlacement.INSIDE);
     }
   }
 
   app.activeDocument = newDoc;
-  alert("✅ Duplicated anim_* folders into new doc with _a_ layer names.");
+  alert("✅ anim_* folders and _a_ layers copied into new doc!");
 })();`;
 
   window.parent.postMessage(script, "*");
