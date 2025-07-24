@@ -8,47 +8,43 @@ function exportGif() {
 
   var doc = app.activeDocument;
 
-  // Step 1: Check for anim_preview folder
-  var previewExists = false;
+  // Check if anim_preview exists
+  var exists = false;
   for (var i = 0; i < doc.layers.length; i++) {
-    var l = doc.layers[i];
-    if (l.name === "anim_preview" && typeof l.layers !== "undefined") {
-      previewExists = true;
+    if (doc.layers[i].name === "anim_preview" && doc.layers[i].layers) {
+      exists = true;
       break;
     }
   }
 
-  if (previewExists) {
-    alert("⚠️ 'anim_preview' already exists. Please delete or rename it.");
+  if (exists) {
+    alert("⚠️ 'anim_preview' already exists. Delete it before rerunning.");
     return;
   }
 
-  // Step 2: Find all anim_* folders
+  // Collect anim_* folders
   var animFolders = [];
   for (var i = 0; i < doc.layers.length; i++) {
-    var l = doc.layers[i];
-    if (
-      typeof l.layers !== "undefined" &&
-      l.name.indexOf("anim_") === 0 &&
-      !l.locked
-    ) {
-      animFolders.push(l);
+    var group = doc.layers[i];
+    if (group.name.indexOf("anim_") === 0 && group.layers && !group.locked) {
+      animFolders.push(group);
     }
   }
 
   if (animFolders.length === 0) {
-    alert("❌ No anim_* folders found.");
+    alert("❌ No 'anim_*' folders found.");
     return;
   }
 
-  // Step 3: Find max number of frames
+  // Get max frame count
   var maxFrames = 0;
   for (var i = 0; i < animFolders.length; i++) {
-    var count = animFolders[i].layers.length;
-    if (count > maxFrames) maxFrames = count;
+    if (animFolders[i].layers.length > maxFrames) {
+      maxFrames = animFolders[i].layers.length;
+    }
   }
 
-  // Step 4: Create anim_preview folder
+  // Create preview folder
   var desc = new ActionDescriptor();
   var ref = new ActionReference();
   ref.putClass(stringIDToTypeID("layerSection"));
@@ -59,52 +55,31 @@ function exportGif() {
   executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
   var previewGroup = doc.layers[0];
 
-  // Step 5: Merge frames
+  // Duplicate and rename _a_ layers per frame
   for (var frame = 0; frame < maxFrames; frame++) {
-    var dupIds = [];
-
-    for (var i = 0; i < animFolders.length; i++) {
-      var folder = animFolders[i];
-      var layer = folder.layers[frame] || folder.layers[0];
+    for (var f = 0; f < animFolders.length; f++) {
+      var folder = animFolders[f];
+      var layer = folder.layers[frame] || folder.layers[0]; // fallback to first if missing
       if (!layer || layer.locked) continue;
 
       var dup = layer.duplicate();
-      dupIds.push(dup.id);
+      dup.name = "_a_Frame " + (frame + 1);
+      
+      // Move to anim_preview
+      var moveDesc = new ActionDescriptor();
+      var moveRef = new ActionReference();
+      moveRef.putIdentifier(charIDToTypeID("Lyr "), dup.id);
+      moveDesc.putReference(charIDToTypeID("null"), moveRef);
+      var toRef = new ActionReference();
+      toRef.putIdentifier(charIDToTypeID("Lyr "), previewGroup.id);
+      moveDesc.putReference(charIDToTypeID("T   "), toRef);
+      moveDesc.putBoolean(charIDToTypeID("Adjs"), false);
+      moveDesc.putInteger(charIDToTypeID("Vrsn"), 5);
+      executeAction(charIDToTypeID("move"), moveDesc, DialogModes.NO);
     }
-
-    if (dupIds.length === 0) continue;
-
-    // Select all duplicated layers
-    var selDesc = new ActionDescriptor();
-    var selList = new ActionList();
-    for (var j = 0; j < dupIds.length; j++) {
-      var ref = new ActionReference();
-      ref.putIdentifier(charIDToTypeID("Lyr "), dupIds[j]);
-      selList.putReference(ref);
-    }
-    selDesc.putList(charIDToTypeID("null"), selList);
-    selDesc.putBoolean(charIDToTypeID("MkVs"), false);
-    executeAction(charIDToTypeID("slct"), selDesc, DialogModes.NO);
-
-    // Merge
-    executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
-    var merged = doc.activeLayer;
-    merged.name = "_a_Frame " + (frame + 1);
-
-    // Move merged to preview group
-    var moveDesc = new ActionDescriptor();
-    var moveRef = new ActionReference();
-    moveRef.putIdentifier(charIDToTypeID("Lyr "), merged.id);
-    moveDesc.putReference(charIDToTypeID("null"), moveRef);
-    var toRef = new ActionReference();
-    toRef.putIdentifier(charIDToTypeID("Lyr "), previewGroup.id);
-    moveDesc.putReference(charIDToTypeID("T   "), toRef);
-    moveDesc.putBoolean(charIDToTypeID("Adjs"), false);
-    moveDesc.putInteger(charIDToTypeID("Vrsn"), 5);
-    executeAction(charIDToTypeID("move"), moveDesc, DialogModes.NO);
   }
 
-  alert("✅ Frames merged into 'anim_preview'. Ready for GIF export.");
+  alert("✅ Duplicated _a_ layers into 'anim_preview'. Use Layer > Animation > Merge to flatten.");
 })();`;
 
   window.parent.postMessage(script, "*");
