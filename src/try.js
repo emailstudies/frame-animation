@@ -1,4 +1,4 @@
-function mergeFirstTwoUnlockedLayers() {
+function exportGif() {
   const script = `
     (function () {
       var doc = app.activeDocument;
