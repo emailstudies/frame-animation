@@ -8,24 +8,47 @@ function exportGif() {
 
   var doc = app.activeDocument;
 
-  // Check if anim_preview already exists
-  var existing = doc.layers.find(l => l.name === "anim_preview" && l.layers);
-  if (existing) {
-    alert("⚠️ 'anim_preview' already exists. Delete it first.");
+  // Step 1: Check for anim_preview folder
+  var previewExists = false;
+  for (var i = 0; i < doc.layers.length; i++) {
+    var l = doc.layers[i];
+    if (l.name === "anim_preview" && typeof l.layers !== "undefined") {
+      previewExists = true;
+      break;
+    }
+  }
+
+  if (previewExists) {
+    alert("⚠️ 'anim_preview' already exists. Please delete or rename it.");
     return;
   }
 
-  // Find anim_* folders
-  var animFolders = doc.layers.filter(f => f.name.startsWith("anim") && f.layers && !f.locked);
+  // Step 2: Find all anim_* folders
+  var animFolders = [];
+  for (var i = 0; i < doc.layers.length; i++) {
+    var l = doc.layers[i];
+    if (
+      typeof l.layers !== "undefined" &&
+      l.name.indexOf("anim_") === 0 &&
+      !l.locked
+    ) {
+      animFolders.push(l);
+    }
+  }
+
   if (animFolders.length === 0) {
-    alert("❌ No 'anim_*' folders found.");
+    alert("❌ No anim_* folders found.");
     return;
   }
 
-  // Find max frame count
-  var maxFrames = Math.max(...animFolders.map(f => f.layers.length));
+  // Step 3: Find max number of frames
+  var maxFrames = 0;
+  for (var i = 0; i < animFolders.length; i++) {
+    var count = animFolders[i].layers.length;
+    if (count > maxFrames) maxFrames = count;
+  }
 
-  // Create anim_preview folder
+  // Step 4: Create anim_preview folder
   var desc = new ActionDescriptor();
   var ref = new ActionReference();
   ref.putClass(stringIDToTypeID("layerSection"));
@@ -36,7 +59,7 @@ function exportGif() {
   executeAction(charIDToTypeID("Mk  "), desc, DialogModes.NO);
   var previewGroup = doc.layers[0];
 
-  // For each frame index
+  // Step 5: Merge frames
   for (var frame = 0; frame < maxFrames; frame++) {
     var dupIds = [];
 
@@ -63,13 +86,12 @@ function exportGif() {
     selDesc.putBoolean(charIDToTypeID("MkVs"), false);
     executeAction(charIDToTypeID("slct"), selDesc, DialogModes.NO);
 
-    // Merge selected
+    // Merge
     executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
-
     var merged = doc.activeLayer;
     merged.name = "_a_Frame " + (frame + 1);
 
-    // Move to preview folder
+    // Move merged to preview group
     var moveDesc = new ActionDescriptor();
     var moveRef = new ActionReference();
     moveRef.putIdentifier(charIDToTypeID("Lyr "), merged.id);
@@ -82,9 +104,8 @@ function exportGif() {
     executeAction(charIDToTypeID("move"), moveDesc, DialogModes.NO);
   }
 
-  alert("✅ Merged preview created in 'anim_preview'");
-
-})();`.trim();
+  alert("✅ Frames merged into 'anim_preview'. Ready for GIF export.");
+})();`;
 
   window.parent.postMessage(script, "*");
 }
