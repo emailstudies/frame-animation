@@ -20,7 +20,6 @@ function previewGif() {
         return;
       }
 
-      // Step 1: Find max number of layers across all anim_* folders
       var maxFrames = 0;
       for (var i = 0; i < animFolders.length; i++) {
         var count = animFolders[i].layers.length;
@@ -34,14 +33,15 @@ function previewGif() {
         return;
       }
 
-      // Step 2: Duplicate in folders that have exactly 1 layer
       for (var i = 0; i < animFolders.length; i++) {
         var folder = animFolders[i];
         if (folder.layers.length === 1) {
           var baseLayer = folder.layers[0];
+          var currentLayer = baseLayer;
           for (var j = 1; j < maxFrames; j++) {
-            var dup = baseLayer.duplicate();
-            folder.insertLayer(dup); // insert at top
+            var dup = currentLayer.duplicate();
+            folder.insertLayer(dup);
+            currentLayer = dup; // use the latest duplicate for next iteration
           }
           console.log("Duplicated layer in " + folder.name + " to " + maxFrames + " layers.");
         }
