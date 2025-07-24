@@ -1,75 +1,44 @@
 function exportGif() {
   const script = `
-(function () {
-  if (!app || !app.activeDocument) {
-    alert("No active document.");
-    return;
-  }
+    (async function () {
+      let doc = app.activeDocument;
+      let folderNames = doc.layers.filter(l => l.type === "group").map(l => l.name);
 
-  var doc = app.activeDocument;
-
-  function mergeVisible() {
-    app.batchPlay(
-      [{
-        _obj: "mergeVisible",
-        _options: { dialogOptions: "dontDisplay" }
-      }],
-      {}
-    );
-  }
-
-  // 1. Find all folders starting with "anim" (ignore locked ones)
-  var animFolders = [];
-  for (var i = 0; i < doc.layerSets.length; i++) {
-    var folder = doc.layerSets[i];
-    if (folder.name.toLowerCase().startsWith("anim") && !folder.allLocked) {
-      animFolders.push(folder);
-    }
-  }
-
-  if (animFolders.length === 0) {
-    alert("❌ No folders starting with 'anim' found.");
-    return;
-  }
-
-  // 2. Get max number of frames
-  var maxFrames = 0;
-  for (var i = 0; i < animFolders.length; i++) {
-    maxFrames = Math.max(maxFrames, animFolders[i].artLayers.length);
-  }
-
-  // 3. For each frame index, collect corresponding layers and merge
-  for (var frame = 0; frame < maxFrames; frame++) {
-    var visibleLayers = [];
-
-    for (var f = 0; f < animFolders.length; f++) {
-      var folder = animFolders[f];
-      var frameIndex = folder.artLayers.length - 1 - frame; // top-down
-
-      if (frameIndex >= 0) {
-        var layer = folder.artLayers[frameIndex];
-        if (!layer.allLocked) {
-          layer.visible = true;
-          visibleLayers.push(layer);
-        }
+      function getFolderLayers(name) {
+        let group = doc.layers.find(l => l.name === name && l.type === "group");
+        return group ? group.layers.slice().reverse() : [];
       }
-    }
 
-    if (visibleLayers.length > 0) {
-      mergeVisible();
-      if (doc.activeLayer) {
-        doc.activeLayer.name = "_a_Frame " + (frame + 1);
+      let folders = folderNames.map(getFolderLayers);
+      let frameCount = Math.min(...folders.map(f => f.length));
+      let mergedGroup = await doc.createLayerGroup("Merged_Frames");
+
+      for (let i = 0; i < frameCount; i++) {
+        doc.layers.forEach(l => {
+          if (l.type === "group") l.layers.forEach(s => s.visible = false);
+        });
+
+        folders.forEach(folder => {
+          if (folder[i]) folder[i].visible = true;
+        });
+
+        app.redraw();
+        await app.runMenuCommand("rasterizeVisible");
+        let frameLayer = doc.activeLayer;
+        frameLayer.name = "Frame_" + (i + 1);
+        await frameLayer.move(mergedGroup);
       }
-    }
 
-    // Hide again
-    for (var v = 0; v < visibleLayers.length; v++) {
-      visibleLayers[v].visible = false;
-    }
-  }
+      alert("✅ Merged frames created.");
+    })();`;
 
-  alert("✅ Animation preview layers (_a_Frame) created without modifying original folders.");
-})();`.trim();
+  window.parent.postMessage(script, "*");
+}
 
+function exportGif() {
+  const script = `
+    await app.runMenuCommand("toTimeline");
+    await app.runMenuCommand("exportAsGif");
+  `;
   window.parent.postMessage(script, "*");
 }
