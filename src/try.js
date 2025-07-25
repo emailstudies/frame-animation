@@ -6,7 +6,7 @@ function exportGif() {
       var layer1 = null;
       var layer2 = null;
 
-      // Step 1: Locate Layer 1 and Layer 2
+      // Step 1: Find Layer 1 and Layer 2
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
         if (!layer || layer.typename === "LayerSet") continue;
@@ -19,19 +19,24 @@ function exportGif() {
         return;
       }
 
-      // Step 2: Remove them from the array
-      var remaining = [];
-      for (var i = 0; i < doc.layers.length; i++) {
-        var layer = doc.layers[i];
-        if (layer !== layer1 && layer !== layer2) {
-          remaining.push(layer);
-        }
-      }
+      // Step 2: Move Layer 1 and Layer 2 to top (Layer 2 should be above Layer 1)
+      var index1 = doc.layers.indexOf(layer1);
+      var index2 = doc.layers.indexOf(layer2);
+      var top = doc.layers.length;
 
-      // Step 3: Rebuild the layer stack: others + Layer 1 + Layer 2
-      doc.layers = remaining.concat([layer1, layer2]);
+      // Remove and re-add in order: Layer 1 first, Layer 2 above it
+      var layers = doc.layers.slice();
+      layers.splice(index1, 1);
+      if (index2 > index1) index2--; // because layer1 was removed
+      layers.splice(index2, 1);
+      layers.push(layer1, layer2);
+      doc.layers = layers;
 
-      alert("✅ Layer 1 and Layer 2 moved to top.");
+      // Step 3: Merge (layer2 is now above layer1)
+      var merged = layer2.merge();
+      merged.name = "Merged_Layer_1_2";
+
+      alert("✅ Layers merged using .merge()");
     })();
   `;
 
