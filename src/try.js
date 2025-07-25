@@ -7,27 +7,28 @@ function exportGif() {
         return;
       }
 
-      var layerToMove = null;
+      // Find the folder named "anim_e"
       var targetFolder = null;
-
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
-        if (layer.name === "Layer 1" && layer.typename !== "LayerSet") {
-          layerToMove = layer;
-        }
         if (layer.name === "anim_e" && layer.typename === "LayerSet") {
           targetFolder = layer;
+          break;
         }
       }
 
-      if (!layerToMove || !targetFolder) {
-        alert("Could not find 'Layer 1' or 'anim_e' folder.");
+      if (!targetFolder) {
+        alert("Folder 'anim_e' not found.");
         return;
       }
 
-      app.activeDocument.activeLayer = layerToMove;
-      layerToMove.move(targetFolder, ElementPlacement.INSIDE);
-      console.log("✅ Moved 'Layer 1' into 'anim_e'");
+      // Select the folder and create a new layer inside it
+      app.activeDocument.activeLayer = targetFolder;
+      var newLayer = app.activeDocument.artLayers.add();
+      newLayer.name = "New Layer";
+      newLayer.move(targetFolder, ElementPlacement.INSIDE);
+
+      console.log("✅ New layer created inside 'anim_e'");
     })();
   `;
 
