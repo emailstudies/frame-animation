@@ -6,38 +6,33 @@ function exportGif() {
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
 
-        // Step 1: Check for folders starting with "anim_"
+        // Step 1: Check for folders named anim_*
         if (group.typename !== "LayerSet" || !group.name.startsWith("anim_")) continue;
 
-        // Step 2: Process layers inside the folder
-        var layersToMerge = [];
-
+        // Step 2: Prefix all layers and collect mergeable ones
+        var mergeable = [];
         for (var j = 0; j < group.layers.length; j++) {
           var layer = group.layers[j];
-
           if (layer.typename === "ArtLayer" && !layer.locked) {
             layer.name = "_a_" + layer.name;
-            layersToMerge.push(layer);
+            mergeable.push(layer);
           }
         }
 
-        // Step 3: Only merge if there are at least 2 layers
-        if (layersToMerge.length >= 2) {
-          // Sort top to bottom (Photopea order is topmost last)
-          layersToMerge.reverse();
+        // Step 3: Merge layers from bottom up (Photopea merges top into bottom)
+        while (mergeable.length > 1) {
+          var top = mergeable.pop(); // last in array = top in UI
+          var below = mergeable[mergeable.length - 1];
+          top.merge(); // merges into below
+        }
 
-          // Move all layers to top of group
-          group.layers = layersToMerge;
-
-          // Merge top two layers
-          var merged = layersToMerge[1].merge();
-          merged.name = "_a_Merged";
-        } else if (layersToMerge.length === 1) {
-          layersToMerge[0].name = "_a_Merged";
+        // Final merged layer (or the only one)
+        if (mergeable.length === 1) {
+          mergeable[0].name = "_a_Merged";
         }
       }
 
-      alert("✅ All anim_* folders processed and merged.");
+      alert("✅ All anim_* folders merged using bottom-up logic.");
     })();
   `;
 
