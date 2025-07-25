@@ -7,28 +7,34 @@ function exportGif() {
         return;
       }
 
-      // Find the folder named "anim_e"
-      var targetFolder = null;
+      // Step 1: Create a new folder named "anim_e"
+      var animFolder = doc.layerSets.add();
+      animFolder.name = "anim_e";
+
+      // Step 2: Find all layers named "Layer 1" at root
+      var layer1s = [];
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
-        if (layer.name === "anim_e" && layer.typename === "LayerSet") {
-          targetFolder = layer;
-          break;
+        if (layer.name === "Layer 1" && layer.typename !== "LayerSet") {
+          layer1s.push(layer);
         }
       }
 
-      if (!targetFolder) {
-        alert("Folder 'anim_e' not found.");
+      if (layer1s.length === 0) {
+        alert("No layers named 'Layer 1' found.");
         return;
       }
 
-      // Select the folder and create a new layer inside it
-      app.activeDocument.activeLayer = targetFolder;
-      var newLayer = app.activeDocument.artLayers.add();
-      newLayer.name = "New Layer";
-      newLayer.move(targetFolder, ElementPlacement.INSIDE);
+      // Step 3: Duplicate each Layer 1 and move duplicate into anim_e
+      for (var i = 0; i < layer1s.length; i++) {
+        var original = layer1s[i];
+        app.activeDocument.activeLayer = original;
+        var dup = original.duplicate();
+        dup.name = "Layer 1 copy " + (i + 1);
+        dup.move(animFolder, ElementPlacement.INSIDE);
+      }
 
-      console.log("✅ New layer created inside 'anim_e'");
+      console.log("✅ Duplicated 'Layer 1' into new folder 'anim_e'");
     })();
   `;
 
