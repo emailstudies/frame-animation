@@ -3,17 +3,16 @@ function exportGif() {
     (function () {
       var doc = app.activeDocument;
 
-      // Step 1: Define the list of layer names to merge
+      // Step 1: Names of layers you want to merge
       var layerNames = ["Layer 1", "Layer 2", "Layer 3"];
-
       var foundLayers = [];
 
-      // Step 2: Find the actual layer objects from the names
+      // Step 2: Locate those layers
       for (var i = 0; i < layerNames.length; i++) {
         var name = layerNames[i];
         for (var j = 0; j < doc.layers.length; j++) {
           var layer = doc.layers[j];
-          if (layer && layer.name === name && layer.typename !== "LayerSet" && !layer.locked) {
+          if (layer.name === name && !layer.locked && layer.typename !== "LayerSet") {
             foundLayers.push(layer);
             break;
           }
@@ -21,32 +20,31 @@ function exportGif() {
       }
 
       if (foundLayers.length < 2) {
-        alert("Need at least 2 layers for merging. Found: " + foundLayers.length);
+        alert("Need at least 2 mergeable layers. Found: " + foundLayers.length);
         return;
       }
 
-      // Step 3: Create a new document
+      // Step 3: Create new document
       var newDoc = app.documents.add(doc.width, doc.height, doc.resolution, "merged_output", NewDocumentMode.RGB);
 
-      // Step 4: Duplicate layers in reverse to preserve stacking order
+      // Step 4: Duplicate layers in REVERSE order to preserve UI stack
       for (var i = foundLayers.length - 1; i >= 0; i--) {
-        var layer = foundLayers[i];
-        app.activeDocument = doc;
-        doc.activeLayer = layer;
-        layer.duplicate(newDoc, ElementPlacement.PLACEATEND);
+        doc.activeLayer = foundLayers[i];
+        foundLayers[i].duplicate(newDoc, ElementPlacement.PLACEATEND);
       }
 
-      // Step 5: Merge all layers
+      // Step 5: Merge layers top-down in new document
       app.activeDocument = newDoc;
 
       while (newDoc.layers.length > 1) {
-        newDoc.layers[newDoc.layers.length - 1].merge(); // merges top into bottom
+        // Make sure the top layer is selected
+        newDoc.activeLayer = newDoc.layers[newDoc.layers.length - 1];
+        newDoc.activeLayer.merge(); // merge top into layer below
       }
 
-      // Step 6: Rename merged result
       newDoc.activeLayer.name = "Merged_Layer_1_2_3";
 
-      alert("✅ Layers merged in new document.");
+      alert("✅ Successfully merged into new document.");
     })();
   `;
 
