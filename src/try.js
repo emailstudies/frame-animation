@@ -7,22 +7,23 @@ function exportGif() {
         return;
       }
 
-      var selectedNames = [];
+      var name = prompt("Enter the exact name of the layer to select:");
+
+      if (!name) {
+        alert("No name entered.");
+        return;
+      }
 
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
-        if (!layer || layer.typename === "LayerSet") continue;
-
-        if (layer.selected) {
-          selectedNames.push(layer.name);
+        if (layer.name === name && layer.typename !== "LayerSet") {
+          doc.activeLayer = layer;
+          alert("✅ Selected: " + name);
+          return;
         }
       }
 
-      if (selectedNames.length > 0) {
-        alert("Selected Layer(s): " + selectedNames.join(", "));
-      } else {
-        alert("No layers are selected.");
-      }
+      alert("❌ Layer '" + name + "' not found.");
     })();
   `;
 
