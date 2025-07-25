@@ -8,44 +8,39 @@ function exportGif() {
         return;
       }
 
-      var layer1Index = -1;
-      var layer2Index = -1;
+      var layer1 = null;
+      var layer2 = null;
 
-      // Find indices of "Layer 1" and "Layer 2"
+      // Find "Layer 1" and "Layer 2"
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
-        if (layer.name === "Layer 1" && layer.typename !== "LayerSet" && layer1Index === -1) {
-          layer1Index = i;
+        if (layer.name === "Layer 1" && layer.typename !== "LayerSet" && !layer1) {
+          layer1 = layer;
         }
-        if (layer.name === "Layer 2" && layer.typename !== "LayerSet" && layer2Index === -1) {
-          layer2Index = i;
+        if (layer.name === "Layer 2" && layer.typename !== "LayerSet" && !layer2) {
+          layer2 = layer;
         }
       }
 
-      if (layer1Index === -1 || layer2Index === -1) {
+      if (!layer1 || !layer2) {
         alert("Layer 1 or Layer 2 not found.");
         return;
       }
 
-      // Duplicate both layers
-      var dup1 = doc.layers[layer1Index].duplicate();
-      var dup2 = doc.layers[layer2Index].duplicate();
+      // Duplicate both
+      var dup1 = layer1.duplicate();
+      var dup2 = layer2.duplicate();
 
-      // Move duplicates to top of stack
-      dup1.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
-      dup2.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
+      // Move duplicates to top
+      dup1.move(doc, ElementPlacement.PLACEATBEGINNING);
+      dup2.move(doc, ElementPlacement.PLACEATBEGINNING);
 
-      // Ensure dup2 is on top (active), and select dup1 too
-      doc.activeLayer = dup2;
-      dup1.selected = true;
+      // Merge using direct .merge()
+      var mergedLayer = dup2.merge();
 
-      // Merge the top two selected layers
-      executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
+      mergedLayer.name = "Merged_Layer 1_Layer 2";
 
-      // Rename merged layer
-      doc.activeLayer.name = "Merged_Layer 1_Layer 2";
-
-      console.log("✅ Merged Layer 1 and Layer 2 successfully.");
+      console.log("✅ Merged using .merge()");
     })();
   `;
 
