@@ -3,40 +3,41 @@ function exportGif() {
     (function () {
       var doc = app.activeDocument;
 
-      var layer1 = null;
-      var layer2 = null;
-
-      // Step 1: Find Layer 1 and Layer 2
       for (var i = 0; i < doc.layers.length; i++) {
-        var layer = doc.layers[i];
-        if (!layer || layer.typename === "LayerSet") continue;
-        if (layer.name === "Layer 1") layer1 = layer;
-        if (layer.name === "Layer 2") layer2 = layer;
+        var group = doc.layers[i];
+
+        // Step 1: Check for folders starting with "anim_"
+        if (group.typename !== "LayerSet" || !group.name.startsWith("anim_")) continue;
+
+        // Step 2: Process layers inside the folder
+        var layersToMerge = [];
+
+        for (var j = 0; j < group.layers.length; j++) {
+          var layer = group.layers[j];
+
+          if (layer.typename === "ArtLayer" && !layer.locked) {
+            layer.name = "_a_" + layer.name;
+            layersToMerge.push(layer);
+          }
+        }
+
+        // Step 3: Only merge if there are at least 2 layers
+        if (layersToMerge.length >= 2) {
+          // Sort top to bottom (Photopea order is topmost last)
+          layersToMerge.reverse();
+
+          // Move all layers to top of group
+          group.layers = layersToMerge;
+
+          // Merge top two layers
+          var merged = layersToMerge[1].merge();
+          merged.name = "_a_Merged";
+        } else if (layersToMerge.length === 1) {
+          layersToMerge[0].name = "_a_Merged";
+        }
       }
 
-      if (!layer1 || !layer2) {
-        alert("Layer 1 and/or Layer 2 not found.");
-        return;
-      }
-
-      // Step 2: Move Layer 1 and Layer 2 to top (Layer 2 should be above Layer 1)
-      var index1 = doc.layers.indexOf(layer1);
-      var index2 = doc.layers.indexOf(layer2);
-      var top = doc.layers.length;
-
-      // Remove and re-add in order: Layer 1 first, Layer 2 above it
-      var layers = doc.layers.slice();
-      layers.splice(index1, 1);
-      if (index2 > index1) index2--; // because layer1 was removed
-      layers.splice(index2, 1);
-      layers.push(layer1, layer2);
-      doc.layers = layers;
-
-      // Step 3: Merge (layer2 is now above layer1)
-      var merged = layer2.merge();
-      merged.name = "Merged_Layer_1_2";
-
-      alert("✅ Layers merged using .merge()");
+      alert("✅ All anim_* folders processed and merged.");
     })();
   `;
 
