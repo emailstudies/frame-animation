@@ -19,11 +19,22 @@ function exportGif() {
         return;
       }
 
-      // Step 2: Merge Layers
+      // Step 2: Move Layer 1 and Layer 2 to top, so they can be merged
+      layer1.move(doc, ElementPlacement.PLACEATBEGINNING);
+      layer2.move(doc, ElementPlacement.PLACEATBEGINNING); // now layer2 is above layer1
+
+      // Step 3: Merge them
       var merged = layer2.merge();
       merged.name = "Merged_Layer_1_2";
 
-      console.log("✅ Merged original Layer 1 and Layer 2");
+      // Step 4: Create folder at top
+      var group = doc.layerSets.add();
+      group.name = "anim_merged";
+
+      // Step 5: Move merged layer into folder
+      merged.move(group, ElementPlacement.INSIDE);
+
+      console.log("✅ Merged and moved into anim_merged folder");
     })();
   `;
 
