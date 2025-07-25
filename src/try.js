@@ -19,11 +19,21 @@ function exportGif() {
         return;
       }
 
-      // Step 2: Move Layer 1 and Layer 2 to top using placement = 1 (PLACEBEFORE)
-      layer1.move(doc, 1); // Move Layer 1 to top
-      layer2.move(doc, 1); // Then Layer 2 above Layer 1
+      // Step 2: Create temp marker to get "top" index
+      var tempGroup = doc.layerSets.add();
+      tempGroup.name = "temp_marker";
 
-      console.log("✅ Layers moved to top. Ready to merge or proceed.");
+      var topIndex = doc.layers.findIndex(function (l) {
+        return l.name === "temp_marker";
+      });
+
+      tempGroup.remove();
+
+      // Step 3: Move Layer 1 and Layer 2 to top using splice
+      doc.layers.splice(topIndex, 0, doc.layers.splice(doc.layers.indexOf(layer1), 1)[0]);
+      doc.layers.splice(topIndex, 0, doc.layers.splice(doc.layers.indexOf(layer2), 1)[0]);
+
+      alert("✅ Layer 1 and Layer 2 moved to top.");
     })();
   `;
 
