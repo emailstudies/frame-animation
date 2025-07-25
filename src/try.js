@@ -1,4 +1,4 @@
-function exportGif() {
+function mergeFrames() {
   const script = `
     (function () {
       alert("hello");
