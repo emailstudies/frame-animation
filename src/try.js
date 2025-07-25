@@ -19,12 +19,11 @@ function exportGif() {
         return;
       }
 
-      // Step 2: Move Layer 1 and Layer 2 to top, so they can be merged
-      layer1.move(doc, ElementPlacement.PLACEATBEGINNING);
-      layer2.move(doc, ElementPlacement.PLACEATBEGINNING); // now layer2 is above layer1
+      // Step 2: Move Layer 1 and Layer 2 to top using placement = 1 (PLACEBEFORE)
+      layer1.move(doc, 1); // Move Layer 1 to top
+      layer2.move(doc, 1); // Then Layer 2 above Layer 1
 
-      
-      console.log("✅ Merged and moved into anim_merged folder");
+      console.log("✅ Layers moved to top. Ready to merge or proceed.");
     })();
   `;
 
