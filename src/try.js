@@ -7,11 +7,13 @@ function exportGif() {
         return;
       }
 
-      // Step 1: Create new folder "anim_e"
-      var animFolder = doc.layerSets.add();
-      animFolder.name = "anim_e";
+      // Step 1: Create new folder "anim_e" at top of root
+      var tempFolder = doc.layerSets.add();
+      tempFolder.name = "TEMP_insert";
+      tempFolder.move(doc.layers[0], ElementPlacement.PLACEBEFORE); // Insert at top
+      tempFolder.name = "anim_e"; // Rename after positioning
 
-      // Step 2: Find Layer 1 and Layer 2
+      // Step 2: Find "Layer 1" and "Layer 2"
       var layer1 = null;
       var layer2 = null;
 
@@ -33,23 +35,31 @@ function exportGif() {
       var dup1 = layer1.duplicate();
       var dup2 = layer2.duplicate();
 
-      // Step 4: Move duplicates to top to be merged easily
-      dup1.move(doc, ElementPlacement.PLACEATBEGINNING);
-      dup2.move(doc, ElementPlacement.PLACEATBEGINNING);
+      // Step 4: Move duplicates to top to make merging reliable
+      dup1.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
+      dup2.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
 
-      // Step 5: Select both duplicated layers
+      // Step 5: Select both duplicates
+      for (var i = 0; i < doc.artLayers.length; i++) {
+        doc.artLayers[i].selected = false;
+      }
       dup1.selected = true;
       dup2.selected = true;
 
-      // Step 6: Merge selected layers (duplicates)
+      // Step 6: Merge selected (duplicated) layers
       executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
-      var mergedLayer = doc.activeLayer;
-      mergedLayer.name = "Merged Layer";
+      var merged = doc.activeLayer;
+      merged.name = "Merged Layer";
 
-      // Step 7: Move merged layer into "anim_e"
-      mergedLayer.move(animFolder, ElementPlacement.INSIDE);
+      // Step 7: Move merged result into "anim_e"
+      for (var i = 0; i < doc.layerSets.length; i++) {
+        if (doc.layerSets[i].name === "anim_e") {
+          merged.move(doc.layerSets[i], ElementPlacement.INSIDE);
+          break;
+        }
+      }
 
-      console.log("✅ Merged copies of 'Layer 1' and 'Layer 2' into 'anim_e'");
+      console.log("✅ Merged duplicates of 'Layer 1' and 'Layer 2' into 'anim_e'");
     })();
   `;
 
