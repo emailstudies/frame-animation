@@ -27,24 +27,26 @@ function exportGif() {
       // Step 3: Create new document
       var newDoc = app.documents.add(doc.width, doc.height, doc.resolution, "merged_output", NewDocumentMode.RGB);
 
-      // Step 4: Duplicate layers in REVERSE order to preserve UI stack
+      // Step 4: Duplicate layers into new doc in reverse (so Layer 1 ends up on top)
       for (var i = foundLayers.length - 1; i >= 0; i--) {
         doc.activeLayer = foundLayers[i];
         foundLayers[i].duplicate(newDoc, ElementPlacement.PLACEATEND);
       }
 
-      // Step 5: Merge layers top-down in new document
+      // Step 5: Merge manually from top to bottom
       app.activeDocument = newDoc;
 
       while (newDoc.layers.length > 1) {
-        // Make sure the top layer is selected
-        newDoc.activeLayer = newDoc.layers[newDoc.layers.length - 1];
-        newDoc.activeLayer.merge(); // merge top into layer below
+        var topLayer = newDoc.layers[newDoc.layers.length - 1];
+        var belowLayer = newDoc.layers[newDoc.layers.length - 2];
+
+        newDoc.activeLayer = topLayer;
+        topLayer.merge(); // merges into belowLayer
       }
 
       newDoc.activeLayer.name = "Merged_Layer_1_2_3";
 
-      alert("✅ Successfully merged into new document.");
+      alert("✅ Merged layers successfully into one.");
     })();
   `;
 
