@@ -1,4 +1,4 @@
-function exportGif() {
+function gifExport() {
   const script = `
     (function () {
       var doc = app.activeDocument;
@@ -7,7 +7,7 @@ function exportGif() {
         return;
       }
 
-      // Find Layer 1 and Layer 2
+      // Step 1: Find Layer 1 and Layer 2
       var layer1 = null;
       var layer2 = null;
       for (var i = 0; i < doc.layers.length; i++) {
@@ -24,22 +24,30 @@ function exportGif() {
         return;
       }
 
-      // Duplicate both layers
+      // Step 2: Duplicate both
       var dup1 = layer1.duplicate();
       var dup2 = layer2.duplicate();
 
-      // Move to top for consistent merge
-      dup1.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
-      dup2.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
+      // Step 3: Move both to top
+      dup1.move(doc, ElementPlacement.PLACEATBEGINNING);
+      dup2.move(doc, ElementPlacement.PLACEATBEGINNING);
 
-      // Select both
+      // Step 4: Deselect all layers
+      for (var i = 0; i < doc.artLayers.length; i++) {
+        doc.artLayers[i].selected = false;
+      }
+
+      // Step 5: Select only dup1 and dup2
       dup1.selected = true;
       dup2.selected = true;
 
-      // Merge them
+      // Step 6: Merge selected
       executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
 
-      console.log("✅ Merged 'Layer 1' and 'Layer 2' (copies only)");
+      var merged = doc.activeLayer;
+      merged.name = "Merged Layer";
+
+      console.log("✅ Merged copies of 'Layer 1' and 'Layer 2'");
     })();
   `;
 
