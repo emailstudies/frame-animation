@@ -19,11 +19,7 @@ function exportGif() {
         return;
       }
 
-      // Step 2: Make sure Layer 2 is directly above Layer 1
-      layer1.move(doc, ElementPlacement.PLACEATBEGINNING);
-      layer2.move(doc, ElementPlacement.PLACEATBEGINNING); // Layer 2 is now above Layer 1
-
-      // Step 3: Merge Layer 2 with the one below (Layer 1)
+      // Step 2: Merge Layers
       var merged = layer2.merge();
       merged.name = "Merged_Layer_1_2";
 
