@@ -32,22 +32,26 @@ function exportGif() {
       dup1.move(doc, ElementPlacement.PLACEATBEGINNING);
       dup2.move(doc, ElementPlacement.PLACEATBEGINNING);
 
-      // Step 4: Deselect all layers
-      for (var i = 0; i < doc.artLayers.length; i++) {
-        doc.artLayers[i].selected = false;
+      // Step 4: Select duplicates by name using ActionDescriptor
+      function selectLayer(name, add) {
+        var desc = new ActionDescriptor();
+        var ref = new ActionReference();
+        ref.putName(charIDToTypeID("Lyr "), name);
+        desc.putReference(charIDToTypeID("null"), ref);
+        if (add) desc.putEnumerated(charIDToTypeID("selectionModifier"), charIDToTypeID("selectionModifierType"), charIDToTypeID("addToSelection"));
+        desc.putBoolean(charIDToTypeID("MkVs"), false);
+        executeAction(charIDToTypeID("slct"), desc, DialogModes.NO);
       }
 
-      // Step 5: Select only dup1 and dup2
-      dup1.selected = true;
-      dup2.selected = true;
+      selectLayer(dup1.name, false);
+      selectLayer(dup2.name, true);
 
-      // Step 6: Merge selected
+      // Step 5: Merge
       executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
 
-      var merged = doc.activeLayer;
-      merged.name = "Merged Layer";
+      app.activeDocument.activeLayer.name = "Merged Layer";
 
-      console.log("✅ Merged copies of 'Layer 1' and 'Layer 2'");
+      console.log("✅ Forced merge of Layer 1 and Layer 2 via ActionDescriptor");
     })();
   `;
 
