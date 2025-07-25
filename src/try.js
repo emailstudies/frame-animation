@@ -1,6 +1,6 @@
 function exportGif() {
   const script = `
-(async function () {
+(function () {
   var doc = app.activeDocument;
 
   // Check if preview folder already exists
