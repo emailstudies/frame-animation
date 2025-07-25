@@ -6,25 +6,22 @@ function exportGif() {
       // Step 1: Create a new document with same dimensions
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
 
-      // Step 2: Duplicate each top-level layer or folder
-      for (var i = 0; i < original.layers.length; i++) {
+      // Step 2: Duplicate layers in REVERSE to preserve order
+      for (var i = original.layers.length - 1; i >= 0; i--) {
         var layer = original.layers[i];
 
-        // Skip locked layers/folders
         if (layer.locked) continue;
 
-        // Select the layer
         app.activeDocument = original;
         original.activeLayer = layer;
 
-        // Duplicate to new doc
         layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
       }
 
       // Step 3: Focus the duplicated document
       app.activeDocument = dupDoc;
 
-      alert("✅ Document duplicated as 'anim_preview'.");
+      alert("✅ Document duplicated with correct order as 'anim_preview'.");
     })();
   `;
 
