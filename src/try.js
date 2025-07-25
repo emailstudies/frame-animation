@@ -2,49 +2,50 @@ function exportGif() {
   const script = `
     (function () {
       var doc = app.activeDocument;
-      if (!doc) {
-        alert("No active document.");
+
+      if (!doc || doc.layers.length < 2) {
+        alert("Document does not have enough layers.");
         return;
       }
 
-      var layerA = null;
-      var layerB = null;
+      var layer1Index = -1;
+      var layer2Index = -1;
 
-      // Step 1: Find "Layer 1" and "Layer 2"
+      // Find indices of "Layer 1" and "Layer 2"
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
-        if (layer.name === "Layer 1" && layer.typename !== "LayerSet") {
-          layerA = layer;
+        if (layer.name === "Layer 1" && layer.typename !== "LayerSet" && layer1Index === -1) {
+          layer1Index = i;
         }
-        if (layer.name === "Layer 2" && layer.typename !== "LayerSet") {
-          layerB = layer;
+        if (layer.name === "Layer 2" && layer.typename !== "LayerSet" && layer2Index === -1) {
+          layer2Index = i;
         }
       }
 
-      if (!layerA || !layerB) {
-        alert("Layer 1 and/or Layer 2 not found.");
+      if (layer1Index === -1 || layer2Index === -1) {
+        alert("Layer 1 or Layer 2 not found.");
         return;
       }
 
-      // Step 2: Duplicate both layers
-      var dupA = layerA.duplicate();
-      var dupB = layerB.duplicate();
+      // Duplicate both layers
+      var dup1 = doc.layers[layer1Index].duplicate();
+      var dup2 = doc.layers[layer2Index].duplicate();
 
-      // Step 3: Move to top of stack
-      dupA.move(doc, ElementPlacement.PLACEATBEGINNING);
-      dupB.move(doc, ElementPlacement.PLACEATBEGINNING);
+      // Move duplicates to top of stack
+      dup1.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
+      dup2.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
 
-      // Step 4: Select both for merge (order matters)
-      doc.activeLayer = dupB;
-      dupA.selected = true;
+      // Ensure dup2 is on top (active), and select dup1 too
+      doc.activeLayer = dup2;
+      dup1.selected = true;
 
-      // Step 5: Merge
+      // Merge the top two selected layers
       executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
 
-      // Step 6: Rename the merged result
+      // Rename merged layer
       doc.activeLayer.name = "Merged_Layer 1_Layer 2";
 
-      console.log("✅ Successfully merged Layer 1 and Layer 2");
+      console.log("✅ Merged Layer 1 and Layer 2 successfully.");
     })();
   `;
 
