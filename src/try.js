@@ -1,80 +1,35 @@
 function exportGif() {
   const script = `
-(function () {
-  var doc = app.activeDocument;
-
-  // Check if preview folder already exists
-  for (var i = 0; i < doc.layers.length; i++) {
-    if (doc.layers[i].name === "anim_preview" && doc.layers[i].typename === "LayerSet") {
-      alert("⚠️ 'anim_preview' folder already exists. Please delete it manually before exporting again.");
-      return;
-    }
-  }
-
-  // Collect all 'anim' folders that are not locked
-  var animGroups = [];
-  for (var i = 0; i < doc.layers.length; i++) {
-    var group = doc.layers[i];
-    if (
-      group.typename === "LayerSet" &&
-      group.name.startsWith("anim") &&
-      !group.allLocked
-    ) {
-      animGroups.push(group);
-    }
-  }
-
-  if (animGroups.length === 0) {
-    alert("⚠️ No unlocked 'anim' folders found.");
-    return;
-  }
-
-  // Determine max frame count
-  var frameCount = 0;
-  for (var g = 0; g < animGroups.length; g++) {
-    var group = animGroups[g];
-    var count = 0;
-    for (var j = 0; j < group.layers.length; j++) {
-      var layer = group.layers[j];
-      if (!layer.allLocked) count++;
-    }
-    if (count > frameCount) frameCount = count;
-  }
-
-  if (frameCount === 0) {
-    alert("⚠️ No unlocked layers found in anim folders.");
-    return;
-  }
-
-  // Create preview folder
-  var previewGroup = doc.layerSets.add();
-  previewGroup.name = "anim_preview";
-
-  for (var f = 0; f < frameCount; f++) {
-    var visibleLayers = [];
-
-    for (var g = 0; g < animGroups.length; g++) {
-      var group = animGroups[g];
-      var layer = group.layers[f];
-      if (layer && !layer.allLocked) {
-        layer.visible = true;
-        visibleLayers.push(layer);
+    (function () {
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No active document.");
+        return;
       }
-    }
 
-    // Merge visible layers
-    var merged = doc.mergeVisibleLayers();
-    merged.name = "_a_Frame " + (f + 1);
-    merged.move(previewGroup, ElementPlacement.INSIDE);
+      var layerToMove = null;
+      var targetFolder = null;
 
-    // Re-hide source layers
-    for (var v = 0; v < visibleLayers.length; v++) {
-      visibleLayers[v].visible = false;
-    }
-  }
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (layer.name === "Layer 1" && layer.typename !== "LayerSet") {
+          layerToMove = layer;
+        }
+        if (layer.name === "anim_e" && layer.typename === "LayerSet") {
+          targetFolder = layer;
+        }
+      }
 
-  alert("✅ Animation preview created in 'anim_preview'. Export manually via File > Export As > GIF.");
-})();`.trim();
+      if (!layerToMove || !targetFolder) {
+        alert("Could not find 'Layer 1' or 'anim_e' folder.");
+        return;
+      }
+
+      app.activeDocument.activeLayer = layerToMove;
+      layerToMove.move(targetFolder, ElementPlacement.INSIDE);
+      console.log("✅ Moved 'Layer 1' into 'anim_e'");
+    })();
+  `;
 
   window.parent.postMessage(script, "*");
 }
