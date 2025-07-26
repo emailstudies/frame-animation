@@ -177,8 +177,13 @@ function exportGif() {
       (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder);
       (${fadeOutAnimFolders.toString()})(doc);
 
-      alert("✅ All frames merged into 'anim_preview'. /n Other anim_folders opacity set to 0 for export. /n You can export via File > Export As > GIF/MP4.");
+      
+      alert("✅ All frames merged into 'anim_preview'.\\nOther anim_folders opacity set to 0 for export.\\nYou can export via File > Export As > GIF/MP4.");
+
+      
     })();
+
+    
   `;
 
   window.parent.postMessage(script, "*");
