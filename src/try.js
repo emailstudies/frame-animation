@@ -1,4 +1,4 @@
-// 🧱 Create anim_preview folder at root and top of layer stack
+// 🧱 Create anim_preview folder at root and top
 function createAnimPreviewFolder(doc) {
   if (!doc) {
     alert("No active document.");
@@ -35,109 +35,110 @@ function createAnimPreviewFolder(doc) {
   return previewFolder;
 }
 
-// 🧱 Duplicate single-layer folders to match maxFrames
-function duplicateSingleLayerFolders(doc, maxFrames) {
-  for (var i = 0; i < doc.layers.length; i++) {
-    var folder = doc.layers[i];
-    if (
-      folder.typename === "LayerSet" &&
-      folder.name.indexOf("anim_") === 0 &&
-      folder.name !== "anim_preview"
-    ) {
-      if (folder.layers.length === 1) {
-        var baseLayer = folder.layers[0];
-        var currentLayer = baseLayer;
-        for (var j = 1; j < maxFrames; j++) {
-          var dup = currentLayer.duplicate();
-          folder.insertLayer(dup);
-          currentLayer = dup;
-        }
-        console.log("📌 Duplicated " + folder.name + " to " + maxFrames + " frames.");
-      }
-    }
-  }
-}
-
-// 🧱 Get anim_* folders and max frame count (before mapping)
+// 🧱 Get all anim_* folders (excluding anim_preview) and determine maxFrames
 function getAnimFoldersAndMaxFrames(doc) {
-  var animFolders = [];
+  var folders = [];
   var maxFrames = 0;
 
-  for (var i = doc.layers.length - 1; i >= 0; i--) {
+  for (var i = 0; i < doc.layers.length; i++) {
     var layer = doc.layers[i];
     if (
       layer.typename === "LayerSet" &&
       layer.name.indexOf("anim_") === 0 &&
       layer.name !== "anim_preview"
     ) {
-      animFolders.push(layer);
+      folders.push(layer);
       if (layer.layers.length > maxFrames) {
         maxFrames = layer.layers.length;
       }
     }
   }
 
-  return {
-    folders: animFolders,
-    maxFrames: maxFrames
-  };
+  return { folders: folders, maxFrames: maxFrames };
 }
 
-// 🧱 Build the frame map AFTER duplication
-function buildFrameMap(animFolders, maxFrames) {
+// 🧱 Duplicate single-layer anim folders to match maxFrames
+function duplicateSingleLayerFolders(doc, maxFrames) {
+  var folders = getAnimFoldersAndMaxFrames(doc).folders;
+
+  for (var i = 0; i < folders.length; i++) {
+    var folder = folders[i];
+    if (folder.layers.length === 1) {
+      var base = folder.layers[0];
+      for (var j = 1; j < maxFrames; j++) {
+        var dup = base.duplicate();
+        folder.insertLayer(dup);
+      }
+    }
+  }
+}
+
+// 🧱 Build a 2D frame map: one frame group per index
+function buildFrameMap(folders, maxFrames) {
   var frameMap = [];
 
   for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
-    var frameGroup = [];
-    for (var j = 0; j < animFolders.length; j++) {
-      var folder = animFolders[j];
+    var group = [];
+    for (var j = 0; j < folders.length; j++) {
+      var folder = folders[j];
       var layerIndex = folder.layers.length - 1 - frameIndex;
       var layer = folder.layers[layerIndex];
       if (layer && layer.typename !== "LayerSet" && !layer.locked) {
-        frameGroup.push(layer);
+        group.push(layer);
       }
     }
-    if (frameGroup.length > 0) frameMap.push(frameGroup);
+    if (group.length > 0) frameMap.push(group);
   }
 
-  console.log("🗂 Frame map built: " + frameMap.length + " frames.");
   return frameMap;
 }
 
-// 🧱 Merge layers per frame index into anim_preview
+// 🧱 Merge each frame group into one layer → anim_preview
 function mergeFrameGroups(doc, frameMap, previewFolder) {
   for (var f = 0; f < frameMap.length; f++) {
     var layers = frameMap[f];
-    var duplicates = [];
+    var dups = [];
 
     for (var i = 0; i < layers.length; i++) {
-      var original = layers[i];
-      doc.activeLayer = original;
-      var dup = original.duplicate();
-      dup.name = "_a_" + original.name;
+      var orig = layers[i];
+      doc.activeLayer = orig;
+      var dup = orig.duplicate();
+      dup.name = "_a_" + orig.name;
       dup.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
-      duplicates.push(dup);
+      dups.push(dup);
     }
 
-    if (duplicates.length >= 2) {
-      doc.activeLayer = duplicates[0];
-      for (var i = 1; i < duplicates.length; i++) {
-        doc.activeLayer = duplicates[i];
-        var merged = duplicates[i].merge();
+    var merged;
+    if (dups.length >= 2) {
+      doc.activeLayer = dups[0];
+      for (var i = 1; i < dups.length; i++) {
+        doc.activeLayer = dups[i];
+        merged = dups[i].merge();
       }
-      var mergedLayer = doc.activeLayer;
-      mergedLayer.name = "_a_Frame " + (f + 1);
-      mergedLayer.move(previewFolder, ElementPlacement.INSIDE);
-      console.log("✅ Merged frame " + (f + 1));
-    } else if (duplicates.length === 1) {
-      var only = duplicates[0];
-      only.name = "_a_Frame " + (f + 1);
-      only.move(previewFolder, ElementPlacement.INSIDE);
+    } else {
+      merged = dups[0];
+    }
+
+    merged.name = "_a_Frame " + (f + 1);
+    merged.move(previewFolder, ElementPlacement.INSIDE);
+  }
+}
+
+// 🧱 Hide all anim_* folders except anim_preview
+function hideAnimFolders(doc) {
+  for (var i = 0; i < doc.layers.length; i++) {
+    var layer = doc.layers[i];
+    if (
+      layer.typename === "LayerSet" &&
+      layer.name.indexOf("anim_") === 0 &&
+      layer.name !== "anim_preview"
+    ) {
+      layer.visible = false;
     }
   }
 }
 
-// 🧱 MAIN wrapper to run everything in order
+// 🧱 Main execution wrapper
 function exportGif() {
   const script = `
     (function () {
@@ -160,8 +161,9 @@ function exportGif() {
       }
 
       (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder);
+      (${hideAnimFolders.toString()})(doc);
 
-      alert("✅ All frames merged into 'anim_preview'.");
+      alert("✅ 'anim_preview' created and filled. All anim_* folders hidden. Ready to export.");
     })();
   `;
 
