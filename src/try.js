@@ -52,14 +52,14 @@ function duplicateSingleLayerFolders(doc, maxFrames) {
           folder.insertLayer(dup);
           currentLayer = dup;
         }
-        console.log("📌 Duplicated " + folder.name + " → now has " + folder.layers.length + " layers.");
+        console.log("📌 Duplicated " + folder.name + " to " + maxFrames + " frames.");
       }
     }
   }
 }
 
-// 🧱 Map animation frame layers from anim_* folders
-function mapAnimFrames(doc) {
+// 🧱 Get anim_* folders and max frame count (before mapping)
+function getAnimFoldersAndMaxFrames(doc) {
   var animFolders = [];
   var maxFrames = 0;
 
@@ -71,7 +71,9 @@ function mapAnimFrames(doc) {
       layer.name !== "anim_preview"
     ) {
       animFolders.push(layer);
-      if (layer.layers.length > maxFrames) maxFrames = layer.layers.length;
+      if (layer.layers.length > maxFrames) {
+        maxFrames = layer.layers.length;
+      }
     }
   }
 
@@ -81,7 +83,7 @@ function mapAnimFrames(doc) {
   };
 }
 
-// 🧱 Build frame map (after duplication)
+// 🧱 Build the frame map AFTER duplication
 function buildFrameMap(animFolders, maxFrames) {
   var frameMap = [];
 
@@ -102,7 +104,7 @@ function buildFrameMap(animFolders, maxFrames) {
   return frameMap;
 }
 
-// 🧱 Merge frame groups into anim_preview
+// 🧱 Merge layers per frame index into anim_preview
 function mergeFrameGroups(doc, frameMap, previewFolder) {
   for (var f = 0; f < frameMap.length; f++) {
     var layers = frameMap[f];
@@ -135,7 +137,7 @@ function mergeFrameGroups(doc, frameMap, previewFolder) {
   }
 }
 
-// 🧱 MAIN wrapper
+// 🧱 MAIN wrapper to run everything in order
 function exportGif() {
   const script = `
     (function () {
@@ -148,7 +150,7 @@ function exportGif() {
       var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
       if (!previewFolder) return;
 
-      var data = (${mapAnimFrames.toString()})(doc);
+      var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
       (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
 
       var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
