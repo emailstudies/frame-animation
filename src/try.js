@@ -80,5 +80,5 @@ function exportGif() {
     })();
   `;
 
-  window.parent.postMessage({ script }, "*");
+  window.parent.postMessage(script, "*");
 }
