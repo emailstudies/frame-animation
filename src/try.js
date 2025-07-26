@@ -9,6 +9,9 @@ function exportGif() {
 
       console.log("📁 Document found:", doc.name);
 
+      // Force refresh layer state
+      app.activeDocument = doc;
+
       // Step 1: Check if 'anim_e' exists
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
@@ -48,7 +51,7 @@ function exportGif() {
               dup.name = "_a_" + inner.name;
               dupes.push(dup);
               console.log("✅ Duplicated from:", layer.name, "→", inner.name);
-              break; // Only first valid layer
+              break; // only first visible, unlocked layer
             }
           }
         }
@@ -61,20 +64,30 @@ function exportGif() {
 
       console.log("✅ Total layers to merge:", dupes.length);
 
-      // Step 4: Move dupes to top in reverse order (so 1st ends up at bottom)
+      // Step 4: Move dupes to top in reverse order
       for (var i = dupes.length - 1; i >= 0; i--) {
         dupes[i].move(doc, ElementPlacement.PLACEATBEGINNING);
         console.log("📌 Moved to top:", dupes[i].name);
       }
 
-      // Step 5: Merge
-      var merged = dupes[dupes.length - 1].merge();
-      merged.name = "_a_Merged_Frame_1";
-      console.log("✅ Layers merged successfully:", merged.name);
+      // Step 5: Select all the duplicate layers
+      for (var i = 0; i < dupes.length; i++) {
+        dupes[i].selected = true;
+      }
 
-      // Step 6: Move merged layer into anim_e
-      merged.move(animFolder, ElementPlacement.INSIDE);
-      console.log("✅ Merged layer moved inside 'anim_e'");
+      // Step 6: Merge selected layers
+      try {
+        var merged = dupes[dupes.length - 1].merge();
+        merged.name = "_a_Merged_Frame_1";
+        console.log("✅ Layers merged successfully:", merged.name);
+
+        // Step 7: Move merged layer into anim_e
+        merged.move(animFolder, ElementPlacement.INSIDE);
+        console.log("✅ Merged layer moved inside 'anim_e'");
+      } catch (e) {
+        alert("❌ Merge failed. Check if layers are top-level and selected.");
+        console.log("❌ Merge error:", e);
+      }
 
       alert("✅ Merged first layers from all anim_* folders into 'anim_e'. Check console for details.");
     })();
