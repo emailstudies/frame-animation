@@ -7,28 +7,15 @@ function exportGif() {
         return;
       }
 
-      // Step 1: Check if anim_e exists
-      for (var i = 0; i < doc.layers.length; i++) {
+      // Step 1: Delete existing anim_e if any
+      for (var i = doc.layers.length - 1; i >= 0; i--) {
         var layer = doc.layers[i];
-        if (layer.typename === "LayerSet" && layer.name === "anim_e") {
-          alert("❌ Folder 'anim_e' already exists. Please delete it before running this.");
-          return;
+        if (layer.name === "anim_e" && layer.typename === "LayerSet") {
+          layer.remove();
         }
       }
 
-      // Step 2: Ensure no nesting
-      var tempFolder = doc.layerSets.add();
-      tempFolder.name = "temp_check_folder";
-      var parent = tempFolder.parent;
-      var atRoot = (parent && parent.name === doc.name);
-      tempFolder.remove();
-
-      if (!atRoot) {
-        alert("❌ Cannot create 'anim_e' as a nested folder. Please deselect all or select nothing.");
-        return;
-      }
-
-      // Step 3: Create anim_e via ActionDescriptor
+      // Step 2: Create new anim_e folder
       var groupDesc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -40,38 +27,48 @@ function exportGif() {
 
       executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-      // Step 4: Move anim_e to top
       var animFolder = doc.activeLayer;
       var topLayer = doc.layers[0];
       animFolder.move(topLayer, ElementPlacement.PLACEBEFORE);
 
-      // Step 5: Collect all root-level non-folder layers to duplicate
+      // Step 3: Collect and duplicate root layers (non-folders only)
       var duplicates = [];
+      var originalLayers = [];
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
-        if (layer.typename !== "LayerSet") {
-          app.activeDocument.activeLayer = layer;
-          var dup = layer.duplicate();
-          dup.name = layer.name + " copy";
-          dup.move(animFolder, ElementPlacement.INSIDE);
-          duplicates.push(dup);
+        if (layer.typename !== "LayerSet" && layer.name !== "Merged_Layer") {
+          originalLayers.push(layer);
         }
       }
 
-      // Step 6: Merge all duplicates if more than 1
+      if (originalLayers.length === 0) {
+        alert("No eligible root layers to duplicate.");
+        return;
+      }
+
+      for (var i = 0; i < originalLayers.length; i++) {
+        var layer = originalLayers[i];
+        app.activeDocument.activeLayer = layer;
+        var dup = layer.duplicate();
+        dup.name = "_a_" + layer.name;
+        dup.move(animFolder, ElementPlacement.INSIDE);
+        duplicates.push(dup);
+      }
+
       if (duplicates.length >= 2) {
-        app.activeDocument.activeLayer = duplicates[0];
-        for (var i = 1; i < duplicates.length; i++) {
-          duplicates[i].move(duplicates[0], ElementPlacement.PLACEAFTER);
+        // Reorder for stacking before merge
+        for (var i = duplicates.length - 1; i >= 0; i--) {
+          duplicates[i].move(duplicates[0], ElementPlacement.PLACEBEFORE);
         }
+
+        // Merge from the top of the stack
+        app.activeDocument.activeLayer = duplicates[0];
         var merged = duplicates[0].merge();
         merged.name = "Merged_Layer";
         merged.move(animFolder, ElementPlacement.INSIDE);
-        console.log("✅ Merged", duplicates.length, "layers into 'Merged_Layer'.");
-      } else if (duplicates.length === 1) {
-        console.log("ℹ️ Only one layer duplicated. No merge needed.");
+        console.log("✅ Merged", duplicates.length, "layers into 'Merged_Layer'");
       } else {
-        alert("❌ No eligible layers found to duplicate.");
+        console.log("ℹ️ Only one duplicate layer, no need to merge.");
       }
     })();
   `;
