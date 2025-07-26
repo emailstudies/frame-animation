@@ -16,25 +16,23 @@ function exportGif() {
         }
       }
 
-      // Step 2: Create anim_e folder at top
-      var tempGroup = doc.layerSets.add();
-      tempGroup.name = "temp_check_folder";
-      var atRoot = (tempGroup.parent === doc);
-      tempGroup.remove();
+      // Step 2: Create anim_e folder at root using ActionDescriptor
+      var groupDesc = new ActionDescriptor();
+      var ref = new ActionReference();
+      ref.putClass(stringIDToTypeID("layerSection"));
+      groupDesc.putReference(charIDToTypeID("null"), ref);
 
-      if (!atRoot) {
-        alert("❌ Please deselect any folder. 'anim_e' must be created at root.");
-        return;
-      }
+      var props = new ActionDescriptor();
+      props.putString(charIDToTypeID("Nm  "), "anim_e");
+      groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
+      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-      var animE = doc.layerSets.add();
-      animE.name = "anim_e";
-
-      // Move anim_e to top of layer stack
+      // Step 3: Move anim_e to top
+      var animE = doc.activeLayer; // newly created
       var topLayer = doc.layers[0];
       animE.move(topLayer, ElementPlacement.PLACEBEFORE);
 
-      // Step 3: Loop through anim_* folders and duplicate their first visible, unlocked layer
+      // Step 4: Duplicate 1st frame from each anim_* folder into anim_e
       var duplicated = [];
 
       for (var i = doc.layers.length - 1; i >= 0; i--) {
@@ -59,7 +57,7 @@ function exportGif() {
         return;
       }
 
-      // Step 4: Merge all duplicated layers inside anim_e
+      // Step 5: Merge all duplicated layers inside anim_e
       for (var i = animE.layers.length - 2; i >= 0; i--) {
         var top = animE.layers[i + 1];
         if (top.typename !== "ArtLayer") continue;
@@ -68,9 +66,9 @@ function exportGif() {
 
       animE.layers[0].name = "_a_merged_1";
 
-      // Debug console log
-      console.log("📦 Selected folders: " + duplicated.join(", "));
-      console.log("✅ Merged into: _a_merged_1");
+      // Console for debug
+      console.log("📦 Merged these layers:", duplicated);
+      console.log("✅ Output layer: _a_merged_1");
 
     })();
   `;
