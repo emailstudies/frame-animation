@@ -1,12 +1,11 @@
+// 🧱 Create anim_e folder at root and top of layer stack
 function createAnimEFolder(doc) {
   console.log("📁 Document found: " + doc.name);
-
   if (!doc) {
     alert("No active document.");
     return null;
   }
 
-  // Step 1: Prevent duplicate anim_e
   for (var i = 0; i < doc.layers.length; i++) {
     var layer = doc.layers[i];
     if (layer.typename === "LayerSet" && layer.name === "anim_e") {
@@ -16,14 +15,12 @@ function createAnimEFolder(doc) {
   }
   console.log("✅ No existing 'anim_e' folder found.");
 
-  // Step 2: Force root selection via dummy layer
   var dummy = doc.artLayers.add();
   dummy.name = "force_root_selection";
   doc.activeLayer = dummy;
   dummy.remove();
   console.log("✅ Forced root-level selection using dummy layer.");
 
-  // Step 3: Create anim_e using ActionDescriptor
   var groupDesc = new ActionDescriptor();
   var ref = new ActionReference();
   ref.putClass(stringIDToTypeID("layerSection"));
@@ -32,9 +29,9 @@ function createAnimEFolder(doc) {
   var props = new ActionDescriptor();
   props.putString(charIDToTypeID("Nm  "), "anim_e");
   groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
+
   executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-  // Step 4: Move it to top
   var animFolder = doc.activeLayer;
   animFolder.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
   console.log("✅ 'anim_e' folder created and moved to top.");
@@ -42,11 +39,12 @@ function createAnimEFolder(doc) {
   return animFolder;
 }
 
+// 🧱 Map frames: layer 1 from each anim_* → group 1, etc.
 function mapAnimFrames(doc) {
   var animFolders = [];
   var maxFrames = 0;
 
-  for (var i = 0; i < doc.layers.length; i++) {
+  for (var i = doc.layers.length - 1; i >= 0; i--) {
     var layer = doc.layers[i];
     if (layer.typename === "LayerSet" && layer.name.indexOf("anim_") === 0 && layer.name !== "anim_e") {
       animFolders.push(layer);
@@ -55,11 +53,14 @@ function mapAnimFrames(doc) {
   }
 
   var frameMap = [];
-  for (var i = 0; i < maxFrames; i++) {
+
+  for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
     var frameGroup = [];
     for (var j = 0; j < animFolders.length; j++) {
       var folder = animFolders[j];
-      var layer = folder.layers[i];
+      var layerIndex = folder.layers.length - 1 - frameIndex;
+      var layer = folder.layers[layerIndex];
+
       if (layer && layer.typename !== "LayerSet" && !layer.locked) {
         frameGroup.push(layer);
         console.log("✅ Collected: " + folder.name + " → " + layer.name);
@@ -72,6 +73,7 @@ function mapAnimFrames(doc) {
   return frameMap;
 }
 
+// 🧱 Merge corresponding layers per frame index → _a_Frame X inside anim_e
 function mergeFrameGroups(doc, frameMap, animFolder) {
   for (var f = 0; f < frameMap.length; f++) {
     var layers = frameMap[f];
@@ -106,25 +108,21 @@ function mergeFrameGroups(doc, frameMap, animFolder) {
   }
 }
 
+// 🧱 Master trigger
 function exportGif() {
   const script = `
     (function () {
       var doc = app.activeDocument;
-      var createAnimEFolder = ${createAnimEFolder.toString()};
-      var mapAnimFrames = ${mapAnimFrames.toString()};
-      var mergeFrameGroups = ${mergeFrameGroups.toString()};
-
-      var animFolder = createAnimEFolder(doc);
+      var animFolder = (${createAnimEFolder.toString()})(doc);
       if (!animFolder) return;
 
-      var frameMap = mapAnimFrames(doc);
+      var frameMap = (${mapAnimFrames.toString()})(doc);
       if (frameMap.length === 0) {
-        alert("No eligible frames found.");
+        alert("No eligible animation frames found.");
         return;
       }
 
-      mergeFrameGroups(doc, frameMap, animFolder);
-
+      (${mergeFrameGroups.toString()})(doc, frameMap, animFolder);
       alert("✅ Merged all corresponding frame layers into 'anim_e'. Check console for steps.");
     })();
   `;
