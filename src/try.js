@@ -11,30 +11,33 @@ function exportGif() {
       var animFolder = doc.layerSets.add();
       animFolder.name = "anim_e";
 
-      // Step 2: Find all layers named "Layer 1" at root
-      var layer1s = [];
+      // Step 2: Names of layers to find
+      var targetNames = ["Layer 1", "Layer 2"];
+      var matchedLayers = [];
+
+      // Step 3: Loop through root layers and collect matches
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
-        if (layer.name === "Layer 1" && layer.typename !== "LayerSet") {
-          layer1s.push(layer);
+        if (layer.typename !== "LayerSet" && targetNames.includes(layer.name)) {
+          matchedLayers.push(layer);
         }
       }
 
-      if (layer1s.length === 0) {
-        alert("No layers named 'Layer 1' found.");
+      if (matchedLayers.length === 0) {
+        alert("No target layers found.");
         return;
       }
 
-      // Step 3: Duplicate each Layer 1 and move duplicate into anim_e
-      for (var i = 0; i < layer1s.length; i++) {
-        var original = layer1s[i];
+      // Step 4: Duplicate each into the anim_e folder
+      for (var i = 0; i < matchedLayers.length; i++) {
+        var original = matchedLayers[i];
         app.activeDocument.activeLayer = original;
         var dup = original.duplicate();
-        dup.name = "Layer 1 copy " + (i + 1);
+        dup.name = original.name + " copy";
         dup.move(animFolder, ElementPlacement.INSIDE);
       }
 
-      console.log("✅ Duplicated 'Layer 1' into new folder 'anim_e'");
+      console.log("✅ Duplicated Layer 1 and Layer 2 into anim_e.");
     })();
   `;
 
