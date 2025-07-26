@@ -3,80 +3,75 @@ function exportGif() {
     (function () {
       var doc = app.activeDocument;
       if (!doc) {
-        alert("❌ No active document.");
+        alert("No active document.");
         return;
       }
 
-      // STEP 0: Check if anim_e already exists
+      // Step 1: Check if anim_e exists
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
         if (layer.name === "anim_e" && layer.typename === "LayerSet") {
-          alert("❌ Folder 'anim_e' already exists. Please delete it before running this.");
+          alert("❌ 'anim_e' folder already exists. Please delete it first.");
           return;
         }
       }
 
-      // STEP 1: Find all anim_* folders
-      var animFolders = [];
-      for (var i = 0; i < doc.layers.length; i++) {
-        var layer = doc.layers[i];
-        if (layer.typename === "LayerSet" && layer.name.indexOf("anim_") === 0) {
-          animFolders.push(layer);
-        }
-      }
+      // Step 2: Create anim_e folder at top
+      var tempGroup = doc.layerSets.add();
+      tempGroup.name = "temp_check_folder";
+      var atRoot = (tempGroup.parent === doc);
+      tempGroup.remove();
 
-      if (animFolders.length === 0) {
-        alert("❌ No anim_* folders found.");
+      if (!atRoot) {
+        alert("❌ Please deselect any folder. 'anim_e' must be created at root.");
         return;
       }
 
-      // STEP 2: Create anim_e at root and move to top
       var animE = doc.layerSets.add();
       animE.name = "anim_e";
 
+      // Move anim_e to top of layer stack
       var topLayer = doc.layers[0];
       animE.move(topLayer, ElementPlacement.PLACEBEFORE);
 
-      // STEP 3: Duplicate first unlocked+visible layer from each anim folder into anim_e
-      var duplicates = [];
+      // Step 3: Loop through anim_* folders and duplicate their first visible, unlocked layer
+      var duplicated = [];
 
-      for (var i = 0; i < animFolders.length; i++) {
-        var group = animFolders[i];
-        var layerToDuplicate = null;
+      for (var i = doc.layers.length - 1; i >= 0; i--) {
+        var group = doc.layers[i];
+        if (group.typename !== "LayerSet") continue;
+        if (group.name.indexOf("anim_") !== 0 || group.name === "anim_e") continue;
 
-        for (var j = 0; j < group.layers.length; j++) {
-          var candidate = group.layers[j];
-          if (candidate.typename !== "LayerSet" && !candidate.locked && candidate.visible) {
-            layerToDuplicate = candidate;
-            break;
-          }
-        }
+        if (group.layers.length === 0) continue;
 
-        if (layerToDuplicate) {
-          doc.activeLayer = layerToDuplicate;
-          var dup = layerToDuplicate.duplicate();
-          dup.name = "_a_" + layerToDuplicate.name;
-          dup.move(animE, ElementPlacement.INSIDE);
-          duplicates.push(dup);
-        }
+        var firstLayer = group.layers[group.layers.length - 1]; // topmost
+        if (!firstLayer || firstLayer.typename === "LayerSet" || firstLayer.locked) continue;
+
+        doc.activeLayer = firstLayer;
+        var dup = firstLayer.duplicate();
+        dup.name = "_a_" + firstLayer.name;
+        dup.move(animE, ElementPlacement.INSIDE);
+        duplicated.push(dup.name);
       }
 
-      if (duplicates.length < 2) {
-        alert("❌ Need at least two eligible layers to merge.");
+      if (duplicated.length < 2) {
+        alert("❌ Need at least two layers to merge. Found: " + duplicated.length);
         return;
       }
 
-      // STEP 4: Merge all duplicates in anim_e
-      doc.activeLayer = duplicates[0];
-      for (var i = 1; i < duplicates.length; i++) {
-        doc.activeLayer = duplicates[i];
-        executeAction(charIDToTypeID("Mrg2"), undefined, DialogModes.NO);
+      // Step 4: Merge all duplicated layers inside anim_e
+      for (var i = animE.layers.length - 2; i >= 0; i--) {
+        var top = animE.layers[i + 1];
+        if (top.typename !== "ArtLayer") continue;
+        top.merge(); // merge with layer below
       }
 
-      // STEP 5: Rename merged layer
-      doc.activeLayer.name = "_a_merged_1";
+      animE.layers[0].name = "_a_merged_1";
 
-      alert("✅ Merged first layers from anim_* folders into 'anim_e'.");
+      // Debug console log
+      console.log("📦 Selected folders: " + duplicated.join(", "));
+      console.log("✅ Merged into: _a_merged_1");
+
     })();
   `;
 
