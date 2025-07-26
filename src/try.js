@@ -7,89 +7,111 @@ function exportGif() {
         return;
       }
 
-      // Step 1: Check if anim_e already exists at root
+      window.console.log("📁 Document found: " + doc.name);
+
+      // Force root-level context
+      try {
+        app.activeDocument.activeLayer = doc.artLayers.add();
+        doc.activeLayer.remove();
+        window.console.log("✅ Forced root-level selection using dummy layer.");
+      } catch (e) {
+        window.console.log("⚠️ Could not reset selection: " + e);
+      }
+
+      // Step 1: Check if 'anim_e' already exists
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
         if (layer.typename === "LayerSet" && layer.name === "anim_e") {
-          alert("❌ Folder 'anim_e' already exists. Please delete it before running this.");
+          alert("❌ Folder 'anim_e' already exists. Please delete it first.");
+          window.console.log("❌ 'anim_e' already exists. Aborting.");
           return;
         }
       }
+      window.console.log("✅ No existing 'anim_e' folder found.");
 
-      // Step 2: Ensure no nesting by creating temp folder to test root access
+      // Step 2: Create 'anim_e' at root using descriptor
       try {
-        var tempFolder = doc.layerSets.add();
-        tempFolder.name = "temp_check_folder";
-        var parent = tempFolder.parent;
-        var atRoot = (parent && parent.name === doc.name);
-        tempFolder.remove();
+        var groupDesc = new ActionDescriptor();
+        var ref = new ActionReference();
+        ref.putClass(stringIDToTypeID("layerSection"));
+        groupDesc.putReference(charIDToTypeID("null"), ref);
 
-        if (!atRoot) {
-          alert("❌ Cannot create 'anim_e' as a nested folder. Please deselect all or select nothing.");
-          return;
-        }
+        var props = new ActionDescriptor();
+        props.putString(charIDToTypeID("Nm  "), "anim_e");
+        groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
+
+        executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
+
+        var animEFolder = doc.activeLayer;
+        var topLayer = doc.layers[0];
+        animEFolder.move(topLayer, ElementPlacement.PLACEBEFORE);
+
+        window.console.log("✅ 'anim_e' folder created and moved to top.");
       } catch (e) {
-        alert("Error verifying root-level access: " + e);
+        window.console.log("❌ Failed to create or move 'anim_e': " + e);
         return;
       }
 
-      // Step 3: Create anim_e folder via ActionDescriptor
-      var groupDesc = new ActionDescriptor();
-      var ref = new ActionReference();
-      ref.putClass(stringIDToTypeID("layerSection"));
-      groupDesc.putReference(charIDToTypeID("null"), ref);
-
-      var props = new ActionDescriptor();
-      props.putString(charIDToTypeID("Nm  "), "anim_e");
-      groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
-
-      executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
-
-      // Step 4: Move anim_e to top of root
-      var animE = doc.activeLayer;
-      var topLayer = doc.layers[0];
-      animE.move(topLayer, ElementPlacement.PLACEBEFORE);
-
-      // Step 5: Duplicate topmost layer from each anim_* folder into anim_e
-      var duplicated = [];
-
+      // Step 3: Collect first layers from all anim_* folders
+      var toMerge = [];
       for (var i = 0; i < doc.layers.length; i++) {
-        var folder = doc.layers[i];
-        if (
-          folder.typename !== "LayerSet" ||
-          folder.name === "anim_e" ||
-          folder.name.indexOf("anim_") !== 0
-        ) continue;
-
-        if (folder.layers.length === 0) continue;
-
-        var firstFrame = folder.layers[folder.layers.length - 1]; // topmost frame
-        if (!firstFrame || firstFrame.typename === "LayerSet" || firstFrame.locked) continue;
-
-        doc.activeLayer = firstFrame;
-        var dup = firstFrame.duplicate();
-        dup.name = "_a_" + firstFrame.name;
-        dup.move(animE, ElementPlacement.INSIDE);
-        duplicated.push(dup.name);
+        var layer = doc.layers[i];
+        if (layer.typename === "LayerSet" && layer.name.indexOf("anim_") === 0 && layer.name !== "anim_e") {
+          if (layer.layers.length > 0) {
+            var firstLayer = layer.layers[layer.layers.length - 1]; // reverse stack order
+            if (!firstLayer.locked) {
+              app.activeDocument.activeLayer = firstLayer;
+              var dup = firstLayer.duplicate();
+              dup.name = "_a_" + firstLayer.name;
+              toMerge.push(dup);
+              window.console.log("✅ Duplicated from: " + layer.name + " → " + firstLayer.name);
+            } else {
+              window.console.log("⚠️ Skipped locked layer: " + firstLayer.name);
+            }
+          } else {
+            window.console.log("⚠️ Folder empty: " + layer.name);
+          }
+        }
       }
 
-      if (duplicated.length < 2) {
-        alert("❌ Need at least 2 anim_* folders with layers.");
+      if (toMerge.length < 2) {
+        alert("Need at least two layers to merge. Found: " + toMerge.length);
+        window.console.log("❌ Not enough layers to merge. Aborting.");
+        return;
+      }
+      window.console.log("✅ Total layers to merge: " + toMerge.length);
+
+      // Step 4: Reorder all toMerge layers to top
+      for (var i = toMerge.length - 1; i >= 0; i--) {
+        toMerge[i].move(doc, ElementPlacement.PLACEATBEGINNING);
+        window.console.log("📌 Moved to top: " + toMerge[i].name);
+      }
+
+      // Step 5: Merge them
+      var merged = null;
+      try {
+        app.activeDocument.activeLayer = toMerge[0];
+        merged = toMerge[0];
+        for (var i = 1; i < toMerge.length; i++) {
+          app.activeDocument.activeLayer = toMerge[i];
+          merged = toMerge[i].merge();
+        }
+        merged.name = "_a_Merged_Frame_1";
+        window.console.log("✅ Layers merged successfully: " + merged.name);
+      } catch (e) {
+        window.console.log("❌ Failed during merge: " + e);
         return;
       }
 
-      // Step 6: Merge all layers inside anim_e
-      while (animE.layers.length > 1) {
-        var top = animE.layers[0];
-        var below = animE.layers[1];
-        doc.activeLayer = below;
-        below.merge();
+      // Step 6: Move merged result into anim_e
+      try {
+        merged.move(animEFolder, ElementPlacement.INSIDE);
+        window.console.log("✅ Merged layer moved inside 'anim_e'");
+      } catch (e) {
+        window.console.log("❌ Failed to move merged layer into 'anim_e': " + e);
       }
 
-      animE.layers[0].name = "_a_merged_1";
-
-      alert("✅ Merged: " + duplicated.join(", "));
-      console.log("✅ Merged into anim_e/_a_merged_1");
+      alert("✅ Merged first layers from all anim_* folders into 'anim_e'. Check console for details.");
     })();
   `;
 
