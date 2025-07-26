@@ -148,8 +148,8 @@ function exportGif() {
       var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
       if (!previewFolder) return;
 
-      var data = (${mapAnimFrames.toString()})(doc);
-      (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
+      var data = (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
+      (${mapAnimFrames.toString()})(doc);
 
       var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
       if (frameMap.length === 0) {
