@@ -7,16 +7,26 @@ function exportGif() {
         return;
       }
 
-      // Step 1: Check if anim_e exists
+      // Step 1: Check if anim_e already exists at root
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
-        if (layer.name === "anim_e" && layer.typename === "LayerSet") {
-          alert("❌ 'anim_e' folder already exists. Please delete it first.");
+        if (layer.typename === "LayerSet" && layer.name === "anim_e") {
+          alert("❌ Folder 'anim_e' already exists. Please delete it before running this.");
           return;
         }
       }
 
-      // Step 2: Create anim_e at root using ActionDescriptor
+      // ✅ Step 2: Deselect all layers (to prevent nesting)
+      try {
+        var desc = new ActionDescriptor();
+        var ref = new ActionReference();
+        desc.putReference(charIDToTypeID("null"), ref);
+        executeAction(charIDToTypeID("selectNoLayers"), desc, DialogModes.NO);
+      } catch (e) {
+        // Ignore errors from deselect (e.g., nothing was selected)
+      }
+
+      // Step 3: Create real anim_e folder via ActionDescriptor
       var groupDesc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -27,46 +37,50 @@ function exportGif() {
       groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
       executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-      var animE = app.activeDocument.activeLayer;
+      // Step 4: Move anim_e to top of root
+      var animE = doc.activeLayer;
       var topLayer = doc.layers[0];
       animE.move(topLayer, ElementPlacement.PLACEBEFORE);
 
-      // Step 3: Find and duplicate first layer from all anim_* folders
+      // Step 5: Loop over all anim_* folders (except anim_e) and duplicate their first layer
       var duplicated = [];
+      for (var i = 0; i < doc.layers.length; i++) {
+        var folder = doc.layers[i];
+        if (
+          folder.typename !== "LayerSet" ||
+          folder.name === "anim_e" ||
+          folder.name.indexOf("anim_") !== 0
+        ) continue;
 
-      for (var i = doc.layers.length - 1; i >= 0; i--) {
-        var group = doc.layers[i];
-        if (group.typename !== "LayerSet") continue;
-        if (group.name.indexOf("anim_") !== 0 || group.name === "anim_e") continue;
+        if (folder.layers.length === 0) continue;
 
-        if (group.layers.length === 0) continue;
+        var firstFrame = folder.layers[folder.layers.length - 1]; // topmost layer
+        if (!firstFrame || firstFrame.typename === "LayerSet" || firstFrame.locked) continue;
 
-        var firstLayer = group.layers[group.layers.length - 1]; // topmost in UI
-        if (!firstLayer || firstLayer.typename === "LayerSet" || firstLayer.locked) continue;
-
-        doc.activeLayer = firstLayer;
-        var dup = firstLayer.duplicate();
-        dup.name = "_a_" + firstLayer.name;
+        doc.activeLayer = firstFrame;
+        var dup = firstFrame.duplicate();
+        dup.name = "_a_" + firstFrame.name;
         dup.move(animE, ElementPlacement.INSIDE);
         duplicated.push(dup.name);
       }
 
       if (duplicated.length < 2) {
-        alert("❌ Need at least 2 layers to merge. Found: " + duplicated.length);
+        alert("❌ Need at least 2 anim_* folders with visible layers.");
         return;
       }
 
-      // Step 4: Merge all layers in anim_e
-      app.activeDocument.activeLayer = animE.layers[0];
-      for (var i = 1; i < animE.layers.length; i++) {
-        animE.layers[i].merge();
+      // Step 6: Merge all layers inside anim_e
+      while (animE.layers.length > 1) {
+        var top = animE.layers[0];
+        var next = animE.layers[1];
+        doc.activeLayer = next;
+        next.merge();
       }
 
       animE.layers[0].name = "_a_merged_1";
 
-      console.log("📦 Merged layers:", duplicated);
-      console.log("✅ Merged output → _a_merged_1");
-
+      console.log("📦 Duplicated from folders:", duplicated);
+      console.log("✅ Merged into anim_e/_a_merged_1");
     })();
   `;
 
