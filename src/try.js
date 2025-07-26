@@ -1,6 +1,5 @@
 // 🧱 Create anim_preview folder at root and top of layer stack
 function createAnimPreviewFolder(doc) {
-  // console.log("📁 Document found: " + doc.name);
   if (!doc) {
     alert("No active document.");
     return null;
@@ -13,13 +12,11 @@ function createAnimPreviewFolder(doc) {
       return null;
     }
   }
-  // console.log("✅ No existing 'anim_preview' folder found.");
 
   var dummy = doc.artLayers.add();
   dummy.name = "force_root_selection";
   doc.activeLayer = dummy;
   dummy.remove();
-  // console.log("✅ Forced root-level selection using dummy layer.");
 
   var groupDesc = new ActionDescriptor();
   var ref = new ActionReference();
@@ -34,12 +31,34 @@ function createAnimPreviewFolder(doc) {
 
   var previewFolder = doc.activeLayer;
   previewFolder.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
-  // console.log("✅ 'anim_preview' folder created and moved to top.");
 
   return previewFolder;
 }
 
-// 🧱 Map frames from anim_* folders (excluding anim_preview)
+// 🧱 Duplicate single-layer anim_* folders up to max frame count
+function duplicateSingleLayerFolders(doc, maxFrames) {
+  for (var i = 0; i < doc.layers.length; i++) {
+    var folder = doc.layers[i];
+    if (
+      folder.typename === "LayerSet" &&
+      folder.name.indexOf("anim_") === 0 &&
+      folder.name !== "anim_preview"
+    ) {
+      if (folder.layers.length === 1) {
+        var baseLayer = folder.layers[0];
+        var currentLayer = baseLayer;
+        for (var j = 1; j < maxFrames; j++) {
+          var dup = currentLayer.duplicate();
+          folder.insertLayer(dup);
+          currentLayer = dup;
+        }
+        console.log("📌 Duplicated single layer in " + folder.name + " to " + maxFrames + " layers.");
+      }
+    }
+  }
+}
+
+// 🧱 Map frames from anim_* folders (top-down), excluding anim_preview
 function mapAnimFrames(doc) {
   var animFolders = [];
   var maxFrames = 0;
@@ -56,6 +75,9 @@ function mapAnimFrames(doc) {
     }
   }
 
+  // ⏩ Duplicate logic for single-layer folders
+  duplicateSingleLayerFolders(doc, maxFrames);
+
   var frameMap = [];
 
   for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
@@ -67,13 +89,12 @@ function mapAnimFrames(doc) {
 
       if (layer && layer.typename !== "LayerSet" && !layer.locked) {
         frameGroup.push(layer);
-       // console.log("✅ Collected: " + folder.name + " → " + layer.name);
       }
     }
     if (frameGroup.length > 0) frameMap.push(frameGroup);
   }
 
-  // console.log("🗂 Total frames mapped: " + frameMap.length);
+  console.log("🗂 Total frames mapped: " + frameMap.length);
   return frameMap;
 }
 
@@ -90,7 +111,6 @@ function mergeFrameGroups(doc, frameMap, previewFolder) {
       dup.name = "_a_" + original.name;
       dup.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
       duplicates.push(dup);
-      // console.log("📌 Moved to top: " + dup.name);
     }
 
     if (duplicates.length >= 2) {
@@ -107,12 +127,11 @@ function mergeFrameGroups(doc, frameMap, previewFolder) {
       var only = duplicates[0];
       only.name = "_a_Frame " + (f + 1);
       only.move(previewFolder, ElementPlacement.INSIDE);
-     // console.log("✅ Single layer frame " + (f + 1) + " added to anim_preview.");
     }
   }
 }
 
-// 🧱 Main trigger (to be connected to button)
+// 🧱 Main Trigger
 function exportGif() {
   const script = `
     (function () {
@@ -130,6 +149,5 @@ function exportGif() {
       alert("✅ Merged all corresponding frame layers into 'anim_preview'. Check console for steps.");
     })();
   `;
-
   window.parent.postMessage(script, "*");
 }
