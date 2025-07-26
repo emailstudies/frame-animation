@@ -7,7 +7,7 @@ function exportGif() {
         return;
       }
 
-      // Step 1: Delete old anim_e if exists
+      // Step 1: Delete existing anim_e if present
       for (var i = doc.layers.length - 1; i >= 0; i--) {
         var layer = doc.layers[i];
         if (layer.name === "anim_e" && layer.typename === "LayerSet") {
@@ -15,7 +15,7 @@ function exportGif() {
         }
       }
 
-      // Step 2: Create anim_e at top
+      // Step 2: Create anim_e at top of root
       var groupDesc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -30,42 +30,18 @@ function exportGif() {
       var topLayer = doc.layers[0];
       animFolder.move(topLayer, ElementPlacement.PLACEBEFORE);
 
-      // Step 3: Get selected layer indices
-      function getSelectedLayerIndices() {
-        var selected = [];
-        try {
-          var ref = new ActionReference();
-          ref.putProperty(charIDToTypeID("Prpr"), stringIDToTypeID("targetLayers"));
-          ref.putEnumerated(charIDToTypeID("Dcmn"), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
-          var desc = executeActionGet(ref);
-          if (desc.hasKey(stringIDToTypeID("targetLayers"))) {
-            var list = desc.getList(stringIDToTypeID("targetLayers"));
-            for (var i = 0; i < list.count; i++) {
-              var idx = list.getReference(i).getIndex();
-              selected.push(idx - 1); // adjust to 0-based
-            }
-          }
-        } catch (e) {
-          alert("❌ Could not read selected layers.");
-        }
-        return selected;
-      }
-
-      var selectedIndices = getSelectedLayerIndices();
+      // Step 3: Find all selected layers
       var selectedLayers = [];
-      for (var i = 0; i < selectedIndices.length; i++) {
-        var index = selectedIndices[i];
-        if (index >= 0 && index < doc.layers.length) {
-          var layer = doc.layers[index];
-          if (layer.typename !== "LayerSet") {
-            selectedLayers.push(layer);
-            console.log("📌 Selected:", layer.name);
-          }
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (layer && !layer.locked && layer.typename !== "LayerSet" && layer.selected) {
+          selectedLayers.push(layer);
+          console.log("📌 Selected:", layer.name);
         }
       }
 
       if (selectedLayers.length === 0) {
-        alert("❌ No usable layers selected.");
+        alert("❌ No layers selected.");
         return;
       }
 
@@ -81,12 +57,12 @@ function exportGif() {
         console.log("📎 Duplicated:", src.name, "→", dup.name);
       }
 
-      // Step 5: Reorder duplicates
+      // Step 5: Reorder duplicates (reverse to preserve visual order)
       for (var i = duplicates.length - 1; i >= 0; i--) {
         duplicates[i].move(duplicates[0], ElementPlacement.PLACEBEFORE);
       }
 
-      // Step 6: Merge
+      // Step 6: Merge if more than 1 layer
       if (duplicates.length >= 2) {
         app.activeDocument.activeLayer = duplicates[0];
         var merged = duplicates[0].merge();
@@ -94,7 +70,7 @@ function exportGif() {
         merged.move(animFolder, ElementPlacement.INSIDE);
         console.log("✅ Merged layer created as:", merged.name);
       } else {
-        alert("ℹ️ Only one layer selected, skipped merging.");
+        alert("ℹ️ Only one layer duplicated, skipping merge.");
       }
 
     })();
