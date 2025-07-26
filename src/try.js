@@ -1,4 +1,4 @@
-// 🧱 Create anim_preview folder at root and top
+// 🧱 Create anim_preview folder at root and top of layer stack
 function createAnimPreviewFolder(doc) {
   if (!doc) {
     alert("No active document.");
@@ -35,97 +35,110 @@ function createAnimPreviewFolder(doc) {
   return previewFolder;
 }
 
-// 🧱 Get all anim_* folders (excluding anim_preview) and determine maxFrames
+// 🧱 Duplicate single-layer folders to match maxFrames
+function duplicateSingleLayerFolders(doc, maxFrames) {
+  for (var i = 0; i < doc.layers.length; i++) {
+    var folder = doc.layers[i];
+    if (
+      folder.typename === "LayerSet" &&
+      folder.name.indexOf("anim_") === 0 &&
+      folder.name !== "anim_preview"
+    ) {
+      if (folder.layers.length === 1) {
+        var baseLayer = folder.layers[0];
+        var currentLayer = baseLayer;
+        for (var j = 1; j < maxFrames; j++) {
+          var dup = currentLayer.duplicate();
+          folder.insertLayer(dup);
+          currentLayer = dup;
+        }
+        console.log("📌 Duplicated " + folder.name + " to " + maxFrames + " frames.");
+      }
+    }
+  }
+}
+
+// 🧱 Get anim_* folders and max frame count (before mapping)
 function getAnimFoldersAndMaxFrames(doc) {
-  var folders = [];
+  var animFolders = [];
   var maxFrames = 0;
 
-  for (var i = 0; i < doc.layers.length; i++) {
+  for (var i = doc.layers.length - 1; i >= 0; i--) {
     var layer = doc.layers[i];
     if (
       layer.typename === "LayerSet" &&
       layer.name.indexOf("anim_") === 0 &&
       layer.name !== "anim_preview"
     ) {
-      folders.push(layer);
+      animFolders.push(layer);
       if (layer.layers.length > maxFrames) {
         maxFrames = layer.layers.length;
       }
     }
   }
 
-  return { folders: folders, maxFrames: maxFrames };
+  return {
+    folders: animFolders,
+    maxFrames: maxFrames
+  };
 }
 
-// 🧱 Duplicate single-layer anim folders to match maxFrames
-function duplicateSingleLayerFolders(doc, maxFrames) {
-  var folders = getAnimFoldersAndMaxFrames(doc).folders;
-
-  for (var i = 0; i < folders.length; i++) {
-    var folder = folders[i];
-    if (folder.layers.length === 1) {
-      var base = folder.layers[0];
-      for (var j = 1; j < maxFrames; j++) {
-        var dup = base.duplicate();
-        folder.insertLayer(dup);
-      }
-    }
-  }
-}
-
-// 🧱 Build a 2D frame map: one frame group per index
-function buildFrameMap(folders, maxFrames) {
+// 🧱 Build the frame map AFTER duplication
+function buildFrameMap(animFolders, maxFrames) {
   var frameMap = [];
 
   for (var frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
-    var group = [];
-    for (var j = 0; j < folders.length; j++) {
-      var folder = folders[j];
+    var frameGroup = [];
+    for (var j = 0; j < animFolders.length; j++) {
+      var folder = animFolders[j];
       var layerIndex = folder.layers.length - 1 - frameIndex;
       var layer = folder.layers[layerIndex];
       if (layer && layer.typename !== "LayerSet" && !layer.locked) {
-        group.push(layer);
+        frameGroup.push(layer);
       }
     }
-    if (group.length > 0) frameMap.push(group);
+    if (frameGroup.length > 0) frameMap.push(frameGroup);
   }
 
+  console.log("🗂 Frame map built: " + frameMap.length + " frames.");
   return frameMap;
 }
 
-// 🧱 Merge each frame group into one layer → anim_preview
+// 🧱 Merge layers per frame index into anim_preview
 function mergeFrameGroups(doc, frameMap, previewFolder) {
   for (var f = 0; f < frameMap.length; f++) {
     var layers = frameMap[f];
-    var dups = [];
+    var duplicates = [];
 
     for (var i = 0; i < layers.length; i++) {
-      var orig = layers[i];
-      doc.activeLayer = orig;
-      var dup = orig.duplicate();
-      dup.name = "_a_" + orig.name;
+      var original = layers[i];
+      doc.activeLayer = original;
+      var dup = original.duplicate();
+      dup.name = "_a_" + original.name;
       dup.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
-      dups.push(dup);
+      duplicates.push(dup);
     }
 
-    var merged;
-    if (dups.length >= 2) {
-      doc.activeLayer = dups[0];
-      for (var i = 1; i < dups.length; i++) {
-        doc.activeLayer = dups[i];
-        merged = dups[i].merge();
+    if (duplicates.length >= 2) {
+      doc.activeLayer = duplicates[0];
+      for (var i = 1; i < duplicates.length; i++) {
+        doc.activeLayer = duplicates[i];
+        var merged = duplicates[i].merge();
       }
-    } else {
-      merged = dups[0];
+      var mergedLayer = doc.activeLayer;
+      mergedLayer.name = "_a_Frame " + (f + 1);
+      mergedLayer.move(previewFolder, ElementPlacement.INSIDE);
+      console.log("✅ Merged frame " + (f + 1));
+    } else if (duplicates.length === 1) {
+      var only = duplicates[0];
+      only.name = "_a_Frame " + (f + 1);
+      only.move(previewFolder, ElementPlacement.INSIDE);
     }
-
-    merged.name = "_a_Frame " + (f + 1);
-    merged.move(previewFolder, ElementPlacement.INSIDE);
   }
 }
 
-// 🧱 Hide all anim_* folders except anim_preview
-function hideAnimFolders(doc) {
+// 🧱 Set opacity of all anim_* folders to 0 (except anim_preview)
+function fadeOutAnimFolders(doc) {
   for (var i = 0; i < doc.layers.length; i++) {
     var layer = doc.layers[i];
     if (
@@ -133,12 +146,13 @@ function hideAnimFolders(doc) {
       layer.name.indexOf("anim_") === 0 &&
       layer.name !== "anim_preview"
     ) {
-      layer.visible = false;
+      layer.opacity = 0;
+      console.log("🔕 Faded out: " + layer.name);
     }
   }
 }
 
-// 🧱 Main execution wrapper
+// 🧱 MAIN wrapper to run everything in order
 function exportGif() {
   const script = `
     (function () {
@@ -161,9 +175,9 @@ function exportGif() {
       }
 
       (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder);
-      (${hideAnimFolders.toString()})(doc);
+      (${fadeOutAnimFolders.toString()})(doc);
 
-      alert("✅ 'anim_preview' created and filled. All anim_* folders hidden. Ready to export.");
+      alert("✅ All frames merged into 'anim_preview'. /n Other anim_folders opacity set to 0 for export. /n You can export via File > Export As > GIF/MP4.");
     })();
   `;
 
