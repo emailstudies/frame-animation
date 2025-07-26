@@ -1,4 +1,3 @@
-// Create anim_e folder at root and at top of stack
 function createAnimEFolder(doc) {
   console.log("📁 Document found: " + doc.name);
 
@@ -7,7 +6,7 @@ function createAnimEFolder(doc) {
     return null;
   }
 
-  // Step 1: Ensure anim_e doesn't already exist
+  // Step 1: Prevent duplicate anim_e
   for (var i = 0; i < doc.layers.length; i++) {
     var layer = doc.layers[i];
     if (layer.typename === "LayerSet" && layer.name === "anim_e") {
@@ -24,7 +23,7 @@ function createAnimEFolder(doc) {
   dummy.remove();
   console.log("✅ Forced root-level selection using dummy layer.");
 
-  // Step 3: Create anim_e folder using ActionDescriptor
+  // Step 3: Create anim_e using ActionDescriptor
   var groupDesc = new ActionDescriptor();
   var ref = new ActionReference();
   ref.putClass(stringIDToTypeID("layerSection"));
@@ -33,84 +32,100 @@ function createAnimEFolder(doc) {
   var props = new ActionDescriptor();
   props.putString(charIDToTypeID("Nm  "), "anim_e");
   groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
-
   executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
   // Step 4: Move it to top
   var animFolder = doc.activeLayer;
-  var topLayer = doc.layers[0];
-  animFolder.move(topLayer, ElementPlacement.PLACEBEFORE);
+  animFolder.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
   console.log("✅ 'anim_e' folder created and moved to top.");
 
   return animFolder;
 }
 
-// Get first unlocked, non-folder layer from each anim_* folder
-function getFirstFrameLayers(doc) {
-  var layersToMerge = [];
+function mapAnimFrames(doc) {
+  var animFolders = [];
+  var maxFrames = 0;
 
   for (var i = 0; i < doc.layers.length; i++) {
-    var group = doc.layers[i];
-    if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
-      for (var j = 0; j < group.layers.length; j++) {
-        var layer = group.layers[j];
-        if (layer.typename !== "LayerSet" && !layer.locked) {
-          console.log("✅ Duplicated from: " + group.name + " → " + layer.name);
-          layersToMerge.push(layer);
-          break;
-        } else {
-          console.log(layer, layer.locked ? "locked" : "skipped");
-        }
+    var layer = doc.layers[i];
+    if (layer.typename === "LayerSet" && layer.name.indexOf("anim_") === 0 && layer.name !== "anim_e") {
+      animFolders.push(layer);
+      if (layer.layers.length > maxFrames) maxFrames = layer.layers.length;
+    }
+  }
+
+  var frameMap = [];
+  for (var i = 0; i < maxFrames; i++) {
+    var frameGroup = [];
+    for (var j = 0; j < animFolders.length; j++) {
+      var folder = animFolders[j];
+      var layer = folder.layers[i];
+      if (layer && layer.typename !== "LayerSet" && !layer.locked) {
+        frameGroup.push(layer);
+        console.log("✅ Collected: " + folder.name + " → " + layer.name);
       }
     }
+    if (frameGroup.length > 0) frameMap.push(frameGroup);
   }
 
-  console.log("✅ Total layers to merge: " + layersToMerge.length);
-  return layersToMerge;
+  console.log("🗂 Total frames mapped: " + frameMap.length);
+  return frameMap;
 }
 
-// Duplicate each layer, move to top, merge, rename
-function mergeLayers(doc, layers, animFolder) {
-  var mergedLayer = null;
-  var duplicates = [];
+function mergeFrameGroups(doc, frameMap, animFolder) {
+  for (var f = 0; f < frameMap.length; f++) {
+    var layers = frameMap[f];
+    var duplicates = [];
 
-  for (var i = 0; i < layers.length; i++) {
-    var original = layers[i];
-    doc.activeLayer = original;
-    var dup = original.duplicate();
-    dup.name = "_a_" + original.name;
-    dup.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
-    duplicates.push(dup);
-    console.log("📌 Moved to top: " + dup.name);
-  }
-
-  // Merge top two, then loop
-  if (duplicates.length >= 2) {
-    doc.activeLayer = duplicates[0];
-    for (var i = 1; i < duplicates.length; i++) {
-      doc.activeLayer = duplicates[i];
-      var merged = duplicates[i].merge();
+    for (var i = 0; i < layers.length; i++) {
+      var original = layers[i];
+      doc.activeLayer = original;
+      var dup = original.duplicate();
+      dup.name = "_a_" + original.name;
+      dup.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
+      duplicates.push(dup);
+      console.log("📌 Moved to top: " + dup.name);
     }
-    mergedLayer = doc.activeLayer;
-    mergedLayer.name = "_a_Merged_Frame_1";
-    console.log("✅ Layers merged successfully: " + mergedLayer.name);
 
-    // Move merged layer into anim_e
-    mergedLayer.move(animFolder, ElementPlacement.INSIDE);
-    console.log("✅ Merged layer moved inside 'anim_e'");
+    if (duplicates.length >= 2) {
+      doc.activeLayer = duplicates[0];
+      for (var i = 1; i < duplicates.length; i++) {
+        doc.activeLayer = duplicates[i];
+        var merged = duplicates[i].merge();
+      }
+      var mergedLayer = doc.activeLayer;
+      mergedLayer.name = "_a_Frame " + (f + 1);
+      mergedLayer.move(animFolder, ElementPlacement.INSIDE);
+      console.log("✅ Merged frame " + (f + 1) + " added to anim_e.");
+    } else if (duplicates.length === 1) {
+      var only = duplicates[0];
+      only.name = "_a_Frame " + (f + 1);
+      only.move(animFolder, ElementPlacement.INSIDE);
+      console.log("✅ Single layer frame " + (f + 1) + " added to anim_e.");
+    }
   }
 }
 
-// Main wrapper
 function exportGif() {
   const script = `
     (function () {
       var doc = app.activeDocument;
-      var animFolder = (${createAnimEFolder.toString()})(doc);
+      var createAnimEFolder = ${createAnimEFolder.toString()};
+      var mapAnimFrames = ${mapAnimFrames.toString()};
+      var mergeFrameGroups = ${mergeFrameGroups.toString()};
+
+      var animFolder = createAnimEFolder(doc);
       if (!animFolder) return;
-      var layers = (${getFirstFrameLayers.toString()})(doc);
-      (${mergeLayers.toString()})(doc, layers, animFolder);
-      alert("✅ Merged first layers from all anim_* folders into 'anim_e'. Check console for details.");
+
+      var frameMap = mapAnimFrames(doc);
+      if (frameMap.length === 0) {
+        alert("No eligible frames found.");
+        return;
+      }
+
+      mergeFrameGroups(doc, frameMap, animFolder);
+
+      alert("✅ Merged all corresponding frame layers into 'anim_e'. Check console for steps.");
     })();
   `;
 
