@@ -16,7 +16,7 @@ function exportGif() {
         }
       }
 
-      // Step 2: Create anim_e folder at root using ActionDescriptor
+      // Step 2: Create anim_e at root using ActionDescriptor
       var groupDesc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -27,12 +27,11 @@ function exportGif() {
       groupDesc.putObject(charIDToTypeID("Usng"), stringIDToTypeID("layerSection"), props);
       executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-      // Step 3: Move anim_e to top
-      var animE = doc.activeLayer; // newly created
+      var animE = app.activeDocument.activeLayer;
       var topLayer = doc.layers[0];
       animE.move(topLayer, ElementPlacement.PLACEBEFORE);
 
-      // Step 4: Duplicate 1st frame from each anim_* folder into anim_e
+      // Step 3: Find and duplicate first layer from all anim_* folders
       var duplicated = [];
 
       for (var i = doc.layers.length - 1; i >= 0; i--) {
@@ -42,7 +41,7 @@ function exportGif() {
 
         if (group.layers.length === 0) continue;
 
-        var firstLayer = group.layers[group.layers.length - 1]; // topmost
+        var firstLayer = group.layers[group.layers.length - 1]; // topmost in UI
         if (!firstLayer || firstLayer.typename === "LayerSet" || firstLayer.locked) continue;
 
         doc.activeLayer = firstLayer;
@@ -53,22 +52,20 @@ function exportGif() {
       }
 
       if (duplicated.length < 2) {
-        alert("❌ Need at least two layers to merge. Found: " + duplicated.length);
+        alert("❌ Need at least 2 layers to merge. Found: " + duplicated.length);
         return;
       }
 
-      // Step 5: Merge all duplicated layers inside anim_e
-      for (var i = animE.layers.length - 2; i >= 0; i--) {
-        var top = animE.layers[i + 1];
-        if (top.typename !== "ArtLayer") continue;
-        top.merge(); // merge with layer below
+      // Step 4: Merge all layers in anim_e
+      app.activeDocument.activeLayer = animE.layers[0];
+      for (var i = 1; i < animE.layers.length; i++) {
+        animE.layers[i].merge();
       }
 
       animE.layers[0].name = "_a_merged_1";
 
-      // Console for debug
-      console.log("📦 Merged these layers:", duplicated);
-      console.log("✅ Output layer: _a_merged_1");
+      console.log("📦 Merged layers:", duplicated);
+      console.log("✅ Merged output → _a_merged_1");
 
     })();
   `;
