@@ -1,38 +1,40 @@
 function exportGif() {
   const script = `
     (function () {
-      var original = app.activeDocument;
-
-      // Step 1: Create a new document with same dimensions
-      var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
-
-      // Step 2: Duplicate top-level layers in REVERSE to preserve stacking order
-      for (var i = original.layers.length - 1; i >= 0; i--) {
-        var layer = original.layers[i];
-        if (layer.locked) continue;
-
-        app.activeDocument = original;
-        original.activeLayer = layer;
-        layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No active document.");
+        return;
       }
 
-      // Step 3: Focus on duplicated document
-      app.activeDocument = dupDoc;
+      // Step 1: Create a new folder named "anim_e"
+      var animFolder = doc.layerSets.add();
+      animFolder.name = "anim_e";
 
-      // Step 4: Prefix all layers inside anim_* folders with "_a_"
-      for (var i = 0; i < dupDoc.layers.length; i++) {
-        var group = dupDoc.layers[i];
-        if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
-          for (var j = 0; j < group.layers.length; j++) {
-            var child = group.layers[j];
-            if (child && !child.name.startsWith("_a_")) {
-              child.name = "_a_" + child.name;
-            }
-          }
+      // Step 2: Find all layers named "Layer 1" at root
+      var layer1s = [];
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (layer.name === "Layer 1" && layer.typename !== "LayerSet") {
+          layer1s.push(layer);
         }
       }
 
-      alert("✅ Duplicated with _a_ prefixing inside anim_* folders.");
+      if (layer1s.length === 0) {
+        alert("No layers named 'Layer 1' found.");
+        return;
+      }
+
+      // Step 3: Duplicate each Layer 1 and move duplicate into anim_e
+      for (var i = 0; i < layer1s.length; i++) {
+        var original = layer1s[i];
+        app.activeDocument.activeLayer = original;
+        var dup = original.duplicate();
+        dup.name = "Layer 1 copy " + (i + 1);
+        dup.move(animFolder, ElementPlacement.INSIDE);
+      }
+
+      console.log("✅ Duplicated 'Layer 1' into new folder 'anim_e'");
     })();
   `;
 
