@@ -28,7 +28,7 @@ function exportGif() {
         return;
       }
 
-      // Step 3: Create real anim_e folder via ActionDescriptor
+      // Step 3: Create anim_e at top using ActionDescriptor
       var groupDesc = new ActionDescriptor();
       var ref = new ActionReference();
       ref.putClass(stringIDToTypeID("layerSection"));
@@ -40,12 +40,12 @@ function exportGif() {
 
       executeAction(charIDToTypeID("Mk  "), groupDesc, DialogModes.NO);
 
-      // Step 4: Move anim_e to top of root
+      // Step 4: Move to top of root
       var animFolder = doc.activeLayer;
       var topLayer = doc.layers[0];
       animFolder.move(topLayer, ElementPlacement.PLACEBEFORE);
 
-      // Step 5: Find "Layer 1" and "Layer 2" at root
+      // Step 5: Find Layer 1 and Layer 2 at root
       var targets = ["Layer 1", "Layer 2"];
       var matched = [];
 
@@ -57,20 +57,34 @@ function exportGif() {
       }
 
       if (matched.length === 0) {
-        alert("No layers named 'Layer 1' or 'Layer 2' found at root.");
+        alert("No layers named 'Layer 1' or 'Layer 2' found.");
         return;
       }
 
-      // Step 6: Duplicate matched layers into anim_e
+      // Step 6: Duplicate into anim_e
+      var duplicates = [];
       for (var i = 0; i < matched.length; i++) {
         var original = matched[i];
         app.activeDocument.activeLayer = original;
         var dup = original.duplicate();
         dup.name = original.name + " copy";
         dup.move(animFolder, ElementPlacement.INSIDE);
+        duplicates.push(dup);
       }
 
-      console.log("✅ anim_e created at top, and Layer 1 / 2 duplicated inside.");
+      // Step 7: Merge duplicated layers inside anim_e
+      if (duplicates.length >= 2) {
+        app.activeDocument.activeLayer = duplicates[0];
+        for (var i = 1; i < duplicates.length; i++) {
+          duplicates[i].move(duplicates[0], ElementPlacement.PLACEAFTER);
+        }
+        var merged = duplicates[0].merge();
+        merged.name = "Merged_Layer";
+        merged.move(animFolder, ElementPlacement.INSIDE);
+        console.log("✅ Duplicates merged into one layer inside anim_e.");
+      } else {
+        console.log("ℹ️ Only one layer duplicated. No merge performed.");
+      }
     })();
   `;
 
