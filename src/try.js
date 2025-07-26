@@ -7,15 +7,23 @@ function exportGif() {
         return;
       }
 
-      // Step 1: Create a new folder named "anim_e"
+      // Step 1: Check if anim_e folder already exists at root
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (layer.typename === "LayerSet" && layer.name === "anim_e") {
+          alert("⚠️ 'anim_e' folder already exists. Please delete it before running this again.");
+          return;
+        }
+      }
+
+      // Step 2: Create new folder 'anim_e' at the root level
       var animFolder = doc.layerSets.add();
       animFolder.name = "anim_e";
 
-      // Step 2: Names of layers to find
+      // Step 3: Find layers named "Layer 1" and "Layer 2" at root
       var targetNames = ["Layer 1", "Layer 2"];
       var matchedLayers = [];
 
-      // Step 3: Loop through root layers and collect matches
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
         if (layer.typename !== "LayerSet" && targetNames.includes(layer.name)) {
@@ -24,11 +32,11 @@ function exportGif() {
       }
 
       if (matchedLayers.length === 0) {
-        alert("No target layers found.");
+        alert("No layers named 'Layer 1' or 'Layer 2' found at root.");
         return;
       }
 
-      // Step 4: Duplicate each into the anim_e folder
+      // Step 4: Duplicate matched layers into anim_e
       for (var i = 0; i < matchedLayers.length; i++) {
         var original = matchedLayers[i];
         app.activeDocument.activeLayer = original;
