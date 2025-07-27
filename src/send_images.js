@@ -1,4 +1,4 @@
-// Flipbook Preview Script (Safe injection + white background)
+// Flipbook Preview Script (Updated: Clears temp doc per frame)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("previewSelectedBtn");
 
@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       })();
     `;
+
     parent.postMessage(script, "*");
     console.log("📤 Sent export script to Photopea");
   };
@@ -76,12 +77,12 @@ document.addEventListener("DOMContentLoaded", () => {
     <canvas id="previewCanvas"></canvas>
     <script>
       const frames = [];
-${collectedFrames
-  .map((ab, i) => {
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-    return `      frames[${i}] = "data:image/png;base64,${base64}";`;
-  })
-  .join("\n")}
+      ${collectedFrames
+        .map((ab, i) => {
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+          return `frames[${i}] = "data:image/png;base64,${base64}";`;
+        })
+        .join("\n")}
 
       const images = frames.map(src => {
         const img = new Image();
@@ -104,20 +105,34 @@ ${collectedFrames
         });
       };
 
-      const startLoop = () => {
+     /* const startLoop = () => {
         canvas.width = images[0].width;
         canvas.height = images[0].height;
         setInterval(() => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = "#ffffff"; // ✅ White background for each frame
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(images[index], 0, 0);
           index = (index + 1) % images.length;
         }, 1000 / fps);
-      };
+      }; */
+
+      const startLoop = () => {
+      canvas.width = images[0].width;
+      canvas.height = images[0].height;
+      setInterval(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 🔧 White background before drawing each frame
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.drawImage(images[index], 0, 0);
+        index = (index + 1) % images.length;
+  }, 1000 / fps);
+};
+
 
       preload();
-    <\\/script>
+    </script>
   </body>
 </html>`;
 
