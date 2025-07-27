@@ -1,22 +1,19 @@
+// Flipbook Preview Script (Photopea plugin)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("previewSelectedBtn");
-  if (!btn) return;
 
-  let previewWindow = null;
-  const collectedFrames = [];
+  if (!btn) {
+    console.error("❌ Button not found");
+    return;
+  }
 
   btn.onclick = () => {
-    // ✅ Open new tab IMMEDIATELY
-    previewWindow = window.open("", "_blank");
-
-    collectedFrames.length = 0;
-
     const script = `
       (function () {
         try {
           var original = app.activeDocument;
           if (!original || original.layers.length === 0) {
-            app.echoToOE("❌ No valid layers.");
+            app.echoToOE("❌ No valid layers found.");
             return;
           }
 
@@ -40,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
           tempDoc.close(SaveOptions.DONOTSAVECHANGES);
           app.echoToOE("done");
         } catch (e) {
-          app.echoToOE("❌ " + e.message);
+          app.echoToOE("❌ ERROR: " + e.message);
         }
       })();
     `;
@@ -49,76 +46,84 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("📤 Sent export script to Photopea");
   };
 
+  const collectedFrames = [];
+
   window.addEventListener("message", (event) => {
     if (event.data instanceof ArrayBuffer) {
       collectedFrames.push(event.data);
     } else if (typeof event.data === "string") {
-      if (event.data === "done") {
-        if (!previewWindow || collectedFrames.length === 0) return;
+      console.log("📩 Message from Photopea:", event.data);
 
-        const frameJS = collectedFrames
-          .map((buf, i) => {
-            const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-            return `frames[${i}] = "data:image/png;base64,${base64}";`;
-          })
-          .join("\n");
+      if (event.data === "done") {
+        if (collectedFrames.length === 0) {
+          alert("❌ No frames received.");
+          return;
+        }
 
         const html = `
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Flipbook</title>
-  <style>
-    html, body { margin: 0; background: #111; height: 100%;
-      display: flex; justify-content: center; align-items: center; }
-    canvas { background: white; image-rendering: pixelated; }
-  </style>
-</head>
-<body>
-  <canvas id="c"></canvas>
-  <script>
-    const frames = [];
-    ${frameJS}
+  <head>
+    <title>Flipbook Preview</title>
+    <style>
+      html, body { margin: 0; background: #111; overflow: hidden; height: 100%; display: flex; justify-content: center; align-items: center; }
+      canvas { image-rendering: pixelated; }
+    </style>
+  </head>
+  <body>
+    <canvas id="previewCanvas"></canvas>
+    <script>
+      const frames = [];
+      ${collectedFrames
+        .map((ab, i) => {
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+          return `frames[${i}] = "data:image/png;base64,${base64}";`;
+        })
+        .join("\n")}
 
-    const images = frames.map(src => {
-      const img = new Image();
-      img.src = src;
-      return img;
-    });
+      const images = frames.map(src => {
+        const img = new Image();
+        img.src = src;
+        return img;
+      });
 
-    const canvas = document.getElementById("c");
-    const ctx = canvas.getContext("2d");
-    let index = 0;
-    const fps = 12;
+      const canvas = document.getElementById("previewCanvas");
+      const ctx = canvas.getContext("2d");
+      const fps = 12;
+      let index = 0;
 
-    let loaded = 0;
-    images.forEach(img => {
-      img.onload = () => {
-        loaded++;
-        if (loaded === images.length) start();
+      const preload = () => {
+        let loaded = 0;
+        images.forEach(img => {
+          img.onload = () => {
+            loaded++;
+            if (loaded === images.length) startLoop();
+          };
+        });
       };
-    });
 
-    function start() {
-      canvas.width = images[0].width;
-      canvas.height = images[0].height;
-      setInterval(() => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(images[index], 0, 0);
-        index = (index + 1) % images.length;
-      }, 1000 / fps);
-    }
-  </script>
-</body>
+      const startLoop = () => {
+        canvas.width = images[0].width;
+        canvas.height = images[0].height;
+        setInterval(() => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(images[index], 0, 0);
+          index = (index + 1) % images.length;
+        }, 1000 / fps);
+      };
+
+      preload();
+    </script>
+  </body>
 </html>`;
 
-        previewWindow.document.open();
-        previewWindow.document.write(html);
-        previewWindow.document.close();
+        const win = window.open();
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
         collectedFrames.length = 0;
       } else if (event.data.startsWith("❌")) {
-        previewWindow?.document.write(`<h2 style="color:red;">${event.data}</h2>`);
-        previewWindow?.document.close();
+        alert(event.data);
       }
     }
   });
