@@ -12,7 +12,9 @@
       justify-content: center;
       align-items: center;
     }
-    canvas { image-rendering: pixelated; }
+    canvas {
+      image-rendering: pixelated;
+    }
   </style>
 </head>
 <body>
@@ -20,45 +22,43 @@
   <script>
     const canvas = document.getElementById("previewCanvas");
     const ctx = canvas.getContext("2d");
-    let frames = [], index = 0;
     const fps = 12;
+    let images = [], index = 0;
 
+    // Let parent window know preview is ready
+    window.onload = () => {
+      window.opener?.postMessage("READY_FOR_FRAMES", "*");
+      console.log("🟢 Preview ready");
+    };
+
+    // Load base64 PNGs from plugin
     window.addEventListener("message", async (event) => {
-      if (!Array.isArray(event.data)) {
-        console.warn("⚠️ Received non-array:", event.data);
-        return;
-      }
+      if (!Array.isArray(event.data)) return;
 
       console.log("📨 Received", event.data.length, "frames");
 
       const loadImage = (ab) => {
         return new Promise((resolve) => {
-          const blob = new Blob([ab], { type: "image/png" });
-          const url = URL.createObjectURL(blob);
           const img = new Image();
-          img.onload = () => {
-            URL.revokeObjectURL(url);
-            resolve(img);
-          };
-          img.src = url;
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+          img.src = "data:image/png;base64," + base64;
+          img.onload = () => resolve(img);
         });
       };
 
-      frames = await Promise.all(event.data.map(loadImage));
+      images = await Promise.all(event.data.map(loadImage));
 
-      canvas.width = frames[0].width;
-      canvas.height = frames[0].height;
+      canvas.width = images[0].width;
+      canvas.height = images[0].height;
 
       setInterval(() => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle = "#fff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(frames[index], 0, 0);
-        index = (index + 1) % frames.length;
+        ctx.drawImage(images[index], 0, 0);
+        index = (index + 1) % images.length;
       }, 1000 / fps);
     });
-
-    console.log("⏳ Waiting for frames in preview tab...");
   </script>
 </body>
 </html>
