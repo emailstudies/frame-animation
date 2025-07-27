@@ -4,34 +4,48 @@ window.addEventListener("message", (event) => {
   const script = `
     (function () {
       try {
-        var original = app.activeDocument;
-        var sel = original.activeLayer;
+        var doc = app.activeDocument;
+        var sel = doc.activeLayer;
 
         if (!sel || sel.typename !== "LayerSet" || !sel.name.startsWith("anim_")) {
           app.echoToOE("❌ Please select an 'anim_*' folder.");
           return;
         }
 
-        var temp = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
+        var temp = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
+        var total = sel.layers.length;
+        var exported = 0;
 
-        for (var i = sel.layers.length - 1; i >= 0; i--) {
-          var layer = sel.layers[i];
-          if (layer.kind !== undefined && !layer.locked) {
+        function exportNext(i) {
+          if (i < 0) {
             app.activeDocument = temp;
-            while (temp.layers.length > 0) temp.layers[0].remove();
-
-            app.activeDocument = original;
-            original.activeLayer = layer;
-            layer.duplicate(temp, ElementPlacement.PLACEATBEGINNING);
-
-            app.activeDocument = temp;
-            temp.saveToOE("png");
+            temp.close(SaveOptions.DONOTSAVECHANGES);
+            app.echoToOE("✅ All PNGs sent");
+            return;
           }
+
+          var layer = sel.layers[i];
+          if (!layer.visible || layer.locked || layer.kind === undefined) {
+            exportNext(i - 1); // Skip invalid layers
+            return;
+          }
+
+          app.activeDocument = temp;
+          while (temp.layers.length > 0) temp.layers[0].remove();
+
+          app.activeDocument = doc;
+          doc.activeLayer = layer;
+          layer.duplicate(temp, ElementPlacement.PLACEATBEGINNING);
+
+          app.activeDocument = temp;
+
+          var bin = temp.saveToOE("png");
+          app.sendToOE(bin); // <-- send buffer to plugin
+          exported++;
+          exportNext(i - 1);
         }
 
-        app.activeDocument = temp;
-        temp.close(SaveOptions.DONOTSAVECHANGES);
-        app.echoToOE("✅ PNGs exported");
+        exportNext(sel.layers.length - 1);
       } catch (e) {
         app.echoToOE("❌ ERROR: " + e.message);
       }
@@ -39,5 +53,5 @@ window.addEventListener("message", (event) => {
   `;
 
   parent.postMessage(script, "*");
-  console.log("📤 Export script sent to Photopea");
+  console.log("📤 Sent PNG export script to Photopea");
 });
