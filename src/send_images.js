@@ -1,6 +1,3 @@
-// This JS file runs inside your plugin iframe
-// It sends multiple selected layers from Photopea, opens a new tab, and previews them as a flipbook
-
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("previewSelectedBtn");
 
@@ -9,97 +6,113 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  const frames = [];
-  const FPS = 12;
-  let previewTab = null;
-
   btn.onclick = () => {
-    frames.length = 0; // Clear old frames
-
-    // Open a new blank tab early
-    previewTab = window.open("", "_blank");
-    if (!previewTab) {
-      alert("Popup blocked! Please allow popups for this site.");
-      return;
-    }
-
-    // Ask Photopea to export selected layers as PNGs
     const script = `
-      var doc = app.activeDocument;
-      var selectedLayers = [];
-      for (var i = 0; i < doc.layers.length; i++) {
-        if (doc.layers[i].selected) {
-          selectedLayers.push(doc.layers[i]);
+      (function () {
+        var doc = app.activeDocument;
+        var validLayers = [];
+
+        // Collect all visible, unlocked pixel layers (not groups or adjustment/text)
+        for (var i = 0; i < doc.layers.length; i++) {
+          var l = doc.layers[i];
+          if (!l.visible || l.locked || l.kind != "LayerKind.NORMAL") continue;
+          validLayers.push(l);
         }
-      }
-      if (selectedLayers.length > 0) {
-        app.activeDocument.saveToOE("png", selectedLayers);
-        app.echoToOE("✅ done");
-      } else {
-        app.echoToOE("❌ No layers selected");
-      }
+
+        if (validLayers.length === 0) {
+          app.echoToOE("❌ No valid layers found.");
+          return;
+        }
+
+        // Process one layer at a time
+        var delay = 1000 / 12; // 12 fps
+        function processNext(i) {
+          if (i >= validLayers.length) {
+            app.echoToOE("✅ All layers sent.");
+            return;
+          }
+
+          var layer = validLayers[i];
+
+          // Create a temporary document
+          var dupDoc = app.documents.add(doc.width, doc.height, doc.resolution, "temp", NewDocumentMode.RGB);
+          doc.activeLayer = layer;
+          layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+          app.activeDocument = dupDoc;
+
+          dupDoc.saveToOE("png");
+
+          setTimeout(function () {
+            dupDoc.close(SaveOptions.DONOTSAVECHANGES);
+            app.activeDocument = doc;
+            processNext(i + 1);
+          }, delay);
+        }
+
+        processNext(0);
+      })();
     `;
     parent.postMessage(script, "*");
-    console.log("📤 Sent script to Photopea.");
+    console.log("📤 Sent layer export script to Photopea.");
   };
 
+  // Collect ArrayBuffers and play as animation in new tab
+  const imageBuffers = [];
   window.addEventListener("message", (event) => {
     if (event.data instanceof ArrayBuffer) {
-      const blob = new Blob([event.data], { type: "image/png" });
-      const url = URL.createObjectURL(blob);
-      frames.push(url);
+      imageBuffers.push(event.data);
     } else if (typeof event.data === "string") {
       console.log("📩 Message from Photopea:", event.data);
-      if (event.data.includes("✅ done")) {
-        if (frames.length > 0) {
-          openCanvasPreview(frames);
-        } else {
-          console.warn("⚠️ No frames received");
-        }
+
+      if (event.data.startsWith("✅ All layers sent")) {
+        // Open animation in new tab after all buffers collected
+        const animWindow = window.open("", "_blank");
+        const html = `
+          <html>
+            <head><title>Preview</title></head>
+            <body style="margin:0; background:#111;">
+              <canvas id="previewCanvas"></canvas>
+              <script>
+                const canvas = document.getElementById("previewCanvas");
+                const ctx = canvas.getContext("2d");
+                const buffers = [];
+                let index = 0;
+                const fps = 12;
+
+                window.addEventListener("message", async (event) => {
+                  if (event.data instanceof ArrayBuffer) {
+                    const blob = new Blob([event.data], { type: "image/png" });
+                    const img = new Image();
+                    img.src = URL.createObjectURL(blob);
+                    await img.decode();
+                    buffers.push(img);
+
+                    if (buffers.length === 1) {
+                      canvas.width = img.width;
+                      canvas.height = img.height;
+                      playAnimation();
+                    }
+                  }
+                });
+
+                function playAnimation() {
+                  setInterval(() => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(buffers[index], 0, 0);
+                    index = (index + 1) % buffers.length;
+                  }, 1000 / fps);
+                }
+              </script>
+            </body>
+          </html>
+        `;
+
+        // Write the animation page content and pipe images
+        animWindow.document.write(html);
+        imageBuffers.forEach(buf => animWindow.postMessage(buf, "*"));
+      } else {
+        alert(event.data); // e.g. "❌ No valid layers found."
       }
     }
   });
-
-  function openCanvasPreview(urls) {
-    const html = `<!DOCTYPE html>
-      <html><head><title>Animation Preview</title><style>
-        body { margin: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        canvas { border: 2px solid #ccc; background: white; }
-      </style></head>
-      <body><canvas id="previewCanvas"></canvas>
-        <script>
-          const canvas = document.getElementById('previewCanvas');
-          const ctx = canvas.getContext('2d');
-          const urls = ${JSON.stringify(urls)};
-          const FPS = ${FPS};
-          const images = [];
-          let loaded = 0;
-
-          urls.forEach(url => {
-            const img = new Image();
-            img.onload = () => {
-              loaded++;
-              if (loaded === urls.length) start();
-            };
-            img.src = url;
-            images.push(img);
-          });
-
-          function start() {
-            canvas.width = images[0].naturalWidth;
-            canvas.height = images[0].naturalHeight;
-            let i = 0;
-            setInterval(() => {
-              ctx.clearRect(0, 0, canvas.width, canvas.height);
-              ctx.drawImage(images[i], 0, 0);
-              i = (i + 1) % images.length;
-            }, 1000 / FPS);
-          }
-        <\/script>
-      </body></html>`;
-
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    previewTab.location = url;
-  }
 });
