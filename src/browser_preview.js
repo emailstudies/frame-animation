@@ -1,8 +1,11 @@
+// browser_preview.js
+
+// Flipbook Preview Script (Exports only layers under selected anim_* folder)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("webPreviewSelectedBtn");
 
   if (!btn) {
-    console.error("❌ Button not found");
+    console.error("❌ webPreviewSelectedBtn not found");
     return;
   }
 
@@ -11,22 +14,20 @@ document.addEventListener("DOMContentLoaded", () => {
       (function () {
         try {
           var original = app.activeDocument;
-          var selected = original.activeLayer;
+          var sel = original.activeLayer;
 
-          if (!original || !selected || selected.typename !== "LayerSet") {
+          if (!sel || sel.typename !== "LayerSet" || !sel.name.startsWith("anim_")) {
             app.echoToOE("❌ Please select an anim_* folder.");
             return;
           }
 
-          var tempDoc = app.documents.add(
-            original.width,
-            original.height,
-            original.resolution,
-            "_temp_export",
-            NewDocumentMode.RGB
-          );
+          var layersToExport = sel.layers;
+          if (layersToExport.length === 0) {
+            app.echoToOE("❌ No layers found in selected folder.");
+            return;
+          }
 
-          var layersToExport = selected.layers;
+          var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
 
           for (var i = layersToExport.length - 1; i >= 0; i--) {
             var layer = layersToExport[i];
@@ -37,7 +38,8 @@ document.addEventListener("DOMContentLoaded", () => {
               }
 
               app.activeDocument = original;
-              selected.layers[i].duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
+              original.activeLayer = layer;
+              layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
 
               app.activeDocument = tempDoc;
               tempDoc.saveToOE("png");
@@ -52,6 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       })();
     `;
+
     parent.postMessage(script, "*");
     console.log("📤 Sent export script to Photopea");
   };
@@ -75,15 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
   <head>
     <title>Flipbook Preview</title>
     <style>
-      html, body {
-        margin: 0;
-        background: #111;
-        overflow: hidden;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
+      html, body { margin: 0; background: #111; overflow: hidden; height: 100%; display: flex; justify-content: center; align-items: center; }
       canvas { image-rendering: pixelated; }
     </style>
   </head>
@@ -94,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ${collectedFrames
         .map((ab, i) => {
           const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-          return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
+          return `frames[${i}] = "data:image/png;base64,${base64}";`;
         })
         .join("\n")}
 
@@ -124,7 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
         canvas.height = images[0].height;
         setInterval(() => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = "#ffffff"; // Always fill white background
+          ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(images[index], 0, 0);
           index = (index + 1) % images.length;
@@ -132,7 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
       };
 
       preload();
-    </script>
+    <\/script>
   </body>
 </html>`;
 
