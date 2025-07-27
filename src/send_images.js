@@ -7,7 +7,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btn.onclick = () => {
-    const script = `App.echoToOE("✅ Hello from plugin")`;
+    const script = `
+      (function () {
+        // Attempt to access document and active layer
+        var doc = app.activeDocument;
+        var layer = doc.activeLayer;
+
+        // Now send message to plugin
+        App.echoToOE("✅ Hello from plugin, layer name: " + (layer ? layer.name : "no layer selected"));
+      })();
+    `;
     parent.postMessage(script, "*");
     console.log("📤 Sent script to Photopea.");
   };
