@@ -1,38 +1,36 @@
-window.sendSelectedFrames = function () {
+// send_selected_layers.js
+
+function sendSelectedFolderLayers() {
   const script = `
     (function () {
       try {
         var doc = app.activeDocument;
-        var selected = doc.activeLayer;
+        var sel = doc.activeLayer;
 
-        if (!selected || selected.typename !== "LayerSet" || !selected.name.startsWith("anim_")) {
-          app.echoToOE("❌ Please select an 'anim_*' folder.");
+        if (!sel || sel.typename !== "LayerSet" || !sel.name.startsWith("anim_")) {
+          app.echoToOE("❌ Please select an anim_* folder.");
           return;
         }
 
-        var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
+        var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "temp_anim_export", NewDocumentMode.RGB);
 
-        var frames = selected.layers;
-        for (var i = frames.length - 1; i >= 0; i--) {
-          var frame = frames[i];
-          if (frame.kind !== undefined && !frame.locked) {
-            // Switch to tempDoc and clear it
-            app.activeDocument = tempDoc;
-            while (tempDoc.layers.length > 0) {
-              try { tempDoc.layers[0].remove(); } catch (e) {}
-            }
-
-            // Duplicate frame into tempDoc
-            app.activeDocument = doc;
-            doc.activeLayer = frame;
-            frame.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
-
-            app.activeDocument = tempDoc;
-            tempDoc.saveToOE("png");
+        // Duplicate all layers from selected anim_* folder to new doc
+        app.activeDocument = doc;
+        for (var i = sel.layers.length - 1; i >= 0; i--) {
+          var layer = sel.layers[i];
+          if (!layer.locked && layer.kind !== undefined) {
+            doc.activeLayer = layer;
+            layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
           }
         }
 
+        // Send each layer as PNG from tempDoc
         app.activeDocument = tempDoc;
+        for (var i = tempDoc.layers.length - 1; i >= 0; i--) {
+          tempDoc.activeLayer = tempDoc.layers[i];
+          tempDoc.saveToOE("png");
+        }
+
         tempDoc.close(SaveOptions.DONOTSAVECHANGES);
         app.echoToOE("done");
       } catch (e) {
@@ -42,5 +40,8 @@ window.sendSelectedFrames = function () {
   `;
 
   parent.postMessage(script, "*");
-  console.log("📤 Export script sent to Photopea.");
-};
+  console.log("📤 Export script sent to Photopea");
+}
+
+// Export function
+window.sendSelectedFolderLayers = sendSelectedFolderLayers;
