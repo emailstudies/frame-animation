@@ -10,12 +10,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const script = `
       (function () {
         var doc = app.activeDocument;
-        var validLayers = [];
+        if (!doc) {
+          app.echoToOE("❌ No document open.");
+          return;
+        }
 
-        // Collect all visible, unlocked pixel layers (not groups or adjustment/text)
+        var validLayers = [];
         for (var i = 0; i < doc.layers.length; i++) {
           var l = doc.layers[i];
-          if (!l.visible || l.locked || l.kind != "LayerKind.NORMAL") continue;
+          if (!l.visible || l.locked || l.kind !== 1) continue; // kind === 1 is normal/pixel
           validLayers.push(l);
         }
 
@@ -24,94 +27,83 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        // Process one layer at a time
-        var delay = 1000 / 12; // 12 fps
-        function processNext(i) {
-          if (i >= validLayers.length) {
-            app.echoToOE("✅ All layers sent.");
-            return;
-          }
+        var dupDoc = app.documents.add(doc.width, doc.height, doc.resolution, "temp_export", NewDocumentMode.RGB);
 
-          var layer = validLayers[i];
-
-          // Create a temporary document
-          var dupDoc = app.documents.add(doc.width, doc.height, doc.resolution, "temp", NewDocumentMode.RGB);
-          doc.activeLayer = layer;
-          layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
-          app.activeDocument = dupDoc;
-
-          dupDoc.saveToOE("png");
-
-          setTimeout(function () {
-            dupDoc.close(SaveOptions.DONOTSAVECHANGES);
-            app.activeDocument = doc;
-            processNext(i + 1);
-          }, delay);
+        for (var i = validLayers.length - 1; i >= 0; i--) {
+          app.activeDocument = doc;
+          doc.activeLayer = validLayers[i];
+          validLayers[i].duplicate(dupDoc, ElementPlacement.PLACEATEND);
         }
 
-        processNext(0);
+        app.activeDocument = dupDoc;
+
+        for (var i = 0; i < dupDoc.layers.length; i++) {
+          dupDoc.activeLayer = dupDoc.layers[i];
+          app.activeDocument.saveToOE("png");
+        }
+
+        app.echoToOE("done");
       })();
     `;
     parent.postMessage(script, "*");
-    console.log("📤 Sent layer export script to Photopea.");
+    console.log("📤 Sent script to Photopea.");
   };
 
-  // Collect ArrayBuffers and play as animation in new tab
-  const imageBuffers = [];
+  // FPS = 12 → 1000 / 12 = ~83ms per frame
+  const FPS = 12;
+  const DELAY = 1000 / FPS;
+  const receivedFrames = [];
+
   window.addEventListener("message", (event) => {
     if (event.data instanceof ArrayBuffer) {
-      imageBuffers.push(event.data);
+      const blob = new Blob([event.data], { type: "image/png" });
+      const url = URL.createObjectURL(blob);
+      receivedFrames.push(url);
+      console.log("📥 Received frame:", url);
     } else if (typeof event.data === "string") {
       console.log("📩 Message from Photopea:", event.data);
 
-      if (event.data.startsWith("✅ All layers sent")) {
-        // Open animation in new tab after all buffers collected
-        const animWindow = window.open("", "_blank");
+      if (event.data === "done") {
+        if (receivedFrames.length === 0) {
+          alert("❌ No frames received.");
+          return;
+        }
+
+        // 🧠 Open a new tab with a canvas-based preview
+        const previewTab = window.open("", "_blank");
         const html = `
           <html>
-            <head><title>Preview</title></head>
-            <body style="margin:0; background:#111;">
-              <canvas id="previewCanvas"></canvas>
-              <script>
-                const canvas = document.getElementById("previewCanvas");
-                const ctx = canvas.getContext("2d");
-                const buffers = [];
-                let index = 0;
-                const fps = 12;
+          <head><title>Preview</title></head>
+          <body style="margin:0; display:flex; align-items:center; justify-content:center; background:#111;">
+            <canvas id="previewCanvas"></canvas>
+            <script>
+              const frames = ${JSON.stringify(receivedFrames)};
+              let index = 0;
+              const fps = ${FPS};
+              const delay = ${DELAY};
+              const img = new Image();
+              const canvas = document.getElementById("previewCanvas");
+              const ctx = canvas.getContext("2d");
 
-                window.addEventListener("message", async (event) => {
-                  if (event.data instanceof ArrayBuffer) {
-                    const blob = new Blob([event.data], { type: "image/png" });
-                    const img = new Image();
-                    img.src = URL.createObjectURL(blob);
-                    await img.decode();
-                    buffers.push(img);
+              img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+              };
+              img.src = frames[0];
 
-                    if (buffers.length === 1) {
-                      canvas.width = img.width;
-                      canvas.height = img.height;
-                      playAnimation();
-                    }
-                  }
-                });
-
-                function playAnimation() {
-                  setInterval(() => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(buffers[index], 0, 0);
-                    index = (index + 1) % buffers.length;
-                  }, 1000 / fps);
-                }
-              </script>
-            </body>
+              setInterval(() => {
+                index = (index + 1) % frames.length;
+                img.src = frames[index];
+              }, delay);
+            </script>
+          </body>
           </html>
         `;
-
-        // Write the animation page content and pipe images
-        animWindow.document.write(html);
-        imageBuffers.forEach(buf => animWindow.postMessage(buf, "*"));
+        previewTab.document.write(html);
+        previewTab.document.close();
       } else {
-        alert(event.data); // e.g. "❌ No valid layers found."
+        alert(event.data);
       }
     }
   });
