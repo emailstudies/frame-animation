@@ -1,4 +1,4 @@
-// Flipbook Preview Script (for Photopea)
+// Flipbook Preview Script (Photopea-compatible)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("previewSelectedBtn");
 
@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btn.onclick = () => {
+    collectedFrames.length = 0; // Reset previous
+
     const script = `
       (function () {
         try {
@@ -43,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
 
     parent.postMessage(script, "*");
-    console.log("📤 Sent export script to Photopea");
+    console.log("📤 Sent flipbook script to Photopea.");
   };
 
   const collectedFrames = [];
@@ -52,21 +54,27 @@ document.addEventListener("DOMContentLoaded", () => {
     if (event.data instanceof ArrayBuffer) {
       collectedFrames.push(event.data);
     } else if (typeof event.data === "string") {
-      console.log("📩 Message from Photopea:", event.data);
-
       if (event.data === "done") {
         if (collectedFrames.length === 0) {
           alert("❌ No frames received.");
           return;
         }
 
-        const flipbookHTML = `
+        // Generate HTML with embedded frames
+        const frameJS = collectedFrames
+          .map((ab, i) => {
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+            return `frames[${i}] = "data:image/png;base64,${base64}";`;
+          })
+          .join("\n");
+
+        const html = `
 <!DOCTYPE html>
 <html>
   <head>
     <title>Flipbook Preview</title>
     <style>
-      html, body { margin: 0; background: #111; overflow: hidden; height: 100%; display: flex; justify-content: center; align-items: center; }
+      html, body { margin: 0; background: #000; overflow: hidden; height: 100%; display: flex; align-items: center; justify-content: center; }
       canvas { image-rendering: pixelated; }
     </style>
   </head>
@@ -74,12 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <canvas id="previewCanvas"></canvas>
     <script>
       const frames = [];
-      ${collectedFrames
-        .map((ab, i) => {
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-          return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
-        })
-        .join("\\n")}
+      ${frameJS}
 
       const images = frames.map(src => {
         const img = new Image();
@@ -117,10 +120,10 @@ document.addEventListener("DOMContentLoaded", () => {
   </body>
 </html>`;
 
-        const blob = new Blob([flipbookHTML], { type: "text/html" });
-        const url = URL.createObjectURL(blob);
-        window.open(url, "_blank");
-        collectedFrames.length = 0;
+        const win = window.open();
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
       } else if (event.data.startsWith("❌")) {
         alert(event.data);
       }
