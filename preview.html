@@ -57,7 +57,7 @@
 </html>
 -->
 
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
@@ -128,4 +128,78 @@
     });
   </script>
 </body>
+</html> -->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Flipbook Preview</title>
+    <style>
+      html, body {
+        margin: 0;
+        background: #111;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      canvas { image-rendering: pixelated; }
+    </style>
+  </head>
+  <body>
+    <canvas id="previewCanvas"></canvas>
+    <div id="loading" style="position:absolute;color:white">Preparing Preview...</div>
+    <script>
+      const canvas = document.getElementById("previewCanvas");
+      const ctx = canvas.getContext("2d");
+      const fps = 12;
+      let index = 0;
+      let images = [];
+
+      window.addEventListener("message", (event) => {
+        if (event.data.type === "frames" && Array.isArray(event.data.frames)) {
+          const frames = event.data.frames.map((ab) => {
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+            return "data:image/png;base64," + base64;
+          });
+
+          images = frames.map(src => {
+            const img = new Image();
+            img.src = src;
+            return img;
+          });
+
+          preloadImages();
+        }
+      });
+
+      function preloadImages() {
+        let loaded = 0;
+        images.forEach(img => {
+          img.onload = () => {
+            loaded++;
+            if (loaded === images.length) {
+              document.getElementById("loading").style.display = "none";
+              startLoop();
+            }
+          };
+        });
+      }
+
+      function startLoop() {
+        canvas.width = images[0].width;
+        canvas.height = images[0].height;
+
+        setInterval(() => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(images[index], 0, 0);
+          index = (index + 1) % images.length;
+        }, 1000 / fps);
+      }
+    </script>
+  </body>
 </html>
+
