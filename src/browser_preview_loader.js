@@ -1,49 +1,37 @@
-// browser_preview_loader.js (Step 2: Parse received PSD and render frames)
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("webPreviewSelectedBtn");
+  const collectedFrames = [];
 
-import { parsePsdFrames } from "./psd_parser.js";
+  btn.onclick = () => {
+    collectedFrames.length = 0;
+    window.open("preview.html", "_blank");
+    parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
+    console.log("▶️ Preview Selected button clicked");
+  };
 
-const collectedPSD = [];
+  window.addEventListener("message", (event) => {
+    if (event.data instanceof ArrayBuffer) {
+      collectedFrames.push(event.data);
+    } else if (typeof event.data === "string") {
+      console.log("📩 Message from Photopea:", event.data);
 
-window.addEventListener("message", async (event) => {
-  if (event.data instanceof ArrayBuffer) {
-    console.log("📥 Received PSD ArrayBuffer");
-    collectedPSD.push(event.data);
-  } else if (typeof event.data === "string") {
-    console.log("📩 Message:", event.data);
-
-    if (event.data === "done") {
-      if (collectedPSD.length === 0) {
-        alert("❌ No PSD received.");
-        return;
-      }
-
-      try {
-        const psdBuffer = collectedPSD.pop();
-        const frames = await parsePsdFrames(psdBuffer);
-
-        if (!frames || frames.length === 0) {
-          alert("❌ No frames parsed from PSD.");
+      if (event.data.startsWith("✅")) {
+        if (collectedFrames.length === 0) {
+          alert("❌ No frames received.");
           return;
         }
 
-        console.log(`✅ Parsed ${frames.length} frames from PSD`);
-        openPreviewTab(frames);
-      } catch (err) {
-        console.error("❌ Failed to parse PSD:", err);
-        alert("❌ Failed to parse PSD");
+        // Delay to ensure preview tab loads
+        setTimeout(() => {
+          const previewTab = [...window.open().parent.frames].find(f => f.location && f.location.href.includes("preview.html"));
+          if (previewTab) {
+            previewTab.postMessage(collectedFrames, "*");
+            console.log("📨 Sent frames to preview.html");
+          }
+        }, 1000);
+      } else if (event.data.startsWith("❌")) {
+        alert(event.data);
       }
     }
-  }
+  });
 });
-
-function openPreviewTab(frames) {
-  const url = new URL("preview.html", window.location.origin);
-  const win = window.open(url.toString(), "_blank");
-
-  const waitForReady = setInterval(() => {
-    if (win && win.postMessage) {
-      win.postMessage({ frames }, "*");
-      clearInterval(waitForReady);
-    }
-  }, 500);
-}
