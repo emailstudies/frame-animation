@@ -1,4 +1,4 @@
-function exportGif() {
+function oldExportGif() {
   const script = `
   (function () {
     // ✅ Find all anim_* folders
