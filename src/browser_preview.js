@@ -1,17 +1,24 @@
-// src/browser_preview.js
-
+// browser_preview.js (Updated)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("webPreviewSelectedBtn");
 
   if (!btn) {
-    console.error("❌ Preview button not found");
+    console.error("❌ Button not found");
     return;
   }
 
   let collectedFrames = [];
+  let win = null;
 
   btn.onclick = () => {
-    collectedFrames = []; // Reset before every run
+    collectedFrames = [];
+
+    win = window.open("about:blank", "_blank");
+    if (!win) {
+      alert("❌ Please enable popups to use Flipbook Preview.");
+      return;
+    }
+    win.document.write("<p>Preparing preview...</p>");
 
     const script = `
       (function () {
@@ -63,26 +70,13 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (typeof event.data === "string") {
       console.log("📩 Message from Photopea:", event.data);
 
-      if (event.data.includes("❌")) {
-        alert(event.data);
-        return;
-      }
-
-      if (event.data.includes("✅ done")) {
+      if (event.data.startsWith("✅ done")) {
         if (collectedFrames.length === 0) {
-          alert("❌ No frames were received.");
+          win.document.body.innerHTML = "<h2>No frames were exported.</h2>";
           return;
         }
 
-        const framesJS = collectedFrames
-          .map((ab, i) => {
-            const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-            return `frames[${i}] = "data:image/png;base64,${base64}";`;
-          })
-          .join("\n");
-
-        const html = `
-<!DOCTYPE html>
+        const flipbookHTML = `<!DOCTYPE html>
 <html>
   <head>
     <title>Flipbook Preview</title>
@@ -95,7 +89,12 @@ document.addEventListener("DOMContentLoaded", () => {
     <canvas id="previewCanvas"></canvas>
     <script>
       const frames = [];
-      ${framesJS}
+      ${collectedFrames
+        .map((ab, i) => {
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+          return `frames[${i}] = "data:image/png;base64,${base64}";`;
+        })
+        .join("\n")}
 
       const images = frames.map(src => {
         const img = new Image();
@@ -123,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
         canvas.height = images[0].height;
         setInterval(() => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = "#fff";
+          ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(images[index], 0, 0);
           index = (index + 1) % images.length;
@@ -131,18 +130,16 @@ document.addEventListener("DOMContentLoaded", () => {
       };
 
       preload();
-    <\/script>
+    </script>
   </body>
 </html>`;
 
-        const blob = new Blob([html], { type: "text/html" });
-        const url = URL.createObjectURL(blob);
-        const win = window.open();
         win.document.open();
-        win.document.write(html);
+        win.document.write(flipbookHTML);
         win.document.close();
-
-        collectedFrames = []; // reset after playback
+        collectedFrames = [];
+      } else if (event.data.startsWith("❌")) {
+        alert(event.data);
       }
     }
   });
