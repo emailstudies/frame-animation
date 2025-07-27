@@ -1,43 +1,37 @@
 window.addEventListener("message", (event) => {
-  if (event.data !== "EXPORT_SELECTED_ANIM_FRAMES_INLINE") return;
+  if (event.data !== "EXPORT_SELECTED_ANIM_FRAMES") return;
 
   const script = `
     (function () {
       try {
-        var doc = app.activeDocument;
-        var sel = doc.activeLayer;
+        var original = app.activeDocument;
+        var sel = original.activeLayer;
 
         if (!sel || sel.typename !== "LayerSet" || !sel.name.startsWith("anim_")) {
           app.echoToOE("❌ Please select an 'anim_*' folder.");
           return;
         }
 
-        var temp = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
+        var temp = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
 
         for (var i = sel.layers.length - 1; i >= 0; i--) {
           var layer = sel.layers[i];
-
-          if (
-            layer &&
-            layer.typename === "ArtLayer" &&
-            !layer.locked &&
-            layer.visible
-          ) {
+          if (layer.kind !== undefined && !layer.locked) {
             app.activeDocument = temp;
             while (temp.layers.length > 0) temp.layers[0].remove();
 
-            app.activeDocument = doc;
-            doc.activeLayer = layer;
+            app.activeDocument = original;
+            original.activeLayer = layer;
             layer.duplicate(temp, ElementPlacement.PLACEATBEGINNING);
 
             app.activeDocument = temp;
-            var png = temp.saveToOE("png");
-            app.sendToOE(png);
+            var png = temp.saveToOE("png");    // ✅ Create PNG
+            app.sendToOE(png);                 // ✅ Send to plugin
           }
         }
 
         temp.close(SaveOptions.DONOTSAVECHANGES);
-        app.echoToOE("✅ PNGs exported");
+        app.echoToOE("done");                  // ✅ Let plugin know we're done
       } catch (e) {
         app.echoToOE("❌ ERROR: " + e.message);
       }
@@ -45,5 +39,5 @@ window.addEventListener("message", (event) => {
   `;
 
   parent.postMessage(script, "*");
-  console.log("📤 Inline export script sent to Photopea");
+  console.log("📤 Sent export script to Photopea");
 });
