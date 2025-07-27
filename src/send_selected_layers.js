@@ -1,47 +1,42 @@
-// send_selected_layers.js
+// send_selected_layers.js (Export selected anim_* folder as PSD)
+document.addEventListener("DOMContentLoaded", () => {
+  const previewBtn = document.getElementById("webPreviewSelectedBtn");
 
-function sendSelectedFolderLayers() {
-  const script = `
-    (function () {
-      try {
-        var doc = app.activeDocument;
-        var sel = doc.activeLayer;
+  if (!previewBtn) {
+    console.error("❌ webPreviewSelectedBtn not found");
+    return;
+  }
 
-        if (!sel || sel.typename !== "LayerSet" || !sel.name.startsWith("anim_")) {
-          app.echoToOE("❌ Please select an anim_* folder.");
-          return;
-        }
+  previewBtn.onclick = () => {
+    const script = `
+      (function () {
+        try {
+          var doc = app.activeDocument;
+          var sel = doc.activeLayer;
 
-        var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "temp_anim_export", NewDocumentMode.RGB);
-
-        // Duplicate all layers from selected anim_* folder to new doc
-        app.activeDocument = doc;
-        for (var i = sel.layers.length - 1; i >= 0; i--) {
-          var layer = sel.layers[i];
-          if (!layer.locked && layer.kind !== undefined) {
-            doc.activeLayer = layer;
-            layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
+          if (!sel || sel.typename !== "LayerSet" || sel.name.indexOf("anim_") !== 0) {
+            app.echoToOE("❌ Please select an anim_* folder.");
+            return;
           }
+
+          // Duplicate the selected anim_* folder into a new document
+          var dupDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_export_psd", NewDocumentMode.RGB);
+          app.activeDocument = doc;
+          doc.activeLayer = sel;
+          sel.duplicate(dupDoc, ElementPlacement.PLACEATBEGINNING);
+
+          app.activeDocument = dupDoc;
+          dupDoc.saveToOE("psd");
+          dupDoc.close(SaveOptions.DONOTSAVECHANGES);
+
+          app.echoToOE("✅ PSD exported");
+        } catch (e) {
+          app.echoToOE("❌ ERROR: " + e.message);
         }
+      })();
+    `;
 
-        // Send each layer as PNG from tempDoc
-        app.activeDocument = tempDoc;
-        for (var i = tempDoc.layers.length - 1; i >= 0; i--) {
-          tempDoc.activeLayer = tempDoc.layers[i];
-          tempDoc.saveToOE("png");
-        }
-
-        tempDoc.close(SaveOptions.DONOTSAVECHANGES);
-        app.echoToOE("done");
-      } catch (e) {
-        app.echoToOE("❌ ERROR: " + e.message);
-      }
-    })();
-  `;
-
-  parent.postMessage(script, "*");
-  console.log("📤 Export script sent to Photopea");
-}
-
-// Export function
-window.sendSelectedFolderLayers = sendSelectedFolderLayers;
+    parent.postMessage(script, "*");
+    console.log("📤 Export PSD script sent to Photopea");
+  };
+});
