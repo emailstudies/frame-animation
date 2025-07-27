@@ -1,224 +1,8 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Flipbook Preview</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    html, body {
-      margin: 0;
-      background: #111;
-      overflow: hidden;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    canvas {
-      image-rendering: pixelated;
-    }
-  </style>
-</head>
-<body>
-  <canvas id="previewCanvas"></canvas>
-  <script type="module">
-    import { parsePSD } from "./src/psd_parser.js";
-
-    const canvas = document.getElementById("previewCanvas");
-    const ctx = canvas.getContext("2d");
-    const fps = 12;
-    let images = [], index = 0;
-
-    window.addEventListener("message", async (event) => {
-      if (!(event.data instanceof ArrayBuffer)) {
-        console.warn("Received non-ArrayBuffer message");
-        return;
-      }
-
-      const arrayBuffer = event.data;
-      const parsed = await parsePSD(arrayBuffer);
-      if (!parsed || parsed.length === 0) {
-        console.error("❌ No layers extracted from PSD");
-        return;
-      }
-
-      images = parsed;
-      preloadImages();
-    });
-
-    function preloadImages() {
-      let loaded = 0;
-      const total = images.length;
-      images.forEach(img => {
-        img.onload = () => {
-          loaded++;
-          if (loaded === total) startLoop();
-        };
-      });
-    }
-
-    function startLoop() {
-      canvas.width = images[0].width;
-      canvas.height = images[0].height;
-      setInterval(() => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(images[index], 0, 0);
-        index = (index + 1) % images.length;
-      }, 1000 / fps);
-    }
-
-    // Show loading status
-    ctx.fillStyle = "#fff";
-    ctx.font = "20px sans-serif";
-    ctx.fillText("Preparing Preview...", 20, 40);
-  </script>
-</body>
-</html>
-
-
-
-
-
-<!-- <!DOCTYPE html>
-<html>
-<head>
-  <title>GIF Preview</title>
-  <style>
-    body {
-      margin: 0;
-      background: #111;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
-    canvas {
-      border: 2px solid #ccc;
-      background: white;
-    }
-  </style>
-</head>
-<body>
-  <canvas id="previewCanvas" width="512" height="512"></canvas>
-
-  <script>
-    window.addEventListener("message", (event) => {
-      if (event.data?.type === "frameImages") {
-        const frames = event.data.frames;
-        const canvas = document.getElementById("previewCanvas");
-        const ctx = canvas.getContext("2d");
-
-        const images = frames.map(f => {
-          const img = new Image();
-          img.src = "data:image/png;base64," + f.data;
-          return img;
-        });
-
-        let loaded = 0;
-        images.forEach(img => {
-          img.onload = () => {
-            loaded++;
-            if (loaded === images.length) {
-              canvas.width = images[0].width;
-              canvas.height = images[0].height;
-
-              let i = 0;
-              setInterval(() => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(images[i], 0, 0);
-                i = (i + 1) % images.length;
-              }, 1000 / 24);
-            }
-          };
-        });
-      }
-    });
-  </script>
-</body>
-</html>
--->
-
-<!-- <!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <title>Flipbook Preview</title>
-  <style>
-    html, body {
-      margin: 0;
-      background: #111;
-      overflow: hidden;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    canvas {
-      image-rendering: pixelated;
-    }
-    #loading {
-      color: white;
-      font-family: sans-serif;
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-  </style>
-</head>
-<body>
-  <div id="loading">⏳ Preparing Preview...</div>
-  <canvas id="previewCanvas" style="display:none;"></canvas>
-  <script>
-    window.addEventListener("message", (event) => {
-      const frameBuffers = event.data.frames;
-      if (!frameBuffers || !Array.isArray(frameBuffers)) return;
-
-      const frames = frameBuffers.map(ab => {
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-        const img = new Image();
-        img.src = "data:image/png;base64," + base64;
-        return img;
-      });
-
-      const canvas = document.getElementById("previewCanvas");
-      const ctx = canvas.getContext("2d");
-      const fps = 12;
-      let index = 0;
-
-      let loaded = 0;
-      frames.forEach(img => {
-        img.onload = () => {
-          loaded++;
-          if (loaded === frames.length) {
-            document.getElementById("loading").style.display = "none";
-            canvas.style.display = "block";
-
-            canvas.width = frames[0].width;
-            canvas.height = frames[0].height;
-
-            setInterval(() => {
-              ctx.clearRect(0, 0, canvas.width, canvas.height);
-              ctx.fillStyle = "#ffffff"; // Optional: white background
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-              ctx.drawImage(frames[index], 0, 0);
-              index = (index + 1) % frames.length;
-            }, 1000 / fps);
-          }
-        };
-      });
-    });
-  </script>
-</body>
-</html> -->
-
-<!--
-<!DOCTYPE html>
-<html>
   <head>
-    <meta charset="utf-8" />
     <title>Flipbook Preview</title>
+    <meta charset="UTF-8" />
     <style>
       html, body {
         margin: 0;
@@ -234,62 +18,88 @@
       canvas {
         image-rendering: pixelated;
       }
+      #status {
+        position: absolute;
+        top: 10px;
+        font-size: 14px;
+      }
     </style>
   </head>
   <body>
-    <div id="status">Preparing Preview...</div>
-    <canvas id="previewCanvas" style="display:none;"></canvas>
-
+    <div id="status">🕐 Preparing Preview...</div>
+    <canvas id="previewCanvas"></canvas>
     <script>
-      window.addEventListener("message", (event) => {
-        const data = event.data;
-        if (!(data instanceof Array)) return;
+      const canvas = document.getElementById("previewCanvas");
+      const ctx = canvas.getContext("2d");
+      const status = document.getElementById("status");
 
-        const status = document.getElementById("status");
-        const canvas = document.getElementById("previewCanvas");
-        const ctx = canvas.getContext("2d");
-        const fps = 12;
-        let index = 0;
+      let fps = 12;
+      let base64Frames = [];
 
-        const frames = data.map((ab) =>
-          "data:image/png;base64," + btoa(String.fromCharCode(...new Uint8Array(ab)))
-        );
+      window.addEventListener("message", async (event) => {
+        if (!event.data || !Array.isArray(event.data.frames)) {
+          status.textContent = "❌ Invalid frame data received";
+          return;
+        }
 
-        const images = frames.map((src) => {
-          const img = new Image();
-          img.src = src;
-          return img;
-        });
+        try {
+          const buffers = event.data.frames;
+          fps = event.data.fps || 12;
 
-        const preload = () => {
+          // Safely convert ArrayBuffers to base64
+          base64Frames = [];
+          for (let i = 0; i < buffers.length; i++) {
+            const uint8 = new Uint8Array(buffers[i]);
+            let binary = "";
+            for (let j = 0; j < uint8.length; j++) {
+              binary += String.fromCharCode(uint8[j]);
+            }
+            base64Frames.push("data:image/png;base64," + btoa(binary));
+          }
+
+          status.textContent = "📷 Loading images...";
+          await preloadImages(base64Frames);
+        } catch (e) {
+          console.error("❌ Error decoding frames:", e);
+          status.textContent = "❌ Failed to decode frame data.";
+        }
+      });
+
+      function preloadImages(base64Frames) {
+        return new Promise((resolve) => {
           let loaded = 0;
-          images.forEach((img) => {
+          const images = [];
+
+          base64Frames.forEach((src, i) => {
+            const img = new Image();
+            img.src = src;
             img.onload = () => {
               loaded++;
-              if (loaded === images.length) startLoop();
+              images[i] = img;
+              if (loaded === base64Frames.length) {
+                startPlayback(images);
+                resolve();
+              }
             };
           });
-        };
+        });
+      }
 
-        const startLoop = () => {
-          canvas.style.display = "block";
-          status.remove();
+      function startPlayback(images) {
+        status.remove();
+        let index = 0;
 
-          canvas.width = images[0].width;
-          canvas.height = images[0].height;
+        canvas.width = images[0].width;
+        canvas.height = images[0].height;
 
-          setInterval(() => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(images[index], 0, 0);
-            index = (index + 1) % images.length;
-          }, 1000 / fps);
-        };
-
-        preload();
-      });
+        setInterval(() => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(images[index], 0, 0);
+          index = (index + 1) % images.length;
+        }, 1000 / fps);
+      }
     </script>
   </body>
 </html>
--->
