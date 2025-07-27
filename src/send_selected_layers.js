@@ -12,13 +12,7 @@ window.addEventListener("message", (event) => {
           return;
         }
 
-        var temp = app.documents.add(
-          original.width,
-          original.height,
-          original.resolution,
-          "_temp_export",
-          NewDocumentMode.RGB
-        );
+        var temp = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
 
         for (var i = sel.layers.length - 1; i >= 0; i--) {
           var layer = sel.layers[i];
@@ -32,7 +26,7 @@ window.addEventListener("message", (event) => {
 
             app.activeDocument = temp;
             var png = temp.saveToOE("png");
-            app.sendToOE(png); // ✅ THIS LINE makes it work
+            app.sendToOE(png);  // ✅ Send PNG to plugin
           }
         }
 
@@ -40,7 +34,7 @@ window.addEventListener("message", (event) => {
         temp.close(SaveOptions.DONOTSAVECHANGES);
         app.echoToOE("✅ PNGs exported");
       } catch (e) {
-        app.echoToOE("❌ ERROR: \" + e.message);
+        app.echoToOE("❌ ERROR: " + e.message);
       }
     })();
   `;
