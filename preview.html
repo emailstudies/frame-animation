@@ -1,3 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Flipbook Preview</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body {
+      margin: 0;
+      background: #111;
+      overflow: hidden;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="previewCanvas"></canvas>
+  <script type="module">
+    import { parsePSD } from "./src/psd_parser.js";
+
+    const canvas = document.getElementById("previewCanvas");
+    const ctx = canvas.getContext("2d");
+    const fps = 12;
+    let images = [], index = 0;
+
+    window.addEventListener("message", async (event) => {
+      if (!(event.data instanceof ArrayBuffer)) {
+        console.warn("Received non-ArrayBuffer message");
+        return;
+      }
+
+      const arrayBuffer = event.data;
+      const parsed = await parsePSD(arrayBuffer);
+      if (!parsed || parsed.length === 0) {
+        console.error("❌ No layers extracted from PSD");
+        return;
+      }
+
+      images = parsed;
+      preloadImages();
+    });
+
+    function preloadImages() {
+      let loaded = 0;
+      const total = images.length;
+      images.forEach(img => {
+        img.onload = () => {
+          loaded++;
+          if (loaded === total) startLoop();
+        };
+      });
+    }
+
+    function startLoop() {
+      canvas.width = images[0].width;
+      canvas.height = images[0].height;
+      setInterval(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(images[index], 0, 0);
+        index = (index + 1) % images.length;
+      }, 1000 / fps);
+    }
+
+    // Show loading status
+    ctx.fillStyle = "#fff";
+    ctx.font = "20px sans-serif";
+    ctx.fillText("Preparing Preview...", 20, 40);
+  </script>
+</body>
+</html>
+
+
+
+
+
 <!-- <!DOCTYPE html>
 <html>
 <head>
@@ -130,6 +213,7 @@
 </body>
 </html> -->
 
+<!--
 <!DOCTYPE html>
 <html>
   <head>
@@ -208,3 +292,4 @@
     </script>
   </body>
 </html>
+-->
