@@ -15,30 +15,33 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        var validLayers = [];
+        var layersToCopy = [];
         for (var i = 0; i < doc.layers.length; i++) {
           var l = doc.layers[i];
-          if (!l.visible || l.locked || l.kind !== 1) continue; // kind === 1 is normal/pixel
-          validLayers.push(l);
+          if (l.name !== "Background") {
+            layersToCopy.push(l);
+          }
         }
 
-        if (validLayers.length === 0) {
+        if (layersToCopy.length === 0) {
           app.echoToOE("❌ No valid layers found.");
           return;
         }
 
         var dupDoc = app.documents.add(doc.width, doc.height, doc.resolution, "temp_export", NewDocumentMode.RGB);
 
-        for (var i = validLayers.length - 1; i >= 0; i--) {
+        for (var i = layersToCopy.length - 1; i >= 0; i--) {
           app.activeDocument = doc;
-          doc.activeLayer = validLayers[i];
-          validLayers[i].duplicate(dupDoc, ElementPlacement.PLACEATEND);
+          doc.activeLayer = layersToCopy[i];
+          layersToCopy[i].duplicate(dupDoc, ElementPlacement.PLACEATEND);
         }
 
         app.activeDocument = dupDoc;
 
         for (var i = 0; i < dupDoc.layers.length; i++) {
-          dupDoc.activeLayer = dupDoc.layers[i];
+          var layer = dupDoc.layers[i];
+          layer.opacity = 100;
+          dupDoc.activeLayer = layer;
           app.activeDocument.saveToOE("png");
         }
 
@@ -49,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("📤 Sent script to Photopea.");
   };
 
-  // FPS = 12 → 1000 / 12 = ~83ms per frame
+  // FPS = 12 → 83ms per frame
   const FPS = 12;
   const DELAY = 1000 / FPS;
   const receivedFrames = [];
@@ -69,17 +72,15 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        // 🧠 Open a new tab with a canvas-based preview
         const previewTab = window.open("", "_blank");
         const html = `
           <html>
           <head><title>Preview</title></head>
-          <body style="margin:0; display:flex; align-items:center; justify-content:center; background:#111;">
+          <body style="margin:0; background:#111; display:flex; align-items:center; justify-content:center;">
             <canvas id="previewCanvas"></canvas>
             <script>
               const frames = ${JSON.stringify(receivedFrames)};
               let index = 0;
-              const fps = ${FPS};
               const delay = ${DELAY};
               const img = new Image();
               const canvas = document.getElementById("previewCanvas");
