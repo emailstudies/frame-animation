@@ -1,105 +1,59 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Flipbook Preview</title>
-    <meta charset="UTF-8" />
-    <style>
-      html, body {
-        margin: 0;
-        background: #111;
-        overflow: hidden;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: white;
-        font-family: sans-serif;
-      }
-      canvas {
-        image-rendering: pixelated;
-      }
-      #status {
-        position: absolute;
-        top: 10px;
-        font-size: 14px;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="status">🕐 Preparing Preview...</div>
-    <canvas id="previewCanvas"></canvas>
-    <script>
-      const canvas = document.getElementById("previewCanvas");
-      const ctx = canvas.getContext("2d");
-      const status = document.getElementById("status");
+<head>
+  <title>Preview</title>
+  <style>
+    html, body {
+      margin: 0;
+      background: #111;
+      overflow: hidden;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="previewCanvas"></canvas>
+  <script>
+    const canvas = document.getElementById("previewCanvas");
+    const ctx = canvas.getContext("2d");
+    const fps = 12;
+    let images = [], index = 0;
 
-      let fps = 12;
-      let base64Frames = [];
+    window.addEventListener("message", async (event) => {
+      if (!Array.isArray(event.data)) return;
 
-      window.addEventListener("message", async (event) => {
-        if (!event.data || !Array.isArray(event.data.frames)) {
-          status.textContent = "❌ Invalid frame data received";
-          return;
-        }
+      console.log("📨 Frames received in preview.html:", event.data.length);
 
-        try {
-          const buffers = event.data.frames;
-          fps = event.data.fps || 12;
-
-          // Safely convert ArrayBuffers to base64
-          base64Frames = [];
-          for (let i = 0; i < buffers.length; i++) {
-            const uint8 = new Uint8Array(buffers[i]);
-            let binary = "";
-            for (let j = 0; j < uint8.length; j++) {
-              binary += String.fromCharCode(uint8[j]);
-            }
-            base64Frames.push("data:image/png;base64," + btoa(binary));
-          }
-
-          status.textContent = "📷 Loading images...";
-          await preloadImages(base64Frames);
-        } catch (e) {
-          console.error("❌ Error decoding frames:", e);
-          status.textContent = "❌ Failed to decode frame data.";
-        }
-      });
-
-      function preloadImages(base64Frames) {
+      const loadImage = (ab) => {
         return new Promise((resolve) => {
-          let loaded = 0;
-          const images = [];
-
-          base64Frames.forEach((src, i) => {
-            const img = new Image();
-            img.src = src;
-            img.onload = () => {
-              loaded++;
-              images[i] = img;
-              if (loaded === base64Frames.length) {
-                startPlayback(images);
-                resolve();
-              }
-            };
-          });
+          const img = new Image();
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+          img.src = "data:image/png;base64," + base64;
+          img.onload = () => resolve(img);
         });
-      }
+      };
 
-      function startPlayback(images) {
-        status.remove();
-        let index = 0;
+      images = await Promise.all(event.data.map(loadImage));
 
-        canvas.width = images[0].width;
-        canvas.height = images[0].height;
+      canvas.width = images[0].width;
+      canvas.height = images[0].height;
 
-        setInterval(() => {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(images[index], 0, 0);
-          index = (index + 1) % images.length;
-        }, 1000 / fps);
-      }
-    </script>
-  </body>
+      setInterval(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff"; // optional white bg
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(images[index], 0, 0);
+        index = (index + 1) % images.length;
+      }, 1000 / fps);
+    });
+
+    console.log("⏳ Waiting for frames...");
+  </script>
+</body>
 </html>
