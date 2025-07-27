@@ -12,9 +12,7 @@
       justify-content: center;
       align-items: center;
     }
-    canvas {
-      image-rendering: pixelated;
-    }
+    canvas { image-rendering: pixelated; }
   </style>
 </head>
 <body>
@@ -25,26 +23,21 @@
     const fps = 12;
     let images = [], index = 0;
 
-    // Let parent window know preview is ready
     window.onload = () => {
       window.opener?.postMessage("READY_FOR_FRAMES", "*");
       console.log("🟢 Preview ready");
     };
 
-    // Load base64 PNGs from plugin
     window.addEventListener("message", async (event) => {
       if (!Array.isArray(event.data)) return;
-
       console.log("📨 Received", event.data.length, "frames");
 
-      const loadImage = (ab) => {
-        return new Promise((resolve) => {
-          const img = new Image();
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-          img.src = "data:image/png;base64," + base64;
-          img.onload = () => resolve(img);
-        });
-      };
+      const loadImage = (ab) => new Promise((resolve) => {
+        const img = new Image();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+        img.src = "data:image/png;base64," + base64;
+        img.onload = () => resolve(img);
+      });
 
       images = await Promise.all(event.data.map(loadImage));
 
