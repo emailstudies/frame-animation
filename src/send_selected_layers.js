@@ -1,49 +1,48 @@
-window.addEventListener("message", (event) => {
+window.addEventListener("message", async (event) => {
   if (event.data !== "EXPORT_SELECTED_ANIM_FRAMES") return;
 
-  const script = `
-    (function () {
-      try {
-        var original = app.activeDocument;
-        var sel = original.activeLayer;
+  try {
+    var doc = app.activeDocument;
+    if (!doc) {
+      app.echoToOE("❌ No active document.");
+      return;
+    }
 
-        if (!sel || sel.typename !== "LayerSet" || !sel.name.startsWith("anim_")) {
-          app.echoToOE("❌ Please select a folder starting with 'anim_'.");
-          return;
-        }
+    var selected = doc.activeLayer;
+    if (!selected || !selected.parent || !selected.parent.name.startsWith("anim_")) {
+      app.echoToOE("❌ Please select a layer inside an anim_* folder.");
+      return;
+    }
 
-        var temp = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
+    var folder = selected.parent;
+    var temp = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
 
-        for (var i = sel.layers.length - 1; i >= 0; i--) {
-          var frame = sel.layers[i];
+    // Loop through layers (reverse to preserve order)
+    for (var i = folder.layers.length - 1; i >= 0; i--) {
+      var layer = folder.layers[i];
 
-          if (frame.kind !== undefined && !frame.locked) {
-            // Clear temp doc
-            app.activeDocument = temp;
-            while (temp.layers.length > 0) temp.layers[0].remove();
-
-            // Duplicate this frame into temp doc
-            app.activeDocument = original;
-            original.activeLayer = frame;
-            frame.duplicate(temp, ElementPlacement.PLACEATBEGINNING);
-
-            // Flatten and send PNG
-            app.activeDocument = temp;
-            var png = temp.saveToOE("png");
-            app.sendToOE(png);
-          }
-        }
-
-        // Cleanup
+      if (layer.kind !== undefined && !layer.locked) {
         app.activeDocument = temp;
-        temp.close(SaveOptions.DONOTSAVECHANGES);
-        app.echoToOE("done");
-      } catch (e) {
-        app.echoToOE("❌ Export error: " + e.message);
-      }
-    })();
-  `;
 
-  parent.postMessage(script, "*");
-  console.log("📤 Export script sent to Photopea");
+        // Remove existing layers
+        while (temp.layers.length > 0) temp.layers[0].remove();
+
+        // Duplicate the selected layer
+        app.activeDocument = doc;
+        doc.activeLayer = layer;
+        layer.duplicate(temp, ElementPlacement.PLACEATBEGINNING);
+
+        // Save and send PNG to plugin
+        app.activeDocument = temp;
+        var png = temp.saveToOE("png");
+        app.sendToOE(png);
+      }
+    }
+
+    temp.close(SaveOptions.DONOTSAVECHANGES);
+    app.echoToOE("done");
+
+  } catch (e) {
+    app.echoToOE("❌ ERROR: " + e.message);
+  }
 });
