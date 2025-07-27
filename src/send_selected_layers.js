@@ -1,42 +1,43 @@
-// send_selected_layers.js (Export selected anim_* folder as PSD)
-document.addEventListener("DOMContentLoaded", () => {
-  const previewBtn = document.getElementById("webPreviewSelectedBtn");
+window.addEventListener("message", (event) => {
+  if (event.data !== "EXPORT_SELECTED_ANIM_FRAMES") return;
 
-  if (!previewBtn) {
-    console.error("❌ webPreviewSelectedBtn not found");
-    return;
-  }
+  const script = `
+    (function () {
+      try {
+        var original = app.activeDocument;
+        var sel = original.activeLayer;
 
-  previewBtn.onclick = () => {
-    const script = `
-      (function () {
-        try {
-          var doc = app.activeDocument;
-          var sel = doc.activeLayer;
-
-          if (!sel || sel.typename !== "LayerSet" || sel.name.indexOf("anim_") !== 0) {
-            app.echoToOE("❌ Please select an anim_* folder.");
-            return;
-          }
-
-          // Duplicate the selected anim_* folder into a new document
-          var dupDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_export_psd", NewDocumentMode.RGB);
-          app.activeDocument = doc;
-          doc.activeLayer = sel;
-          sel.duplicate(dupDoc, ElementPlacement.PLACEATBEGINNING);
-
-          app.activeDocument = dupDoc;
-          dupDoc.saveToOE("psd");
-          dupDoc.close(SaveOptions.DONOTSAVECHANGES);
-
-          app.echoToOE("✅ PSD exported");
-        } catch (e) {
-          app.echoToOE("❌ ERROR: " + e.message);
+        if (!sel || sel.typename !== "LayerSet" || !sel.name.startsWith("anim_")) {
+          app.echoToOE("❌ Please select an 'anim_*' folder.");
+          return;
         }
-      })();
-    `;
 
-    parent.postMessage(script, "*");
-    console.log("📤 Export PSD script sent to Photopea");
-  };
+        var temp = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
+
+        for (var i = sel.layers.length - 1; i >= 0; i--) {
+          var layer = sel.layers[i];
+          if (layer.kind !== undefined && !layer.locked) {
+            app.activeDocument = temp;
+            while (temp.layers.length > 0) temp.layers[0].remove();
+
+            app.activeDocument = original;
+            original.activeLayer = layer;
+            layer.duplicate(temp, ElementPlacement.PLACEATBEGINNING);
+
+            app.activeDocument = temp;
+            temp.saveToOE("png");
+          }
+        }
+
+        app.activeDocument = temp;
+        temp.close(SaveOptions.DONOTSAVECHANGES);
+        app.echoToOE("✅ PNGs exported");
+      } catch (e) {
+        app.echoToOE("❌ ERROR: " + e.message);
+      }
+    })();
+  `;
+
+  parent.postMessage(script, "*");
+  console.log("📤 Export script sent to Photopea");
 });
