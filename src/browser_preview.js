@@ -1,41 +1,40 @@
-// browser_preview.js
+// src/browser_preview.js
 
-// Flipbook Preview Script (Exports only layers under selected anim_* folder)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("webPreviewSelectedBtn");
 
   if (!btn) {
-    console.error("❌ webPreviewSelectedBtn not found");
+    console.error("❌ Preview button not found");
     return;
   }
 
+  let collectedFrames = [];
+
   btn.onclick = () => {
+    collectedFrames = []; // Reset before every run
+
     const script = `
       (function () {
         try {
           var original = app.activeDocument;
-          var sel = original.activeLayer;
-
-          if (!sel || sel.typename !== "LayerSet" || !sel.name.startsWith("anim_")) {
+          if (!original || !original.activeLayer || !original.activeLayer.name.startsWith("anim_") || original.activeLayer.typename !== "LayerSet") {
             app.echoToOE("❌ Please select an anim_* folder.");
             return;
           }
 
-          var layersToExport = sel.layers;
-          if (layersToExport.length === 0) {
-            app.echoToOE("❌ No layers found in selected folder.");
+          var group = original.activeLayer;
+          if (group.layers.length === 0) {
+            app.echoToOE("❌ Selected folder has no layers.");
             return;
           }
 
           var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
 
-          for (var i = layersToExport.length - 1; i >= 0; i--) {
-            var layer = layersToExport[i];
+          for (var i = group.layers.length - 1; i >= 0; i--) {
+            var layer = group.layers[i];
             if (layer.kind !== undefined && !layer.locked) {
               app.activeDocument = tempDoc;
-              for (var j = tempDoc.layers.length - 1; j >= 0; j--) {
-                tempDoc.layers[j].remove();
-              }
+              while (tempDoc.layers.length > 0) tempDoc.layers[0].remove();
 
               app.activeDocument = original;
               original.activeLayer = layer;
@@ -46,9 +45,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           }
 
-          app.activeDocument = tempDoc;
           tempDoc.close(SaveOptions.DONOTSAVECHANGES);
-          app.echoToOE("done");
+          app.echoToOE("✅ done");
         } catch (e) {
           app.echoToOE("❌ ERROR: " + e.message);
         }
@@ -56,10 +54,8 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
 
     parent.postMessage(script, "*");
-    console.log("📤 Sent export script to Photopea");
+    console.log("📤 Export script sent to Photopea");
   };
-
-  const collectedFrames = [];
 
   window.addEventListener("message", (event) => {
     if (event.data instanceof ArrayBuffer) {
@@ -67,13 +63,26 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (typeof event.data === "string") {
       console.log("📩 Message from Photopea:", event.data);
 
-      if (event.data === "done") {
+      if (event.data.includes("❌")) {
+        alert(event.data);
+        return;
+      }
+
+      if (event.data.includes("✅ done")) {
         if (collectedFrames.length === 0) {
-          alert("❌ No frames received.");
+          alert("❌ No frames were received.");
           return;
         }
 
-        const flipbookHTML = `<!DOCTYPE html>
+        const framesJS = collectedFrames
+          .map((ab, i) => {
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+            return `frames[${i}] = "data:image/png;base64,${base64}";`;
+          })
+          .join("\n");
+
+        const html = `
+<!DOCTYPE html>
 <html>
   <head>
     <title>Flipbook Preview</title>
@@ -86,12 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <canvas id="previewCanvas"></canvas>
     <script>
       const frames = [];
-      ${collectedFrames
-        .map((ab, i) => {
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-          return `frames[${i}] = "data:image/png;base64,${base64}";`;
-        })
-        .join("\n")}
+      ${framesJS}
 
       const images = frames.map(src => {
         const img = new Image();
@@ -119,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
         canvas.height = images[0].height;
         setInterval(() => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = "#ffffff";
+          ctx.fillStyle = "#fff";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(images[index], 0, 0);
           index = (index + 1) % images.length;
@@ -131,16 +135,14 @@ document.addEventListener("DOMContentLoaded", () => {
   </body>
 </html>`;
 
-        const blob = new Blob([flipbookHTML], { type: "text/html" });
+        const blob = new Blob([html], { type: "text/html" });
         const url = URL.createObjectURL(blob);
         const win = window.open();
         win.document.open();
-        win.document.write(flipbookHTML);
+        win.document.write(html);
         win.document.close();
 
-        collectedFrames.length = 0;
-      } else if (event.data.startsWith("❌")) {
-        alert(event.data);
+        collectedFrames = []; // reset after playback
       }
     }
   });
