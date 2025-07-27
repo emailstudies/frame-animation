@@ -7,17 +7,23 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btn.onclick = () => {
-    const script = `
+    const safeScript = `
       (function () {
-        // Attempt to access document and active layer
-        var doc = app.activeDocument;
-        var layer = doc.activeLayer;
+        if (!app.documents.length) {
+          App.echoToOE("❌ No document open.");
+          return;
+        }
 
-        // Now send message to plugin
-        App.echoToOE("✅ Hello from plugin, layer name: " + (layer ? layer.name : "no layer selected"));
+        var doc = app.activeDocument;
+        if (!doc.activeLayer) {
+          App.echoToOE("❌ No active layer selected.");
+          return;
+        }
+
+        App.echoToOE("✅ Active Layer Name: " + doc.activeLayer.name);
       })();
     `;
-    parent.postMessage(script, "*");
+    parent.postMessage(safeScript, "*");
     console.log("📤 Sent script to Photopea.");
   };
 
