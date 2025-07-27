@@ -11,15 +11,18 @@ window.sendSelectedFrames = function () {
         }
 
         var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
-        var frames = selected.layers;
 
+        var frames = selected.layers;
         for (var i = frames.length - 1; i >= 0; i--) {
           var frame = frames[i];
-          if (!frame.locked && frame.kind !== undefined) {
+          if (frame.kind !== undefined && !frame.locked) {
+            // Switch to tempDoc and clear it
             app.activeDocument = tempDoc;
+            while (tempDoc.layers.length > 0) {
+              try { tempDoc.layers[0].remove(); } catch (e) {}
+            }
 
-            while (tempDoc.layers.length > 0) tempDoc.layers[0].remove();
-
+            // Duplicate frame into tempDoc
             app.activeDocument = doc;
             doc.activeLayer = frame;
             frame.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
@@ -37,6 +40,7 @@ window.sendSelectedFrames = function () {
       }
     })();
   `;
+
   parent.postMessage(script, "*");
   console.log("📤 Export script sent to Photopea.");
 };
