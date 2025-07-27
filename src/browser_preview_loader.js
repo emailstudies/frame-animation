@@ -1,14 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("webPreviewSelectedBtn");
-
-  if (!btn) return;
-
   const collectedFrames = [];
 
   btn.onclick = () => {
     collectedFrames.length = 0;
-    parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES_INLINE", "*");
     console.log("▶️ Started frame export");
+    parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
   };
 
   window.addEventListener("message", (event) => {
@@ -17,13 +14,15 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (typeof event.data === "string") {
       console.log("📩 Message from Photopea:", event.data);
 
-      if (event.data.startsWith("✅")) {
+      if (event.data === "done") {
         if (collectedFrames.length === 0) {
           alert("❌ No frames received.");
           return;
         }
 
+        console.log("✅ Received all frames, opening preview...");
         const flipbookHTML = generateInlineFlipbook(collectedFrames);
+
         const blob = new Blob([flipbookHTML], { type: "text/html" });
         const url = URL.createObjectURL(blob);
 
@@ -31,7 +30,6 @@ document.addEventListener("DOMContentLoaded", () => {
         win.document.open();
         win.document.write(flipbookHTML);
         win.document.close();
-        console.log("🟢 Flipbook opened with", collectedFrames.length, "frames");
 
         collectedFrames.length = 0;
       } else if (event.data.startsWith("❌")) {
@@ -40,39 +38,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  function generateInlineFlipbook(buffers) {
-    const frameScripts = buffers
+  // This must be defined globally or within same script
+  function generateInlineFlipbook(arrayBuffers) {
+    const frameData = arrayBuffers
       .map((ab, i) => {
         const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
         return `frames[${i}] = "data:image/png;base64,${base64}";`;
       })
       .join("\n");
 
-    return `
-<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html>
 <head>
   <title>Flipbook Preview</title>
   <style>
-    html, body {
-      margin: 0;
-      background: #111;
-      overflow: hidden;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    canvas {
-      image-rendering: pixelated;
-    }
+    html, body { margin: 0; background: #111; overflow: hidden; height: 100%; display: flex; justify-content: center; align-items: center; }
+    canvas { image-rendering: pixelated; }
   </style>
 </head>
 <body>
   <canvas id="previewCanvas"></canvas>
   <script>
+    const canvas = document.getElementById("previewCanvas");
+    const ctx = canvas.getContext("2d");
+    const fps = 12;
     const frames = [];
-    ${frameScripts}
+    let index = 0;
+
+    ${frameData}
 
     const images = frames.map(src => {
       const img = new Image();
@@ -80,28 +73,22 @@ document.addEventListener("DOMContentLoaded", () => {
       return img;
     });
 
-    const canvas = document.getElementById("previewCanvas");
-    const ctx = canvas.getContext("2d");
-    const fps = 12;
-    let index = 0;
-
     const preload = () => {
       let loaded = 0;
       images.forEach(img => {
         img.onload = () => {
           loaded++;
-          if (loaded === images.length) startLoop();
+          if (loaded === images.length) start();
         };
       });
     };
 
-    const startLoop = () => {
+    const start = () => {
       canvas.width = images[0].width;
       canvas.height = images[0].height;
-
       setInterval(() => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle = "#fff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(images[index], 0, 0);
         index = (index + 1) % images.length;
