@@ -16,21 +16,29 @@ window.addEventListener("message", (event) => {
 
         for (var i = sel.layers.length - 1; i >= 0; i--) {
           var layer = sel.layers[i];
-          if (layer.kind !== undefined && !layer.locked) {
+
+          if (
+            layer &&
+            layer.typename === "ArtLayer" &&
+            !layer.locked &&
+            layer.visible
+          ) {
+            // Clear temp doc
             app.activeDocument = temp;
             while (temp.layers.length > 0) temp.layers[0].remove();
 
+            // Duplicate frame
             app.activeDocument = original;
             original.activeLayer = layer;
             layer.duplicate(temp, ElementPlacement.PLACEATBEGINNING);
 
+            // Export PNG + send
             app.activeDocument = temp;
             var png = temp.saveToOE("png");
-            app.sendToOE(png);  // ✅ Send PNG to plugin
+            app.sendToOE(png);
           }
         }
 
-        app.activeDocument = temp;
         temp.close(SaveOptions.DONOTSAVECHANGES);
         app.echoToOE("✅ PNGs exported");
       } catch (e) {
