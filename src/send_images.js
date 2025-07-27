@@ -9,20 +9,26 @@ document.addEventListener("DOMContentLoaded", () => {
   btn.onclick = () => {
     const safeScript = `
       (function () {
-        if (!app.documents.length) {
-          App.echoToOE("❌ No document open.");
-          return;
-        }
+        try {
+          if (!app.documents.length) {
+            App.echoToOE("❌ No document open.");
+            return;
+          }
 
-        var doc = app.activeDocument;
-        if (!doc.activeLayer) {
-          App.echoToOE("❌ No active layer selected.");
-          return;
-        }
+          var doc = app.activeDocument;
+          if (!doc.activeLayer) {
+            App.echoToOE("⚠️ No layer selected.");
+            return;
+          }
 
-        App.echoToOE("✅ Active Layer Name: " + doc.activeLayer.name);
+          var name = doc.activeLayer.name || "(no name)";
+          App.echoToOE("✅ Active Layer Name: " + name);
+        } catch (e) {
+          App.echoToOE("❌ JS Exception: " + e.message);
+        }
       })();
     `;
+
     parent.postMessage(safeScript, "*");
     console.log("📤 Sent script to Photopea.");
   };
@@ -30,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("message", (e) => {
     if (typeof e.data === "string") {
       console.log("📩 Message from Photopea:", e.data);
-      alert("✅ Photopea says: " + e.data);
+      alert("📬 " + e.data);
     }
   });
 });
