@@ -1,4 +1,4 @@
-// Flipbook Preview Script (Photopea-compatible)
+// Flipbook Preview Script (for Photopea)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("previewSelectedBtn");
 
@@ -8,8 +8,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btn.onclick = () => {
-    collectedFrames.length = 0; // Reset previous
-
     const script = `
       (function () {
         try {
@@ -19,11 +17,12 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
+          // Create temporary export doc
           var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
 
           for (var i = original.layers.length - 1; i >= 0; i--) {
             var layer = original.layers[i];
-            if (layer.kind !== undefined && !layer.locked) {
+            if (layer.kind !== undefined && !layer.locked && layer.visible) {
               app.activeDocument = original;
               original.activeLayer = layer;
               layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
@@ -45,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
 
     parent.postMessage(script, "*");
-    console.log("📤 Sent flipbook script to Photopea.");
+    console.log("📤 Sent export script to Photopea");
   };
 
   const collectedFrames = [];
@@ -54,19 +53,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (event.data instanceof ArrayBuffer) {
       collectedFrames.push(event.data);
     } else if (typeof event.data === "string") {
+      console.log("📩 Message from Photopea:", event.data);
+
       if (event.data === "done") {
         if (collectedFrames.length === 0) {
           alert("❌ No frames received.");
           return;
         }
-
-        // Generate HTML with embedded frames
-        const frameJS = collectedFrames
-          .map((ab, i) => {
-            const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-            return `frames[${i}] = "data:image/png;base64,${base64}";`;
-          })
-          .join("\n");
 
         const html = `
 <!DOCTYPE html>
@@ -74,15 +67,28 @@ document.addEventListener("DOMContentLoaded", () => {
   <head>
     <title>Flipbook Preview</title>
     <style>
-      html, body { margin: 0; background: #000; overflow: hidden; height: 100%; display: flex; align-items: center; justify-content: center; }
-      canvas { image-rendering: pixelated; }
+      html, body {
+        margin: 0;
+        background: #111;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      canvas {
+        image-rendering: pixelated;
+      }
     </style>
   </head>
   <body>
     <canvas id="previewCanvas"></canvas>
     <script>
       const frames = [];
-      ${frameJS}
+      ${collectedFrames.map((ab, i) => {
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+        return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
+      }).join("\\n")}
 
       const images = frames.map(src => {
         const img = new Image();
@@ -110,6 +116,8 @@ document.addEventListener("DOMContentLoaded", () => {
         canvas.height = images[0].height;
         setInterval(() => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(images[index], 0, 0);
           index = (index + 1) % images.length;
         }, 1000 / fps);
@@ -120,10 +128,13 @@ document.addEventListener("DOMContentLoaded", () => {
   </body>
 </html>`;
 
+        // 🔁 OPEN IN NEW TAB VIA HTML STREAM
         const win = window.open();
         win.document.open();
         win.document.write(html);
         win.document.close();
+
+        collectedFrames.length = 0;
       } else if (event.data.startsWith("❌")) {
         alert(event.data);
       }
