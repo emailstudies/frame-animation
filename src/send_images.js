@@ -1,4 +1,4 @@
-// Flipbook Preview Script (with white background fix and script escape fix)
+// Flipbook Preview Script (with white background fix)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("previewSelectedBtn");
 
@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
+          // Create temporary export doc
           var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
 
           for (var i = original.layers.length - 1; i >= 0; i--) {
@@ -44,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       })();
     `;
+
     parent.postMessage(script, "*");
     console.log("📤 Sent export script to Photopea");
   };
@@ -67,28 +69,20 @@ document.addEventListener("DOMContentLoaded", () => {
   <head>
     <title>Flipbook Preview</title>
     <style>
-      html, body {
-        margin: 0;
-        background: #111;
-        overflow: hidden;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      canvas {
-        image-rendering: pixelated;
-      }
+      html, body { margin: 0; background: #111; overflow: hidden; height: 100%; display: flex; justify-content: center; align-items: center; }
+      canvas { image-rendering: pixelated; }
     </style>
   </head>
   <body>
     <canvas id="previewCanvas"></canvas>
     <script>
       const frames = [];
-      ${collectedFrames.map((ab, i) => {
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-        return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
-      }).join("\\n")}
+      ${collectedFrames
+        .map((ab, i) => {
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+          return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
+        })
+        .join("\n")}
 
       const images = frames.map(src => {
         const img = new Image();
@@ -116,15 +110,18 @@ document.addEventListener("DOMContentLoaded", () => {
         canvas.height = images[0].height;
         setInterval(() => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // ✅ White background for each frame
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
+
           ctx.drawImage(images[index], 0, 0);
           index = (index + 1) % images.length;
         }, 1000 / fps);
       };
 
       preload();
-    <\/script>
+    </script>
   </body>
 </html>`;
 
