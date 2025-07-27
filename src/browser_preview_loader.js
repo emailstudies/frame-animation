@@ -1,16 +1,16 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const previewBtn = document.getElementById("webPreviewSelectedBtn");
+  const btn = document.getElementById("webPreviewSelectedBtn");
   const collectedFrames = [];
   let previewTab = null;
 
-  previewBtn.onclick = () => {
+  btn.onclick = () => {
     collectedFrames.length = 0;
     previewTab = window.open("preview.html", "_blank");
 
     setTimeout(() => {
       parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
-      console.log("▶️ Preview Selected button clicked");
-    }, 500);
+      console.log("▶️ Started frame export");
+    }, 300);
   };
 
   window.addEventListener("message", (event) => {
@@ -21,19 +21,16 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("📩 Message from Photopea:", event.data);
 
       if (event.data.startsWith("✅")) {
-        if (collectedFrames.length === 0) {
-          alert("❌ No frames received.");
+        if (!collectedFrames.length) {
+          alert("❌ No frames received");
           return;
         }
 
+        // Wait for the tab to be ready
         setTimeout(() => {
-          if (previewTab) {
-            previewTab.postMessage(collectedFrames, "*");
-            console.log("📨 Frames sent to preview tab");
-          } else {
-            alert("❌ Preview tab not found.");
-          }
-        }, 1000);
+          previewTab?.postMessage(collectedFrames, "*");
+          console.log("📨 Sent frames to preview tab");
+        }, 500);
       } else if (event.data.startsWith("❌")) {
         alert(event.data);
       }
