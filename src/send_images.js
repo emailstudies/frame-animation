@@ -17,11 +17,14 @@ document.addEventListener("DOMContentLoaded", () => {
           }
 
           var dupDoc = app.documents.add(original.width, original.height, original.resolution, "temp_export", NewDocumentMode.RGB);
+
           for (var i = original.layers.length - 1; i >= 0; i--) {
             var layer = original.layers[i];
             if (layer.kind !== LayerKind.NORMAL || layer.name === "Background") continue;
+
             app.activeDocument = original;
             original.activeLayer = layer;
+            layer.opacity = 100; // ensure visible
             layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
           }
 
@@ -43,9 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
     parent.postMessage(script, "*");
     console.log("📤 Sent export script to Photopea.");
 
-    // Flipbook handling
     const receivedFrames = [];
-
     const win = window.open("", "_blank");
 
     window.addEventListener("message", function handler(event) {
@@ -62,10 +63,10 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
-          // Compose flipbook HTML
           const fps = 12;
           const duration = 1000 / fps;
 
+          // Delay building until all frames are ready
           let html = `
             <html><head><title>Flipbook Preview</title></head>
             <body style="margin:0; background:#111;">
@@ -92,6 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 };
 
                 const start = () => {
+                  if (!images[0]) return;
                   canvas.width = images[0].width;
                   canvas.height = images[0].height;
                   setInterval(() => {
@@ -111,6 +113,6 @@ document.addEventListener("DOMContentLoaded", () => {
           win.document.close();
         }
       }
-    }, { once: true });
+    });
   };
 });
