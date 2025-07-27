@@ -8,36 +8,42 @@ window.addEventListener("message", (event) => {
         var sel = original.activeLayer;
 
         if (!sel || sel.typename !== "LayerSet" || !sel.name.startsWith("anim_")) {
-          app.echoToOE("❌ Please select an 'anim_*' folder.");
+          app.echoToOE("❌ Please select a folder starting with 'anim_'.");
           return;
         }
 
         var temp = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
 
         for (var i = sel.layers.length - 1; i >= 0; i--) {
-          var layer = sel.layers[i];
-          if (layer.kind !== undefined && !layer.locked) {
+          var frame = sel.layers[i];
+
+          if (frame.kind !== undefined && !frame.locked) {
+            // Clear temp doc
             app.activeDocument = temp;
             while (temp.layers.length > 0) temp.layers[0].remove();
 
+            // Duplicate this frame into temp doc
             app.activeDocument = original;
-            original.activeLayer = layer;
-            layer.duplicate(temp, ElementPlacement.PLACEATBEGINNING);
+            original.activeLayer = frame;
+            frame.duplicate(temp, ElementPlacement.PLACEATBEGINNING);
 
+            // Flatten and send PNG
             app.activeDocument = temp;
-            var png = temp.saveToOE("png");    // ✅ Create PNG
-            app.sendToOE(png);                 // ✅ Send to plugin
+            var png = temp.saveToOE("png");
+            app.sendToOE(png);
           }
         }
 
+        // Cleanup
+        app.activeDocument = temp;
         temp.close(SaveOptions.DONOTSAVECHANGES);
-        app.echoToOE("done");                  // ✅ Let plugin know we're done
+        app.echoToOE("done");
       } catch (e) {
-        app.echoToOE("❌ ERROR: " + e.message);
+        app.echoToOE("❌ Export error: " + e.message);
       }
     })();
   `;
 
   parent.postMessage(script, "*");
-  console.log("📤 Sent export script to Photopea");
+  console.log("📤 Export script sent to Photopea");
 });
