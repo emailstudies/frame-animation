@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Preview</title>
+  <title>Flipbook Preview</title>
   <style>
     html, body {
       margin: 0;
@@ -23,19 +23,26 @@
     const canvas = document.getElementById("previewCanvas");
     const ctx = canvas.getContext("2d");
     const fps = 12;
-    let images = [], index = 0;
+    let images = [], frameIndex = 0;
 
     window.addEventListener("message", async (event) => {
-      if (!Array.isArray(event.data)) return;
+      if (!Array.isArray(event.data)) {
+        console.warn("⚠️ Received non-array in preview:", event.data);
+        return;
+      }
 
-      console.log("📨 Frames received in preview.html:", event.data.length);
+      console.log("📨 Received", event.data.length, "frames");
 
       const loadImage = (ab) => {
         return new Promise((resolve) => {
+          const blob = new Blob([ab], { type: "image/png" });
+          const url = URL.createObjectURL(blob);
           const img = new Image();
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-          img.src = "data:image/png;base64," + base64;
-          img.onload = () => resolve(img);
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(img);
+          };
+          img.src = url;
         });
       };
 
@@ -46,14 +53,14 @@
 
       setInterval(() => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#fff"; // optional white bg
+        ctx.fillStyle = "#fff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(images[index], 0, 0);
-        index = (index + 1) % images.length;
+        ctx.drawImage(images[frameIndex], 0, 0);
+        frameIndex = (frameIndex + 1) % images.length;
       }, 1000 / fps);
     });
 
-    console.log("⏳ Waiting for frames...");
+    console.log("⏳ preview.html loaded – waiting for frames...");
   </script>
 </body>
 </html>
