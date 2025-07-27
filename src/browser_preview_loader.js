@@ -1,10 +1,23 @@
+// browser_preview_loader.js
+// ✅ Handles Web Preview Selected logic safely
+
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("webPreviewSelectedBtn");
   const collectedFrames = [];
+  let exportStarted = false;
 
   btn.onclick = () => {
     collectedFrames.length = 0;
+    exportStarted = false;
     console.log("▶️ Started frame export");
+
+    // Open tab immediately to avoid popup block
+    const win = window.open();
+    win.document.write("<p>Preparing preview...</p>");
+    win.document.close();
+    window._previewTab = win;
+
+    // Tell Photopea to begin export
     parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
   };
 
@@ -15,30 +28,32 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("📩 Message from Photopea:", event.data);
 
       if (event.data === "done") {
+        if (!exportStarted) {
+          exportStarted = true; // First 'done' = init
+          return;
+        }
+
         if (collectedFrames.length === 0) {
           alert("❌ No frames received.");
           return;
         }
 
-        console.log("✅ Received all frames, opening preview...");
+        console.log("✅ Received all frames, opening inline preview");
         const flipbookHTML = generateInlineFlipbook(collectedFrames);
 
         const blob = new Blob([flipbookHTML], { type: "text/html" });
         const url = URL.createObjectURL(blob);
 
-        const win = window.open();
-        win.document.open();
-        win.document.write(flipbookHTML);
-        win.document.close();
+        window._previewTab.location.href = url;
+        window._previewTab.focus();
+      }
 
-        collectedFrames.length = 0;
-      } else if (event.data.startsWith("❌")) {
+      if (event.data.startsWith("❌")) {
         alert(event.data);
       }
     }
   });
 
-  // This must be defined globally or within same script
   function generateInlineFlipbook(arrayBuffers) {
     const frameData = arrayBuffers
       .map((ab, i) => {
