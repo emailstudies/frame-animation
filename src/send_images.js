@@ -1,4 +1,4 @@
-// Flipbook Preview Script (Updated: Clears temp doc per frame)
+// Flipbook Preview Script (with white background fix)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("previewSelectedBtn");
 
@@ -80,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ${collectedFrames
         .map((ab, i) => {
           const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-          return `frames[${i}] = "data:image/png;base64,${base64}";`;
+          return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
         })
         .join("\n")}
 
@@ -110,6 +110,8 @@ document.addEventListener("DOMContentLoaded", () => {
         canvas.height = images[0].height;
         setInterval(() => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#ffffff"; // ← White background before each frame
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(images[index], 0, 0);
           index = (index + 1) % images.length;
         }, 1000 / fps);
