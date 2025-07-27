@@ -1,80 +1,49 @@
-// browser_preview_loader.js
-document.addEventListener("DOMContentLoaded", () => {
-  const selectedBtn = document.getElementById("webPreviewSelectedBtn");
+// browser_preview_loader.js (Step 2: Parse received PSD and render frames)
 
-  let previewWindow = null;
-  let collectedFrames = [];
+import { parsePsdFrames } from "./psd_parser.js";
 
-  selectedBtn.onclick = () => {
-    console.clear();
-    console.log("▶️ Preview Selected button clicked");
+const collectedPSD = [];
 
-    // Check selected layer
-    const script = `
-      (function () {
-        try {
-          var doc = app.activeDocument;
-          var sel = doc.activeLayer;
-          if (!sel || !sel.layers || !sel.name.startsWith("anim_")) {
-            app.echoToOE("❌ Please select an anim_* folder");
-            return;
-          }
+window.addEventListener("message", async (event) => {
+  if (event.data instanceof ArrayBuffer) {
+    console.log("📥 Received PSD ArrayBuffer");
+    collectedPSD.push(event.data);
+  } else if (typeof event.data === "string") {
+    console.log("📩 Message:", event.data);
 
-          var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
+    if (event.data === "done") {
+      if (collectedPSD.length === 0) {
+        alert("❌ No PSD received.");
+        return;
+      }
 
-          for (var i = sel.layers.length - 1; i >= 0; i--) {
-            var layer = sel.layers[i];
-            if (layer.kind !== undefined && !layer.locked) {
-              app.activeDocument = tempDoc;
-              while (tempDoc.layers.length > 0) tempDoc.layers[0].remove();
+      try {
+        const psdBuffer = collectedPSD.pop();
+        const frames = await parsePsdFrames(psdBuffer);
 
-              app.activeDocument = doc;
-              doc.activeLayer = layer;
-              layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
-
-              app.activeDocument = tempDoc;
-              tempDoc.saveToOE("png");
-            }
-          }
-
-          app.activeDocument = tempDoc;
-          tempDoc.close(SaveOptions.DONOTSAVECHANGES);
-          app.echoToOE("done");
-        } catch (e) {
-          app.echoToOE("❌ ERROR: " + e.message);
-        }
-      })();
-    `;
-
-    collectedFrames = [];
-    previewWindow = window.open("preview.html", "_blank");
-    setTimeout(() => parent.postMessage(script, "*"), 500); // Allow new tab to load
-    console.log("📤 Export script sent to Photopea");
-  };
-
-  window.addEventListener("message", (event) => {
-    if (event.data instanceof ArrayBuffer) {
-      collectedFrames.push(event.data);
-    } else if (typeof event.data === "string") {
-      console.log("📩 From Photopea:", event.data);
-
-      if (event.data === "done") {
-        if (collectedFrames.length === 0) {
-          alert("❌ No frames received.");
+        if (!frames || frames.length === 0) {
+          alert("❌ No frames parsed from PSD.");
           return;
         }
 
-        if (previewWindow && previewWindow.postMessage) {
-          previewWindow.postMessage(collectedFrames, "*");
-          console.log(`✅ Sent ${collectedFrames.length} frames to preview window`);
-        } else {
-          alert("❌ Preview tab not ready.");
-        }
-
-        collectedFrames = [];
-      } else if (event.data.startsWith("❌")) {
-        alert(event.data);
+        console.log(`✅ Parsed ${frames.length} frames from PSD`);
+        openPreviewTab(frames);
+      } catch (err) {
+        console.error("❌ Failed to parse PSD:", err);
+        alert("❌ Failed to parse PSD");
       }
     }
-  });
+  }
 });
+
+function openPreviewTab(frames) {
+  const url = new URL("preview.html", window.location.origin);
+  const win = window.open(url.toString(), "_blank");
+
+  const waitForReady = setInterval(() => {
+    if (win && win.postMessage) {
+      win.postMessage({ frames }, "*");
+      clearInterval(waitForReady);
+    }
+  }, 500);
+}
