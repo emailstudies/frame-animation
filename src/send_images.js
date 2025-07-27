@@ -1,4 +1,4 @@
-// Flipbook Preview Script (Photopea plugin)
+// Flipbook Preview Script (Updated: Clears temp doc per frame)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("previewSelectedBtn");
 
@@ -17,19 +17,23 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
+          // Create temporary export doc
           var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
 
           for (var i = original.layers.length - 1; i >= 0; i--) {
             var layer = original.layers[i];
-            if (layer.kind !== undefined && !layer.locked && layer.visible) {
+            if (layer.kind !== undefined && !layer.locked) {
+              app.activeDocument = tempDoc;
+              for (var j = tempDoc.layers.length - 1; j >= 0; j--) {
+                tempDoc.layers[j].remove();
+              }
+
               app.activeDocument = original;
               original.activeLayer = layer;
               layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
 
               app.activeDocument = tempDoc;
-              tempDoc.flatten();
               tempDoc.saveToOE("png");
-              tempDoc.undo();
             }
           }
 
@@ -60,8 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        const html = `
-<!DOCTYPE html>
+        const flipbookHTML = `<!DOCTYPE html>
 <html>
   <head>
     <title>Flipbook Preview</title>
@@ -117,10 +120,13 @@ document.addEventListener("DOMContentLoaded", () => {
   </body>
 </html>`;
 
+        const blob = new Blob([flipbookHTML], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
         const win = window.open();
         win.document.open();
-        win.document.write(html);
+        win.document.write(flipbookHTML);
         win.document.close();
+
         collectedFrames.length = 0;
       } else if (event.data.startsWith("❌")) {
         alert(event.data);
