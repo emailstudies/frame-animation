@@ -1,53 +1,89 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Flipbook Preview</title>
   <style>
     html, body {
-      margin: 0; background: #111; overflow: hidden;
-      height: 100%; display: flex; justify-content: center; align-items: center;
+      margin: 0;
+      background: #111;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
-    canvas { image-rendering: pixelated; }
+    canvas {
+      image-rendering: pixelated;
+    }
+    #loading {
+      color: white;
+      font-family: sans-serif;
+      font-size: 18px;
+      position: absolute;
+    }
   </style>
 </head>
 <body>
   <canvas id="previewCanvas"></canvas>
+  <div id="loading">Preparing Preview...</div>
+
   <script>
     const canvas = document.getElementById("previewCanvas");
     const ctx = canvas.getContext("2d");
+    const loadingDiv = document.getElementById("loading");
+
+    const frames = [];
     const fps = 12;
     let index = 0;
 
-    window.onload = () => {
-      window.opener?.postMessage("READY_FOR_FRAMES", "*");
-      console.log("🟢 Preview ready");
-    };
+    // Wait for frames from parent
+    window.addEventListener("message", (event) => {
+      if (!(event.data instanceof ArrayBuffer)) return;
 
-    window.addEventListener("message", async (event) => {
-      if (!Array.isArray(event.data)) return;
+      const blob = new Blob([event.data], { type: "image/png" });
+      const url = URL.createObjectURL(blob);
+      frames.push(url);
 
-      console.log("📨 Received", event.data.length, "frames");
+      if (frames.length === 1) {
+        startPreload();
+      }
+    });
 
-      const loadImage = (ab) => new Promise((resolve) => {
-        const blob = new Blob([ab], { type: "image/png" });
-        const url = URL.createObjectURL(blob);
+    function startPreload() {
+      const images = frames.map(url => {
         const img = new Image();
-        img.onload = () => resolve(img);
         img.src = url;
+        return img;
       });
 
-      const images = await Promise.all(event.data.map(loadImage));
+      let loaded = 0;
+      images.forEach(img => {
+        img.onload = () => {
+          loaded++;
+          if (loaded === images.length) {
+            loadingDiv.style.display = "none";
+            startLoop(images);
+          }
+        };
+      });
+    }
+
+    function startLoop(images) {
       canvas.width = images[0].width;
       canvas.height = images[0].height;
 
       setInterval(() => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#fff";
+        ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(images[index], 0, 0);
         index = (index + 1) % images.length;
       }, 1000 / fps);
-    });
+    }
+
+    // Tell parent we are ready
+    window.opener?.postMessage("READY_FOR_FRAMES", "*");
   </script>
 </body>
 </html>
