@@ -2,99 +2,55 @@ document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("webPreviewSelectedBtn");
   const collectedFrames = [];
 
+  let previewTab = null;
+  let previewTabReady = false;
+
   btn.onclick = () => {
     collectedFrames.length = 0;
-    console.log("▶️ Started frame export");
-    parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
+    previewTabReady = false;
+
+    console.log("🪟 Opening preview tab...");
+    previewTab = window.open("preview.html", "_blank");
+
+    // Wait for preview tab to confirm it's ready
+    const waitForPreview = setInterval(() => {
+      if (previewTabReady) {
+        clearInterval(waitForPreview);
+        console.log("▶️ Starting frame export");
+        parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
+      }
+    }, 200);
   };
 
   window.addEventListener("message", (event) => {
-    if (event.data instanceof ArrayBuffer) {
-      collectedFrames.push(event.data);
-    } else if (typeof event.data === "string") {
-      console.log("📩 Message from Photopea:", event.data);
+    const data = event.data;
 
-      if (event.data === "done") {
+    if (typeof data === "string") {
+      if (data === "READY_FOR_FRAMES") {
+        console.log("✅ Preview tab ready");
+        previewTabReady = true;
+        return;
+      }
+
+      console.log("📩 Message from Photopea:", data);
+
+      if (data === "done") {
+        console.log(`📦 All frames received: ${collectedFrames.length} total`);
         if (collectedFrames.length === 0) {
           alert("❌ No frames received.");
           return;
         }
 
-        const flipbookHTML = generateInlineFlipbook(collectedFrames);
-        const blob = new Blob([flipbookHTML], { type: "text/html" });
-        const url = URL.createObjectURL(blob);
-
-        const win = window.open();
-        win.document.open();
-        win.document.write(flipbookHTML);
-        win.document.close();
-
-        collectedFrames.length = 0;
-      } else if (event.data.startsWith("❌")) {
-        alert(event.data);
+        previewTab.postMessage(collectedFrames, "*");
+        console.log("📤 Sent frames to preview tab");
       }
+
+      if (data.startsWith("❌") || data.startsWith("⏭️") || data.startsWith("✅") || data.startsWith("🔎")) {
+        console.log(data); // Extra debug logs from export script
+      }
+    } else if (data instanceof ArrayBuffer) {
+      collectedFrames.push(data);
+      console.log(`🖼️ Frame ${collectedFrames.length} received (${data.byteLength} bytes)`);
     }
   });
-
-  function generateInlineFlipbook(arrayBuffers) {
-    const frameData = arrayBuffers
-      .map((ab, i) => {
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-        return `frames[${i}] = "data:image/png;base64,${base64}";`;
-      })
-      .join("\n");
-
-    return `<!DOCTYPE html>
-<html>
-<head>
-  <title>Flipbook Preview</title>
-  <style>
-    html, body { margin: 0; background: #111; overflow: hidden; height: 100%; display: flex; justify-content: center; align-items: center; }
-    canvas { image-rendering: pixelated; }
-  </style>
-</head>
-<body>
-  <canvas id="previewCanvas"></canvas>
-  <script>
-    const frames = [];
-    ${frameData}
-
-    const images = frames.map(src => {
-      const img = new Image();
-      img.src = src;
-      return img;
-    });
-
-    const canvas = document.getElementById("previewCanvas");
-    const ctx = canvas.getContext("2d");
-    const fps = 12;
-    let index = 0;
-
-    const preload = () => {
-      let loaded = 0;
-      images.forEach(img => {
-        img.onload = () => {
-          loaded++;
-          if (loaded === images.length) startLoop();
-        };
-      });
-    };
-
-    const startLoop = () => {
-      canvas.width = images[0].width;
-      canvas.height = images[0].height;
-      setInterval(() => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(images[index], 0, 0);
-        index = (index + 1) % images.length;
-      }, 1000 / fps);
-    };
-
-    preload();
-  </script>
-</body>
-</html>`;
-  }
 });
