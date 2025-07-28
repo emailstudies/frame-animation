@@ -1,48 +1,59 @@
-window.addEventListener("message", async (event) => {
-  if (event.data !== "EXPORT_SELECTED_ANIM_FRAMES") return;
+window.addEventListener("message", (event) => {
+  if (event.data === "EXPORT_SELECTED_ANIM_FRAMES") {
+    const script = `
+      (function () {
+        try {
+          var doc = app.activeDocument;
+          if (!doc) {
+            app.echoToOE("❌ No document open.");
+            return;
+          }
 
-  try {
-    var doc = app.activeDocument;
-    if (!doc) {
-      app.echoToOE("❌ No active document.");
-      return;
-    }
+          var selectedLayer = doc.activeLayer;
+          if (!selectedLayer || !selectedLayer.parent || selectedLayer.parent === doc) {
+            app.echoToOE("❌ Please select a layer inside an anim_* folder.");
+            return;
+          }
 
-    var selected = doc.activeLayer;
-    if (!selected || !selected.parent || !selected.parent.name.startsWith("anim_")) {
-      app.echoToOE("❌ Please select a layer inside an anim_* folder.");
-      return;
-    }
+          var group = selectedLayer.parent;
+          if (!group.name.startsWith("anim_")) {
+            app.echoToOE("❌ Selection is not inside an anim_* folder.");
+            return;
+          }
 
-    var folder = selected.parent;
-    var temp = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
+          var frames = group.layers.slice().reverse(); // Frame 1 is at bottom
+          var originalVisibility = [];
 
-    // Loop through layers (reverse to preserve order)
-    for (var i = folder.layers.length - 1; i >= 0; i--) {
-      var layer = folder.layers[i];
+          for (var i = 0; i < frames.length; i++) {
+            var frame = frames[i];
 
-      if (layer.kind !== undefined && !layer.locked) {
-        app.activeDocument = temp;
+            // Store current visibility
+            originalVisibility[i] = frame.visible;
 
-        // Remove existing layers
-        while (temp.layers.length > 0) temp.layers[0].remove();
+            // Hide all frames
+            for (var j = 0; j < frames.length; j++) {
+              frames[j].visible = false;
+            }
 
-        // Duplicate the selected layer
-        app.activeDocument = doc;
-        doc.activeLayer = layer;
-        layer.duplicate(temp, ElementPlacement.PLACEATBEGINNING);
+            // Show only current frame
+            frame.visible = true;
 
-        // Save and send PNG to plugin
-        app.activeDocument = temp;
-        var png = temp.saveToOE("png");
-        app.sendToOE(png);
-      }
-    }
+            // Save and send PNG
+            var png = doc.saveToOE("png");
+            app.sendToOE(png);
+          }
 
-    temp.close(SaveOptions.DONOTSAVECHANGES);
-    app.echoToOE("done");
+          // Restore original visibility
+          for (var i = 0; i < frames.length; i++) {
+            frames[i].visible = originalVisibility[i];
+          }
 
-  } catch (e) {
-    app.echoToOE("❌ ERROR: " + e.message);
+          app.echoToOE("done");
+        } catch (e) {
+          app.echoToOE("❌ ERROR: " + e.message);
+        }
+      })();
+    `;
+    parent.postMessage(script, "*");
   }
 });
