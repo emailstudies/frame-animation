@@ -21,36 +21,29 @@ window.addEventListener("message", (event) => {
             return;
           }
 
-          var frames = group.layers.slice().reverse(); // Frame 1 at bottom
-          var original = app.activeDocument;
-          var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_preview", NewDocumentMode.RGB);
+          var frames = group.layers.slice().reverse(); // Frame 1 is bottom-most
+          var originalVis = [];
 
+          // Hide all frames first
           for (var i = 0; i < frames.length; i++) {
-            var layer = frames[i];
-            app.echoToOE("🔎 Frame " + (i + 1) + ": " + layer.name + " | visible=" + layer.visible + ", locked=" + layer.locked + ", kind=" + layer.kind);
-
-            // Skip if not a usable raster/text/smart object
-            if (layer.kind !== undefined && !layer.locked && layer.visible) {
-              // Clear temp doc
-              app.activeDocument = tempDoc;
-              while (tempDoc.layers.length > 0) tempDoc.layers[0].remove();
-
-              // Duplicate current frame layer
-              app.activeDocument = original;
-              original.activeLayer = layer;
-              layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
-
-              app.activeDocument = tempDoc;
-              var png = tempDoc.saveToOE("png");
-              app.sendToOE(png);
-              app.echoToOE("✅ Sent frame " + (i + 1));
-            } else {
-              app.echoToOE("⏭️ Skipped frame " + (i + 1));
-            }
+            originalVis[i] = frames[i].visible;
+            frames[i].visible = false;
           }
 
-          app.activeDocument = tempDoc;
-          tempDoc.close(SaveOptions.DONOTSAVECHANGES);
+          for (var i = 0; i < frames.length; i++) {
+            var frame = frames[i];
+            frame.visible = true;
+
+            var png = doc.saveToOE("png");
+            app.sendToOE(png);
+
+            frame.visible = false; // hide again for next
+          }
+
+          // Restore visibility
+          for (var i = 0; i < frames.length; i++) {
+            frames[i].visible = originalVis[i];
+          }
 
           app.echoToOE("done");
         } catch (e) {
