@@ -17,11 +17,11 @@ window.addEventListener("message", (event) => {
             group = selectedLayer.parent;
           }
 
-          // Else auto-pick first anim_* folder
+          // Else fallback to first anim_* folder
           if (!group) {
             for (var i = 0; i < doc.layers.length; i++) {
               var l = doc.layers[i];
-              if (l.typename === "LayerSet" && l.name.indexOf("anim_") === 0) {
+              if (l.typename === "LayerSet" && l.name.startsWith("anim_")) {
                 group = l;
                 break;
               }
@@ -37,27 +37,33 @@ window.addEventListener("message", (event) => {
           var originalVisibility = [];
 
           for (var i = 0; i < frames.length; i++) {
-            var frame = frames[i];
+            originalVisibility[i] = frames[i].visible;
+            frames[i].visible = false;
+          }
 
-            originalVisibility[i] = frame.visible;
-
-            // Hide all
-            for (var j = 0; j < frames.length; j++) {
-              frames[j].visible = false;
+          function exportNext(index) {
+            if (index >= frames.length) {
+              // Restore visibility
+              for (var i = 0; i < frames.length; i++) {
+                frames[i].visible = originalVisibility[i];
+              }
+              app.echoToOE("done");
+              return;
             }
 
-            frame.visible = true;
+            for (var i = 0; i < frames.length; i++) {
+              frames[i].visible = false;
+            }
 
+            frames[index].visible = true;
             var png = doc.saveToOE("png");
             app.sendToOE(png);
+
+            // Wait before next export (⚠️ Give browser time to process)
+            app.scheduleTask("exportNext(" + (index + 1) + ")", 200, false);
           }
 
-          // Restore visibility
-          for (var i = 0; i < frames.length; i++) {
-            frames[i].visible = originalVisibility[i];
-          }
-
-          app.echoToOE("done");
+          exportNext(0);
         } catch (e) {
           app.echoToOE("❌ ERROR: " + e.message);
         }
