@@ -1,3 +1,4 @@
+/*
 window.addEventListener("message", (event) => {
   if (event.data === "EXPORT_SELECTED_ANIM_FRAMES") {
     const script = `
@@ -72,3 +73,4 @@ window.addEventListener("message", (event) => {
     parent.postMessage(script, "*");
   }
 });
+*/
