@@ -1,4 +1,4 @@
-// ✅ browser_preview_loader.js (modular, stable, flipbook-ready)
+// ✅ browser_preview_loader.js (fixed, modular, preview-compatible)
 
 const webPreviewBtn = document.getElementById("webPreviewSelectedBtn");
 let collectedFrames = [];
@@ -17,6 +17,7 @@ window.addEventListener("message", (event) => {
   if (event.data === "READY_FOR_FRAMES") {
     console.log("✅ Preview tab ready");
     previewReady = true;
+
     console.log("▶️ Starting frame export");
     parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
     return;
@@ -35,10 +36,12 @@ window.addEventListener("message", (event) => {
         return;
       }
 
-      // Send to preview tab via postMessage
-      if (previewTab && previewTabReady) {
-        previewTab.postMessage({ type: "FRAMES", frames: collectedFrames }, "*");
-        console.log("🚀 Sent frames to preview tab");
+      // Send each frame individually as ArrayBuffer to preview tab
+      if (previewTab && previewReady) {
+        for (let frame of collectedFrames) {
+          previewTab.postMessage(frame, "*");
+        }
+        console.log("🚀 Sent all frames to preview tab");
       } else {
         alert("❌ Preview tab not ready to receive frames.");
       }
