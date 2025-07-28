@@ -1,5 +1,4 @@
-// ✅ browser_preview_loader.js (Single controller)
-
+// ✅ browser_preview_loader.js (patched, modular, no tempDoc)
 const webPreviewBtn = document.getElementById("webPreviewSelectedBtn");
 let collectedFrames = [];
 let previewTab = null;
@@ -17,8 +16,9 @@ window.addEventListener("message", (event) => {
   if (event.data === "READY_FOR_FRAMES") {
     console.log("✅ Preview tab ready");
     previewReady = true;
-
     console.log("▶️ Starting frame export");
+
+    // ⏳ Begin Photopea export inline
     const script = `
       (function () {
         try {
@@ -28,43 +28,42 @@ window.addEventListener("message", (event) => {
             return;
           }
 
-          var selectedLayer = doc.activeLayer;
-          if (!selectedLayer || !selectedLayer.parent || selectedLayer.parent === doc) {
-            app.echoToOE("❌ Please select a layer inside an anim_* folder.");
+          var targetGroup = null;
+          var active = doc.activeLayer;
+
+          if (active && active.typename === "LayerSet" && active.name.startsWith("anim_")) {
+            targetGroup = active;
+          } else if (active && active.parent && active.parent.typename === "LayerSet" && active.parent.name.startsWith("anim_")) {
+            targetGroup = active.parent;
+          }
+
+          if (!targetGroup) {
+            app.echoToOE("❌ Please select an anim_* folder or a layer inside it.");
             return;
           }
 
-          var group = selectedLayer.parent;
-          if (!group.name.startsWith("anim_")) {
-            app.echoToOE("❌ Selection is not inside an anim_* folder.");
-            return;
-          }
-
-          var frames = group.layers.slice().reverse(); // Frame 1 is at bottom
+          var layers = Array.from(targetGroup.layers).reverse();
           var originalVisibility = [];
 
-          for (var i = 0; i < frames.length; i++) {
-            var frame = frames[i];
+          for (var i = 0; i < layers.length; i++) {
+            var layer = layers[i];
+            originalVisibility[i] = layer.visible;
 
-            // Store current visibility
-            originalVisibility[i] = frame.visible;
-
-            // Hide all frames
-            for (var j = 0; j < frames.length; j++) {
-              frames[j].visible = false;
+            // Hide all
+            for (var j = 0; j < layers.length; j++) {
+              layers[j].visible = false;
             }
 
-            // Show only current frame
-            frame.visible = true;
+            // Show only this one
+            layer.visible = true;
 
-            // Export PNG
             var png = doc.saveToOE("png");
             app.sendToOE(png);
           }
 
           // Restore visibility
-          for (var i = 0; i < frames.length; i++) {
-            frames[i].visible = originalVisibility[i];
+          for (var i = 0; i < layers.length; i++) {
+            layers[i].visible = originalVisibility[i];
           }
 
           app.echoToOE("done");
@@ -73,14 +72,18 @@ window.addEventListener("message", (event) => {
         }
       })();
     `;
+
     parent.postMessage(script, "*");
     return;
   }
 
-  // Receive PNGs
+  // 🖼️ Received PNG frame
   if (event.data instanceof ArrayBuffer) {
     collectedFrames.push(event.data);
-  } else if (typeof event.data === "string") {
+  } 
+  
+  // 📩 Message from Photopea
+  else if (typeof event.data === "string") {
     console.log("📩 Message from Photopea:", event.data);
 
     if (event.data === "done") {
@@ -92,13 +95,12 @@ window.addEventListener("message", (event) => {
       }
 
       if (previewTab && previewReady) {
-        for (let i = 0; i < collectedFrames.length; i++) {
-          previewTab.postMessage(collectedFrames[i], "*");
-        }
+        previewTab.postMessage({ type: "FRAMES", frames: collectedFrames }, "*");
         console.log("🚀 Sent frames to preview tab");
       } else {
         alert("❌ Preview tab not ready to receive frames.");
       }
+
     } else if (event.data.startsWith("❌")) {
       alert(event.data);
     }
