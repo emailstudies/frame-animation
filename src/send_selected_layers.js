@@ -21,34 +21,33 @@ window.addEventListener("message", (event) => {
             return;
           }
 
-          var frames = group.layers.slice().reverse(); // Frame 1 is at bottom
+          var frames = group.layers.slice().reverse(); // Frame 1 is bottom-most
           var originalVisibility = [];
 
           for (var i = 0; i < frames.length; i++) {
             var frame = frames[i];
 
-            // Store current visibility
             originalVisibility[i] = frame.visible;
 
-            // Hide all frames
+            // Hide all
             for (var j = 0; j < frames.length; j++) {
               frames[j].visible = false;
             }
 
-            // Show only current frame
+            // Show only one frame
             frame.visible = true;
 
-            // Save and send PNG
+            // Export
             var png = doc.saveToOE("png");
-            app.sendToOE(png);
+            app.sendToOE(png); // ✅ actually sends it
           }
 
-          // Restore original visibility
+          // Restore visibility
           for (var i = 0; i < frames.length; i++) {
             frames[i].visible = originalVisibility[i];
           }
 
-          app.echoToOE("done");
+          app.echoToOE("done"); // Only sent ONCE
         } catch (e) {
           app.echoToOE("❌ ERROR: " + e.message);
         }
