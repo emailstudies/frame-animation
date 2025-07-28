@@ -3,34 +3,37 @@ window.addEventListener("message", (event) => {
     const script = `
       (function () {
         try {
-          var doc = app.activeDocument;
-          if (!doc) return app.echoToOE("❌ No document open.");
-
-          var selected = doc.activeLayer;
-          if (!selected || !selected.parent || selected.parent === doc)
-            return app.echoToOE("❌ Please select a layer inside an anim_* folder.");
-
-          var group = selected.parent;
-          if (!group.name.startsWith("anim_"))
-            return app.echoToOE("❌ Selection not in anim_* folder.");
-
-          var frames = group.layers.slice().reverse();
-          var originalVis = frames.map(f => f.visible);
-
-          for (var i = 0; i < frames.length; i++) {
-            // Hide all
-            for (var j = 0; j < frames.length; j++) frames[j].visible = false;
-            // Show one
-            frames[i].visible = true;
-
-            // Export frame
-            var png = doc.saveToOE("png");
-            app.sendToOE(png);
+          var original = app.activeDocument;
+          if (!original || original.layers.length === 0) {
+            app.echoToOE("❌ No valid layers found.");
+            return;
           }
 
-          // Restore visibility
-          for (var i = 0; i < frames.length; i++) frames[i].visible = originalVis[i];
+          // Create temporary doc only once
+          var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
 
+          for (var i = original.layers.length - 1; i >= 0; i--) {
+            var layer = original.layers[i];
+            if (layer.kind !== undefined && !layer.locked) {
+              // Clear temp doc
+              app.activeDocument = tempDoc;
+              while (tempDoc.layers.length > 0) tempDoc.layers[0].remove();
+
+              // Copy from original
+              app.activeDocument = original;
+              original.activeLayer = layer;
+              layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
+
+              // Export
+              app.activeDocument = tempDoc;
+              var png = tempDoc.saveToOE("png");
+              app.sendToOE(png);
+            }
+          }
+
+          // Close temp doc
+          app.activeDocument = tempDoc;
+          tempDoc.close(SaveOptions.DONOTSAVECHANGES);
           app.echoToOE("done");
         } catch (e) {
           app.echoToOE("❌ ERROR: " + e.message);
