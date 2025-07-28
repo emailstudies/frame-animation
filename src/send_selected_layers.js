@@ -4,51 +4,52 @@ window.addEventListener("message", (event) => {
       (function () {
         try {
           var doc = app.activeDocument;
-          if (!doc) {
+          if (!doc || doc.layers.length === 0) {
             app.echoToOE("❌ No document open.");
             return;
           }
 
-          var selectedLayer = doc.activeLayer;
-          if (!selectedLayer || !selectedLayer.parent || selectedLayer.parent === doc) {
-            app.echoToOE("❌ Please select a layer inside an anim_* folder.");
+          var animGroups = [];
+          for (var i = 0; i < doc.layers.length; i++) {
+            var group = doc.layers[i];
+            if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
+              animGroups.push(group);
+            }
+          }
+
+          if (animGroups.length === 0) {
+            app.echoToOE("❌ No anim_* folders found.");
             return;
           }
 
-          var group = selectedLayer.parent;
-          app.echoToOE("ℹ️ Selected group: " + group.name);
+          for (var g = 0; g < animGroups.length; g++) {
+            var group = animGroups[g];
+            var layers = group.layers.slice().reverse(); // Frame 1 at bottom
+            var visibilityBackup = [];
 
-          if (!group.name.startsWith("anim_")) {
-            app.echoToOE("❌ Selection is not inside an anim_* folder.");
-            return;
+            for (var i = 0; i < layers.length; i++) {
+              // Backup visibility
+              visibilityBackup[i] = layers[i].visible;
+
+              // Hide all layers
+              for (var j = 0; j < layers.length; j++) {
+                layers[j].visible = false;
+              }
+
+              // Show only current frame
+              layers[i].visible = true;
+
+              // Export current view
+              var png = doc.saveToOE("png");
+              app.sendToOE(png);
+            }
+
+            // Restore visibility
+            for (var i = 0; i < layers.length; i++) {
+              layers[i].visible = visibilityBackup[i];
+            }
           }
 
-          var frames = group.layers.slice().reverse();
-          app.echoToOE("📦 Frame count: " + frames.length);
-
-          var originalVis = [];
-
-          for (var i = 0; i < frames.length; i++) {
-            originalVis[i] = frames[i].visible;
-            frames[i].visible = false;
-          }
-
-          for (var i = 0; i < frames.length; i++) {
-            var frame = frames[i];
-            frame.visible = true;
-            app.echoToOE("📤 Exporting frame " + (i + 1) + ": " + frame.name);
-
-            var png = doc.saveToOE("png");
-            app.sendToOE(png);
-
-            frame.visible = false;
-          }
-
-          for (var i = 0; i < frames.length; i++) {
-            frames[i].visible = originalVis[i];
-          }
-
-          app.echoToOE("✅ Frame export complete.");
           app.echoToOE("done");
         } catch (e) {
           app.echoToOE("❌ ERROR: " + e.message);
