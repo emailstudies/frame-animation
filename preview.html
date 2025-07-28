@@ -4,13 +4,8 @@
   <title>Flipbook Preview</title>
   <style>
     html, body {
-      margin: 0;
-      background: #111;
-      overflow: hidden;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      margin: 0; background: #111; overflow: hidden;
+      height: 100%; display: flex; justify-content: center; align-items: center;
     }
     canvas { image-rendering: pixelated; }
   </style>
@@ -21,7 +16,7 @@
     const canvas = document.getElementById("previewCanvas");
     const ctx = canvas.getContext("2d");
     const fps = 12;
-    let images = [], index = 0;
+    let index = 0;
 
     window.onload = () => {
       window.opener?.postMessage("READY_FOR_FRAMES", "*");
@@ -30,17 +25,18 @@
 
     window.addEventListener("message", async (event) => {
       if (!Array.isArray(event.data)) return;
+
       console.log("📨 Received", event.data.length, "frames");
 
       const loadImage = (ab) => new Promise((resolve) => {
+        const blob = new Blob([ab], { type: "image/png" });
+        const url = URL.createObjectURL(blob);
         const img = new Image();
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-        img.src = "data:image/png;base64," + base64;
         img.onload = () => resolve(img);
+        img.src = url;
       });
 
-      images = await Promise.all(event.data.map(loadImage));
-
+      const images = await Promise.all(event.data.map(loadImage));
       canvas.width = images[0].width;
       canvas.height = images[0].height;
 
