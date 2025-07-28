@@ -1,4 +1,4 @@
-// ✅ browser_preview_loader.js (fixed, modular, preview-compatible)
+// ✅ browser_preview_loader.js (Single controller)
 
 const webPreviewBtn = document.getElementById("webPreviewSelectedBtn");
 let collectedFrames = [];
@@ -19,10 +19,65 @@ window.addEventListener("message", (event) => {
     previewReady = true;
 
     console.log("▶️ Starting frame export");
-    parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
+    const script = `
+      (function () {
+        try {
+          var doc = app.activeDocument;
+          if (!doc) {
+            app.echoToOE("❌ No document open.");
+            return;
+          }
+
+          var selectedLayer = doc.activeLayer;
+          if (!selectedLayer || !selectedLayer.parent || selectedLayer.parent === doc) {
+            app.echoToOE("❌ Please select a layer inside an anim_* folder.");
+            return;
+          }
+
+          var group = selectedLayer.parent;
+          if (!group.name.startsWith("anim_")) {
+            app.echoToOE("❌ Selection is not inside an anim_* folder.");
+            return;
+          }
+
+          var frames = group.layers.slice().reverse(); // Frame 1 is at bottom
+          var originalVisibility = [];
+
+          for (var i = 0; i < frames.length; i++) {
+            var frame = frames[i];
+
+            // Store current visibility
+            originalVisibility[i] = frame.visible;
+
+            // Hide all frames
+            for (var j = 0; j < frames.length; j++) {
+              frames[j].visible = false;
+            }
+
+            // Show only current frame
+            frame.visible = true;
+
+            // Export PNG
+            var png = doc.saveToOE("png");
+            app.sendToOE(png);
+          }
+
+          // Restore visibility
+          for (var i = 0; i < frames.length; i++) {
+            frames[i].visible = originalVisibility[i];
+          }
+
+          app.echoToOE("done");
+        } catch (e) {
+          app.echoToOE("❌ ERROR: " + e.message);
+        }
+      })();
+    `;
+    parent.postMessage(script, "*");
     return;
   }
 
+  // Receive PNGs
   if (event.data instanceof ArrayBuffer) {
     collectedFrames.push(event.data);
   } else if (typeof event.data === "string") {
@@ -36,12 +91,11 @@ window.addEventListener("message", (event) => {
         return;
       }
 
-      // Send each frame individually as ArrayBuffer to preview tab
       if (previewTab && previewReady) {
-        for (let frame of collectedFrames) {
-          previewTab.postMessage(frame, "*");
+        for (let i = 0; i < collectedFrames.length; i++) {
+          previewTab.postMessage(collectedFrames[i], "*");
         }
-        console.log("🚀 Sent all frames to preview tab");
+        console.log("🚀 Sent frames to preview tab");
       } else {
         alert("❌ Preview tab not ready to receive frames.");
       }
