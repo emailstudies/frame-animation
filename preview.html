@@ -37,21 +37,15 @@
     const fps = 12;
     let index = 0;
 
-    // Wait for frames from parent
     window.addEventListener("message", (event) => {
-      if (!(event.data instanceof ArrayBuffer)) return;
+      if (!Array.isArray(event.data)) return;
 
-      const blob = new Blob([event.data], { type: "image/png" });
-      const url = URL.createObjectURL(blob);
-      frames.push(url);
+      const frameURLs = event.data.map((ab) => {
+        const blob = new Blob([ab], { type: "image/png" });
+        return URL.createObjectURL(blob);
+      });
 
-      if (frames.length === 1) {
-        startPreload();
-      }
-    });
-
-    function startPreload() {
-      const images = frames.map(url => {
+      const images = frameURLs.map((url) => {
         const img = new Image();
         img.src = url;
         return img;
@@ -67,7 +61,7 @@
           }
         };
       });
-    }
+    });
 
     function startLoop(images) {
       canvas.width = images[0].width;
@@ -82,7 +76,7 @@
       }, 1000 / fps);
     }
 
-    // Tell parent we are ready
+    // Tell parent tab we’re ready
     window.opener?.postMessage("READY_FOR_FRAMES", "*");
   </script>
 </body>
