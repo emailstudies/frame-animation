@@ -1,108 +1,92 @@
-// ✅ browser_preview_loader.js (patched, modular, no tempDoc)
-const webPreviewBtn = document.getElementById("webPreviewSelectedBtn");
-let collectedFrames = [];
-let previewTab = null;
-let previewReady = false;
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("webPreviewSelectedBtn");
+  const collectedFrames = [];
+  let previewTab = null;
 
-webPreviewBtn.onclick = () => {
-  collectedFrames = [];
-  previewReady = false;
+  btn.onclick = () => {
+    collectedFrames.length = 0;
+    previewTab = window.open("preview.html", "_blank");
 
-  console.log("🪟 Opening preview tab...");
-  previewTab = window.open("preview.html", "_blank");
-};
-
-window.addEventListener("message", (event) => {
-  if (event.data === "READY_FOR_FRAMES") {
-    console.log("✅ Preview tab ready");
-    previewReady = true;
-    console.log("▶️ Starting frame export");
-
-    // ⏳ Begin Photopea export inline
-    const script = `
-      (function () {
-        try {
-          var doc = app.activeDocument;
-          if (!doc) {
-            app.echoToOE("❌ No document open.");
-            return;
-          }
-
-          var targetGroup = null;
-          var active = doc.activeLayer;
-
-          if (active && active.typename === "LayerSet" && active.name.startsWith("anim_")) {
-            targetGroup = active;
-          } else if (active && active.parent && active.parent.typename === "LayerSet" && active.parent.name.startsWith("anim_")) {
-            targetGroup = active.parent;
-          }
-
-          if (!targetGroup) {
-            app.echoToOE("❌ Please select an anim_* folder or a layer inside it.");
-            return;
-          }
-
-          var layers = Array.from(targetGroup.layers).reverse();
-          var originalVisibility = [];
-
-          for (var i = 0; i < layers.length; i++) {
-            var layer = layers[i];
-            originalVisibility[i] = layer.visible;
-
-            // Hide all
-            for (var j = 0; j < layers.length; j++) {
-              layers[j].visible = false;
+    setTimeout(() => {
+      const exportScript = `
+        (function () {
+          try {
+            var doc = app.activeDocument;
+            if (!doc || doc.layers.length === 0) {
+              app.echoToOE("❌ No document or layers found.");
+              return;
             }
 
-            // Show only this one
-            layer.visible = true;
+            var selectedGroup = null;
+            for (var i = 0; i < doc.layers.length; i++) {
+              var layer = doc.layers[i];
+              if (layer.typename === "LayerSet" && layer.selected && layer.name.indexOf("anim_") === 0) {
+                selectedGroup = layer;
+                break;
+              }
+            }
 
-            var png = doc.saveToOE("png");
-            app.sendToOE(png);
+            if (!selectedGroup) {
+              app.echoToOE("❌ Selection is not inside an anim_* folder.");
+              return;
+            }
+
+            // Create temp doc
+            var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
+
+            for (var i = selectedGroup.layers.length - 1; i >= 0; i--) {
+              var frameLayer = selectedGroup.layers[i];
+              if (!frameLayer.locked && frameLayer.kind !== undefined) {
+                app.activeDocument = tempDoc;
+
+                // Clear temp doc before adding frame
+                for (var j = tempDoc.layers.length - 1; j >= 0; j--) {
+                  tempDoc.layers[j].remove();
+                }
+
+                app.activeDocument = doc;
+                doc.activeLayer = frameLayer;
+                frameLayer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
+
+                app.activeDocument = tempDoc;
+                tempDoc.saveToOE("png");
+              }
+            }
+
+            app.activeDocument = tempDoc;
+            tempDoc.close(SaveOptions.DONOTSAVECHANGES);
+            app.echoToOE("done");
+          } catch (e) {
+            app.echoToOE("❌ ERROR: " + e.message);
           }
+        })();
+      `;
 
-          // Restore visibility
-          for (var i = 0; i < layers.length; i++) {
-            layers[i].visible = originalVisibility[i];
-          }
+      parent.postMessage(exportScript, "*");
+      console.log("▶️ Started frame export from selected anim_* folder");
+    }, 300);
+  };
 
-          app.echoToOE("done");
-        } catch (e) {
-          app.echoToOE("❌ ERROR: " + e.message);
+  window.addEventListener("message", (event) => {
+    if (event.data instanceof ArrayBuffer) {
+      collectedFrames.push(event.data);
+      console.log("🧩 Frame received:", collectedFrames.length);
+    } else if (typeof event.data === "string") {
+      console.log("📩 Message from Photopea:", event.data);
+
+      if (event.data === "done") {
+        if (!collectedFrames.length) {
+          alert("❌ No frames received");
+          return;
         }
-      })();
-    `;
 
-    parent.postMessage(script, "*");
-    return;
-  }
-
-  // 🖼️ Received PNG frame
-  if (event.data instanceof ArrayBuffer) {
-    collectedFrames.push(event.data);
-  } 
-  
-  // 📩 Message from Photopea
-  else if (typeof event.data === "string") {
-    console.log("📩 Message from Photopea:", event.data);
-
-    if (event.data === "done") {
-      console.log("📦 All frames received:", collectedFrames.length, "total");
-
-      if (collectedFrames.length === 0) {
-        alert("❌ No frames received.");
-        return;
+        setTimeout(() => {
+          previewTab?.postMessage(collectedFrames, "*");
+          console.log("📨 Sent frames to preview tab");
+        }, 500);
+      } else if (event.data.startsWith("❌")) {
+        alert(event.data);
       }
-
-      if (previewTab && previewReady) {
-        previewTab.postMessage({ type: "FRAMES", frames: collectedFrames }, "*");
-        console.log("🚀 Sent frames to preview tab");
-      } else {
-        alert("❌ Preview tab not ready to receive frames.");
-      }
-
-    } else if (event.data.startsWith("❌")) {
-      alert(event.data);
     }
-  }
+  });
 });
