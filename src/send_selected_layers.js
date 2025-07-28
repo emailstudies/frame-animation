@@ -16,15 +16,18 @@ window.addEventListener("message", (event) => {
           }
 
           var group = selectedLayer.parent;
+          app.echoToOE("ℹ️ Selected group: " + group.name);
+
           if (!group.name.startsWith("anim_")) {
             app.echoToOE("❌ Selection is not inside an anim_* folder.");
             return;
           }
 
-          var frames = group.layers.slice().reverse(); // Frame 1 is bottom-most
+          var frames = group.layers.slice().reverse();
+          app.echoToOE("📦 Frame count: " + frames.length);
+
           var originalVis = [];
 
-          // Hide all frames first
           for (var i = 0; i < frames.length; i++) {
             originalVis[i] = frames[i].visible;
             frames[i].visible = false;
@@ -33,18 +36,19 @@ window.addEventListener("message", (event) => {
           for (var i = 0; i < frames.length; i++) {
             var frame = frames[i];
             frame.visible = true;
+            app.echoToOE("📤 Exporting frame " + (i + 1) + ": " + frame.name);
 
             var png = doc.saveToOE("png");
             app.sendToOE(png);
 
-            frame.visible = false; // hide again for next
+            frame.visible = false;
           }
 
-          // Restore visibility
           for (var i = 0; i < frames.length; i++) {
             frames[i].visible = originalVis[i];
           }
 
+          app.echoToOE("✅ Frame export complete.");
           app.echoToOE("done");
         } catch (e) {
           app.echoToOE("❌ ERROR: " + e.message);
