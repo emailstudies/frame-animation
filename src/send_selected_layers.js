@@ -1,55 +1,63 @@
-// send_selected_layers.js (patched for sequential frame export)
 window.addEventListener("message", (event) => {
   if (event.data === "EXPORT_SELECTED_ANIM_FRAMES") {
     const script = `
       (function () {
         try {
           var doc = app.activeDocument;
-          if (!doc) return app.echoToOE("❌ No document open.");
+          if (!doc) {
+            app.echoToOE("❌ No document open.");
+            return;
+          }
 
+          var group = null;
           var selectedLayer = doc.activeLayer;
-          if (!selectedLayer || !selectedLayer.parent || selectedLayer.parent === doc) {
-            return app.echoToOE("❌ Please select a layer inside an anim_* folder.");
+
+          // Prefer selected layer's parent
+          if (selectedLayer && selectedLayer.parent && selectedLayer.parent !== doc && selectedLayer.parent.name.startsWith("anim_")) {
+            group = selectedLayer.parent;
           }
 
-          var group = selectedLayer.parent;
-          if (!group.name.startsWith("anim_")) {
-            return app.echoToOE("❌ Selection is not inside an anim_* folder.");
+          // Else auto-pick first anim_* folder
+          if (!group) {
+            for (var i = 0; i < doc.layers.length; i++) {
+              var l = doc.layers[i];
+              if (l.typename === "LayerSet" && l.name.indexOf("anim_") === 0) {
+                group = l;
+                break;
+              }
+            }
           }
 
-          var frames = group.layers.slice().reverse();
-          var frameIndex = 0;
+          if (!group) {
+            app.echoToOE("❌ No anim_* folder found.");
+            return;
+          }
+
+          var frames = group.layers.slice().reverse(); // Frame 1 = bottom
           var originalVisibility = [];
 
           for (var i = 0; i < frames.length; i++) {
-            originalVisibility[i] = frames[i].visible;
-            frames[i].visible = false;
-          }
+            var frame = frames[i];
 
-          function sendNextFrame() {
-            if (frameIndex >= frames.length) {
-              // Restore visibility
-              for (var i = 0; i < frames.length; i++) {
-                frames[i].visible = originalVisibility[i];
-              }
-              return app.echoToOE("done");
+            originalVisibility[i] = frame.visible;
+
+            // Hide all
+            for (var j = 0; j < frames.length; j++) {
+              frames[j].visible = false;
             }
 
-            var current = frames[frameIndex];
-            current.visible = true;
+            frame.visible = true;
+
             var png = doc.saveToOE("png");
             app.sendToOE(png);
-            current.visible = false;
-            frameIndex++;
           }
 
-          app.listenToOE(function(msg) {
-            if (msg === "READY_FOR_NEXT_FRAME") {
-              sendNextFrame();
-            }
-          });
+          // Restore visibility
+          for (var i = 0; i < frames.length; i++) {
+            frames[i].visible = originalVisibility[i];
+          }
 
-          sendNextFrame();
+          app.echoToOE("done");
         } catch (e) {
           app.echoToOE("❌ ERROR: " + e.message);
         }
