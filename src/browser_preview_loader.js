@@ -1,49 +1,57 @@
-// browser_preview_loader.js
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("webPreviewSelectedBtn");
+  const collectedFrames = [];
+  let previewWin = null;
+  let previewReady = false;
 
-let previewWindow = null;
-let frames = [];
+  btn.onclick = () => {
+    collectedFrames.length = 0;
+    previewReady = false;
 
-// Handle the UI button click
-const btn = document.getElementById("webPreviewSelectedBtn");
-btn.onclick = () => {
-  frames = []; // reset
-  console.log("🪟 Opening preview tab...");
+    // 🪟 Open the preview tab
+    console.log("🪟 Opening preview tab...");
+    previewWin = window.open("preview.html");
 
-  previewWindow = window.open("preview.html", "_blank");
-};
+    // Wait for "READY_FOR_FRAMES" before triggering export
+  };
 
-// Listen for messages from Photopea and the preview tab
-window.addEventListener("message", async (event) => {
-  const msg = event.data;
+  window.addEventListener("message", (event) => {
+    if (event.data === "READY_FOR_FRAMES") {
+      console.log("✅ Preview tab ready");
+      previewReady = true;
 
-  // From preview tab
-  if (msg === "READY_FOR_FRAMES") {
-    console.log("✅ Preview tab ready");
-    console.log("▶️ Starting frame export");
-    parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
-  }
-
-  // PNG frame from Photopea
-  else if (msg instanceof ArrayBuffer) {
-    frames.push(msg);
-    parent.postMessage("READY_FOR_NEXT_FRAME", "*");
-  }
-
-  // Final message from Photopea
-  else if (msg === "done") {
-    console.log("📦 All frames received:", frames.length, "total");
-
-    if (previewWindow) {
-      previewWindow.postMessage(frames, "*");
-    } else {
-      alert("❌ Preview window not found.");
+      // Trigger export now that preview is ready
+      console.log("▶️ Starting frame export");
+      parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
     }
-  }
 
-  // Error string
-  else if (typeof msg === "string" && msg.startsWith("❌")) {
-    alert(msg);
-  } else {
-    console.log("📩 Message from Photopea:", msg);
-  }
+    // Handle incoming frames from Photopea
+    else if (event.data instanceof ArrayBuffer) {
+      collectedFrames.push(event.data);
+    }
+
+    // Handle end-of-export signal
+    else if (typeof event.data === "string") {
+      console.log("📩 Message from Photopea:", event.data);
+
+      if (event.data === "done") {
+        console.log("📦 All frames received:", collectedFrames.length, "total");
+
+        if (collectedFrames.length === 0) {
+          alert("❌ No frames received.");
+          return;
+        }
+
+        // Send all frames to preview tab
+        collectedFrames.forEach((ab) => {
+          previewWin.postMessage(ab, "*");
+        });
+
+        // Finally, notify preview to start playback
+        previewWin.postMessage("done", "*");
+      } else if (event.data.startsWith("❌")) {
+        alert(event.data);
+      }
+    }
+  });
 });
