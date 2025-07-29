@@ -1,4 +1,3 @@
-// Flipbook Preview Script (Updated: Clears temp doc per frame)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("previewSelectedBtn");
 
@@ -8,63 +7,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btn.onclick = () => {
-    const script = `
-      (function () {
-        try {
-          var original = app.activeDocument;
-          if (!original || original.layers.length === 0) {
-            app.echoToOE("❌ No valid layers found.");
+    const collectedFrames = [];
+
+    const handleMessage = (event) => {
+      // Only accept messages from Photopea, with expected types
+      if (event.data instanceof ArrayBuffer) {
+        collectedFrames.push(event.data);
+      } else if (typeof event.data === "string") {
+        console.log("📩 Message from Photopea:", event.data);
+
+        if (event.data === "done") {
+          window.removeEventListener("message", handleMessage); // ✅ Clean up listener
+
+          if (collectedFrames.length === 0) {
+            alert("❌ No frames received.");
             return;
           }
 
-          // Create temporary export doc
-          var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
-
-          for (var i = original.layers.length - 1; i >= 0; i--) {
-            var layer = original.layers[i];
-            if (layer.kind !== undefined && !layer.locked) {
-              app.activeDocument = tempDoc;
-              for (var j = tempDoc.layers.length - 1; j >= 0; j--) {
-                tempDoc.layers[j].remove();
-              }
-
-              app.activeDocument = original;
-              original.activeLayer = layer;
-              layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
-
-              app.activeDocument = tempDoc;
-              tempDoc.saveToOE("png");
-            }
-          }
-
-          app.activeDocument = tempDoc;
-          tempDoc.close(SaveOptions.DONOTSAVECHANGES);
-          app.echoToOE("done");
-        } catch (e) {
-          app.echoToOE("❌ ERROR: " + e.message);
-        }
-      })();
-    `;
-
-    parent.postMessage(script, "*");
-    console.log("📤 Sent export script to Photopea");
-  };
-
-  const collectedFrames = [];
-
-  window.addEventListener("message", (event) => {
-    if (event.data instanceof ArrayBuffer) {
-      collectedFrames.push(event.data);
-    } else if (typeof event.data === "string") {
-      console.log("📩 Message from Photopea:", event.data);
-
-      if (event.data === "done") {
-        if (collectedFrames.length === 0) {
-          alert("❌ No frames received.");
-          return;
-        }
-
-        const flipbookHTML = `<!DOCTYPE html>
+          const flipbookHTML = `<!DOCTYPE html>
 <html>
   <head>
     <title>Flipbook Preview</title>
@@ -105,48 +65,77 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       };
 
-     /* const startLoop = () => {
+      const startLoop = () => {
         canvas.width = images[0].width;
         canvas.height = images[0].height;
         setInterval(() => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#ffffff"; // white background
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(images[index], 0, 0);
           index = (index + 1) % images.length;
         }, 1000 / fps);
-      }; */
-
-      const startLoop = () => {
-      canvas.width = images[0].width;
-      canvas.height = images[0].height;
-      setInterval(() => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // 🔧 White background before drawing each frame
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.drawImage(images[index], 0, 0);
-        index = (index + 1) % images.length;
-  }, 1000 / fps);
-};
-
+      };
 
       preload();
     </script>
   </body>
 </html>`;
 
-        const blob = new Blob([flipbookHTML], { type: "text/html" });
-        const url = URL.createObjectURL(blob);
-        const win = window.open();
-        win.document.open();
-        win.document.write(flipbookHTML);
-        win.document.close();
+          const blob = new Blob([flipbookHTML], { type: "text/html" });
+          const url = URL.createObjectURL(blob);
+          const win = window.open();
+          win.document.open();
+          win.document.write(flipbookHTML);
+          win.document.close();
 
-        collectedFrames.length = 0;
-      } else if (event.data.startsWith("❌")) {
-        alert(event.data);
+          collectedFrames.length = 0;
+        } else if (event.data.startsWith("❌")) {
+          window.removeEventListener("message", handleMessage);
+          alert(event.data);
+        }
       }
-    }
-  });
+    };
+
+    // ✅ Add listener ONLY when needed
+    window.addEventListener("message", handleMessage);
+
+    const script = `
+      (function () {
+        try {
+          var original = app.activeDocument;
+          if (!original || original.layers.length === 0) {
+            app.echoToOE("❌ No valid layers found.");
+            return;
+          }
+
+          var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
+
+          for (var i = original.layers.length - 1; i >= 0; i--) {
+            var layer = original.layers[i];
+            if (layer.kind !== undefined && !layer.locked) {
+              app.activeDocument = tempDoc;
+              while (tempDoc.layers.length > 0) tempDoc.layers[0].remove();
+
+              app.activeDocument = original;
+              original.activeLayer = layer;
+              layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
+
+              app.activeDocument = tempDoc;
+              tempDoc.saveToOE("png");
+            }
+          }
+
+          app.activeDocument = tempDoc;
+          tempDoc.close(SaveOptions.DONOTSAVECHANGES);
+          app.echoToOE("done");
+        } catch (e) {
+          app.echoToOE("❌ ERROR: " + e.message);
+        }
+      })();
+    `;
+
+    parent.postMessage(script, "*");
+    console.log("📤 Sent export script to Photopea");
+  };
 });
