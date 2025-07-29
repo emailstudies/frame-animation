@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+/*document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("webPreviewSelectedBtn");
 
   if (!btn) {
@@ -56,3 +56,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+
+*/
