@@ -1,4 +1,4 @@
-// Flipbook Preview Script (Updated: Only exports first anim_ folder)
+// Flipbook Preview Script (Updated: Clears temp doc per frame)
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("previewSelectedBtn");
 
@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btn.onclick = () => {
-    const script = `
+    const script = 
       (function () {
         try {
           var original = app.activeDocument;
@@ -17,32 +17,11 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
-          // 🔍 Find the first "anim_" folder
-          var animFolder = null;
-          for (var i = 0; i < original.layers.length; i++) {
-            var layer = original.layers[i];
-            if (layer.typename === "LayerSet" && layer.name.indexOf("anim_") === 0) {
-              animFolder = layer;
-              break;
-            }
-          }
-
-          if (!animFolder) {
-            app.echoToOE("❌ No folder found starting with 'anim_'.");
-            return;
-          }
-
-          if (animFolder.layers.length === 0) {
-            app.echoToOE("❌ 'anim_' folder is empty.");
-            return;
-          }
-
           // Create temporary export doc
           var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
 
-          // Loop through layers inside the animFolder
-          for (var i = animFolder.layers.length - 1; i >= 0; i--) {
-            var layer = animFolder.layers[i];
+          for (var i = original.layers.length - 1; i >= 0; i--) {
+            var layer = original.layers[i];
             if (layer.kind !== undefined && !layer.locked) {
               app.activeDocument = tempDoc;
               for (var j = tempDoc.layers.length - 1; j >= 0; j--) {
@@ -65,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
           app.echoToOE("❌ ERROR: " + e.message);
         }
       })();
-    `;
+    ;
 
     parent.postMessage(script, "*");
     console.log("📤 Sent export script to Photopea");
@@ -85,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        const flipbookHTML = \`<!DOCTYPE html>
+        const flipbookHTML = <!DOCTYPE html>
 <html>
   <head>
     <title>Flipbook Preview</title>
@@ -101,9 +80,9 @@ document.addEventListener("DOMContentLoaded", () => {
       ${collectedFrames
         .map((ab, i) => {
           const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-          return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
+          return frames[${i}] = "data:image/png;base64,${base64}";;
         })
-        .join("\\n")}
+        .join("\n")}
 
       const images = frames.map(src => {
         const img = new Image();
@@ -126,25 +105,36 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       };
 
-      const startLoop = () => {
+     /* const startLoop = () => {
         canvas.width = images[0].width;
         canvas.height = images[0].height;
         setInterval(() => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-          // 🔧 White background before drawing each frame
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-
           ctx.drawImage(images[index], 0, 0);
           index = (index + 1) % images.length;
         }, 1000 / fps);
-      };
+      }; */
+
+      const startLoop = () => {
+      canvas.width = images[0].width;
+      canvas.height = images[0].height;
+      setInterval(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 🔧 White background before drawing each frame
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.drawImage(images[index], 0, 0);
+        index = (index + 1) % images.length;
+  }, 1000 / fps);
+};
+
 
       preload();
     </script>
   </body>
-</html>\`;
+</html>;
 
         const blob = new Blob([flipbookHTML], { type: "text/html" });
         const url = URL.createObjectURL(blob);
@@ -160,3 +150,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+
+
