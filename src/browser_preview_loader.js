@@ -1,102 +1,157 @@
+// Flipbook Preview Script (Updated: Only exports first anim_ folder)
 document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("webPreviewSelectedBtn");
-  const collectedFrames = [];
+  const btn = document.getElementById("previewSelectedBtn");
+
+  if (!btn) {
+    console.error("❌ Button not found");
+    return;
+  }
 
   btn.onclick = () => {
-    collectedFrames.length = 0;
-    parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
-    console.log("▶️ Started frame export from selected anim_* folder");
+    const script = `
+      (function () {
+        try {
+          var original = app.activeDocument;
+          if (!original || original.layers.length === 0) {
+            app.echoToOE("❌ No valid layers found.");
+            return;
+          }
+
+          // 🔍 Find the first "anim_" folder
+          var animFolder = null;
+          for (var i = 0; i < original.layers.length; i++) {
+            var layer = original.layers[i];
+            if (layer.typename === "LayerSet" && layer.name.indexOf("anim_") === 0) {
+              animFolder = layer;
+              break;
+            }
+          }
+
+          if (!animFolder) {
+            app.echoToOE("❌ No folder found starting with 'anim_'.");
+            return;
+          }
+
+          if (animFolder.layers.length === 0) {
+            app.echoToOE("❌ 'anim_' folder is empty.");
+            return;
+          }
+
+          // Create temporary export doc
+          var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
+
+          // Loop through layers inside the animFolder
+          for (var i = animFolder.layers.length - 1; i >= 0; i--) {
+            var layer = animFolder.layers[i];
+            if (layer.kind !== undefined && !layer.locked) {
+              app.activeDocument = tempDoc;
+              for (var j = tempDoc.layers.length - 1; j >= 0; j--) {
+                tempDoc.layers[j].remove();
+              }
+
+              app.activeDocument = original;
+              original.activeLayer = layer;
+              layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
+
+              app.activeDocument = tempDoc;
+              tempDoc.saveToOE("png");
+            }
+          }
+
+          app.activeDocument = tempDoc;
+          tempDoc.close(SaveOptions.DONOTSAVECHANGES);
+          app.echoToOE("done");
+        } catch (e) {
+          app.echoToOE("❌ ERROR: " + e.message);
+        }
+      })();
+    `;
+
+    parent.postMessage(script, "*");
+    console.log("📤 Sent export script to Photopea");
   };
 
-  let previewURL = null;
+  const collectedFrames = [];
 
   window.addEventListener("message", (event) => {
     if (event.data instanceof ArrayBuffer) {
       collectedFrames.push(event.data);
-      console.log("🧩 Frame received:", collectedFrames.length);
     } else if (typeof event.data === "string") {
       console.log("📩 Message from Photopea:", event.data);
 
       if (event.data === "done") {
-        if (!collectedFrames.length) {
+        if (collectedFrames.length === 0) {
           alert("❌ No frames received.");
           return;
         }
 
-        // ✅ Create inline preview HTML with base64 frames
-        const flipbookHTML = `
-<!DOCTYPE html>
+        const flipbookHTML = \`<!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <title>Flipbook Preview</title>
-  <style>
-    html, body {
-      margin: 0;
-      background: #111;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-    }
-    canvas {
-      image-rendering: pixelated;
-    }
-  </style>
-</head>
-<body>
-  <canvas id="previewCanvas"></canvas>
-  <script>
-    const frames = [];
-    ${collectedFrames
-      .map((ab, i) => {
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-        return `frames[${i}] = "data:image/png;base64,${base64}";`;
-      })
-      .join("\n")}
+  <head>
+    <title>Flipbook Preview</title>
+    <style>
+      html, body { margin: 0; background: #111; overflow: hidden; height: 100%; display: flex; justify-content: center; align-items: center; }
+      canvas { image-rendering: pixelated; }
+    </style>
+  </head>
+  <body>
+    <canvas id="previewCanvas"></canvas>
+    <script>
+      const frames = [];
+      ${collectedFrames
+        .map((ab, i) => {
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+          return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
+        })
+        .join("\\n")}
 
-    const images = frames.map(src => {
-      const img = new Image();
-      img.src = src;
-      return img;
-    });
-
-    const canvas = document.getElementById("previewCanvas");
-    const ctx = canvas.getContext("2d");
-    const fps = 12;
-    let index = 0;
-
-    const preload = () => {
-      let loaded = 0;
-      images.forEach(img => {
-        img.onload = () => {
-          loaded++;
-          if (loaded === images.length) startLoop();
-        };
+      const images = frames.map(src => {
+        const img = new Image();
+        img.src = src;
+        return img;
       });
-    };
 
-    const startLoop = () => {
-      canvas.width = images[0].width;
-      canvas.height = images[0].height;
-      setInterval(() => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(images[index], 0, 0);
-        index = (index + 1) % images.length;
-      }, 1000 / fps);
-    };
+      const canvas = document.getElementById("previewCanvas");
+      const ctx = canvas.getContext("2d");
+      const fps = 12;
+      let index = 0;
 
-    preload();
-  </script>
-</body>
-</html>`;
+      const preload = () => {
+        let loaded = 0;
+        images.forEach(img => {
+          img.onload = () => {
+            loaded++;
+            if (loaded === images.length) startLoop();
+          };
+        });
+      };
+
+      const startLoop = () => {
+        canvas.width = images[0].width;
+        canvas.height = images[0].height;
+        setInterval(() => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // 🔧 White background before drawing each frame
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          ctx.drawImage(images[index], 0, 0);
+          index = (index + 1) % images.length;
+        }, 1000 / fps);
+      };
+
+      preload();
+    </script>
+  </body>
+</html>\`;
 
         const blob = new Blob([flipbookHTML], { type: "text/html" });
-        previewURL = URL.createObjectURL(blob);
-        window.open(previewURL, "_blank");
+        const url = URL.createObjectURL(blob);
+        const win = window.open();
+        win.document.open();
+        win.document.write(flipbookHTML);
+        win.document.close();
 
         collectedFrames.length = 0;
       } else if (event.data.startsWith("❌")) {
@@ -105,4 +160,3 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
-
