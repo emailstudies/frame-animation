@@ -3,4 +3,6 @@ document.getElementById("updateLayerNumbersBtn").onclick = handleUpdateLayerNumb
 document.getElementById("onionSkinBtn").onclick = toggleOnionSkinMode; 
 document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin; 
 document.getElementById("previewAllBtn").onclick = exportGif;
+document.getElementById("webPreviewSelectedBtn").onclick = openMagicCut;
+
 
