@@ -1,14 +1,22 @@
-// 🧱 Helper: Get selected top-level folders
+// 🧱 Helper: Get selected top-level folders (reliable version using ActionManager)
 function getSelectedLayers(doc) {
   var selected = [];
+  try {
+    var ref = new ActionReference();
+    ref.putProperty(charIDToTypeID("Prpr"), stringIDToTypeID("targetLayers"));
+    ref.putEnumerated(charIDToTypeID("Dcmn"), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+    var desc = executeActionGet(ref);
 
-  for (var i = 0; i < doc.layers.length; i++) {
-    var layer = doc.layers[i];
-    if (layer.typename === "LayerSet" && layer.selected) {
-      selected.push(layer);
+    if (desc.hasKey(stringIDToTypeID("targetLayers"))) {
+      var selList = desc.getList(stringIDToTypeID("targetLayers"));
+      for (var i = 0; i < selList.count; i++) {
+        var idx = selList.getReference(i).getIndex();
+        selected.push(doc.layers[doc.layers.length - idx]);
+      }
     }
+  } catch (e) {
+    alert("⚠️ Could not read selected layers.");
   }
-
   return selected;
 }
 
@@ -21,6 +29,7 @@ function getSelectedAnimFoldersAndMaxFrames(doc) {
   for (var i = 0; i < selectedLayers.length; i++) {
     var layer = selectedLayers[i];
     if (
+      layer.typename === "LayerSet" &&
       layer.name.indexOf("anim_") === 0 &&
       layer.name !== "anim_preview"
     ) {
