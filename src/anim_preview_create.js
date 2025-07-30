@@ -179,7 +179,7 @@ function exportGif() {
       }
 
       
-      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, ${JSON.stringify(delay)});
+      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
       (${fadeOutAnimFolders.toString()})(doc);
 
       alert("✅ All frames merged into 'anim_preview'.\\nOther anim_folders hidden.\\nYou can export via File > Export As > GIF.");
