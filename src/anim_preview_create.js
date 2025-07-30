@@ -104,7 +104,7 @@ function buildFrameMap(animFolders, maxFrames) {
   return frameMap;
 }
 
-// 🧱 Merge layers per frame index into anim_preview, now accepts `delay`
+// 🧱 Merge layers per frame index into anim_preview, with delay
 function mergeFrameGroups(doc, frameMap, previewFolder, delay) {
   for (var f = 0; f < frameMap.length; f++) {
     var layers = frameMap[f];
@@ -137,7 +137,7 @@ function mergeFrameGroups(doc, frameMap, previewFolder, delay) {
   }
 }
 
-// 🧱 Set opacity of all anim_* folders to 0 (except anim_preview)
+// 🧱 Set visibility of anim_* folders to false (except anim_preview)
 function fadeOutAnimFolders(doc) {
   for (var i = 0; i < doc.layers.length; i++) {
     var layer = doc.layers[i];
@@ -158,6 +158,8 @@ function exportGif() {
   const manual = document.getElementById("manualDelay").value;
   const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
 
+  console.log("🎬 Export with delay:", delay, "ms");
+
   const script = `
     (function () {
       var doc = app.activeDocument;
@@ -165,6 +167,8 @@ function exportGif() {
         alert("No active document.");
         return;
       }
+
+      var delay = ${delay}; // 👈 inject delay value directly
 
       var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
       if (!previewFolder) return;
@@ -178,16 +182,16 @@ function exportGif() {
         return;
       }
 
-      var delay = ${delay};
       (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
       (${fadeOutAnimFolders.toString()})(doc);
 
-      alert("✅ All frames merged into 'anim_preview'.\nOther anim_folders hidden.\nYou can export via File > Export As > GIF.");
+      alert("✅ All frames merged into 'anim_preview'.\\nOther anim_folders hidden.\\nYou can export via File > Export As > GIF.");
     })();
   `;
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 
