@@ -77,6 +77,32 @@
 <div class="section">
   <h3>3. Export</h3>
 
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+    <label for="fpsSelect">FPS:</label>
+    <select id="fpsSelect">
+      <option value="30">30</option>
+      <option value="24">24</option>
+      <option value="12" selected>12</option>
+      <option value="10">10</option>
+    </select>
+
+    <span>or</span>
+
+    <label for="manualDelay">Hold (sec):</label>
+    <input type="number" id="manualDelay" step="0.1" min="0" placeholder="e.g. 0.5" style="width: 60px;" />
+  </div>
+
+  <div style="display: flex; gap: 20px;">
+    <button id="previewAllBtn">🎞️ Preview All</button>
+    <button id="previewSelectedBtn">🧪 Testing</button>
+  </div>
+</div>
+
+  <!--
+  <!-- Phase 4: Export GIF 
+<div class="section">
+  <h3>3. Export</h3>
+
   <div style="margin-bottom: 10px;">
     <label for="fpsSelect">FPS:</label>
     <select id="fpsSelect">
@@ -91,9 +117,9 @@
   <div style="display: flex; gap: 20px;">
     <button id="previewAllBtn">Preview All</button>
      <button id="previewSelectedBtn">Testing</button>
-  <!--  <button onclick="exportGif()">🎞️ Export GIF</button> -->
+  <!--  <button onclick="exportGif()">🎞️ Export GIF</button> 
   </div>
-</div>
+</div> -->
 
 
   <!-- Phase 5: Web Preview -->
@@ -106,7 +132,7 @@
 </div>
   
   <!-- Plugin Scripts -->
-  <script src="src/app.js"></script>
+  
   
   <script src="src/create_anim_folder.js"></script>
   <script src="src/update_layer_numbers.js"></script>
@@ -118,6 +144,7 @@
   <script src="src/send_images.js"></script>
   <script src="src/browser_preview_loader.js"></script>
   <!-- <script src="src/send_selected_layers.js"></script> -->
+  <script src="src/app.js"></script>
   
   
 </body>
