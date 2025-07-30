@@ -146,7 +146,8 @@ function fadeOutAnimFolders(doc) {
       layer.name.indexOf("anim_") === 0 &&
       layer.name !== "anim_preview"
     ) {
-      layer.opacity = 0;
+      /*layer.opacity = 0;*/
+      layer.visible = false;
       console.log("🔕 Faded out: " + layer.name);
     }
   }
