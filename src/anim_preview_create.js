@@ -156,6 +156,7 @@ function fadeOutAnimFolders(doc) {
 function exportGif() {
   const fps = getSelectedFPS();     // From app.js
   const delay = fpsToDelay(fps);    // From app.js
+  console.log("📸 Selected FPS:", fps, "→ Delay:", delay);  // <--- Add this
 
   const script = `
     (function () {
