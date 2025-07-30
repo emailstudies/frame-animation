@@ -166,6 +166,8 @@ function exportGif() {
         return;
       }
 
+      var delay = ${delay}; // 👈 inject delay value directly
+
       var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
       if (!previewFolder) return;
 
