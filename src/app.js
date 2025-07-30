@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("onionSkinBtn").onclick = toggleOnionSkinMode;
   document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin;
   document.getElementById("previewAllBtn").onclick = exportGif;
+  document.getElementById("previewSelctedBtn").onclick = exportGifFromSelected;
   document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
 });
 
