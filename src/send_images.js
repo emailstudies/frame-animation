@@ -1,5 +1,5 @@
 function openMagicCut() {
-  const script = `app.showWindow("export");`;
+  const script = `app.showWindow("exportas");`;
   window.parent.postMessage(script, "*");
   console.log("📤 Sent request to open Magic Cut");
 }
