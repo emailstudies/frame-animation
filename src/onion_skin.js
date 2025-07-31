@@ -14,9 +14,7 @@ function toggleOnionSkinMode() {
 
       var beforeSteps = ${beforeSteps};
       var afterSteps = ${afterSteps};
-
       var opacityMap = { 1: 50, 2: 40, 3: 30 };
-
       var selectedByParent = {};
 
       // Collect selected layer indexes by anim_* folder
@@ -44,8 +42,12 @@ function toggleOnionSkinMode() {
         if (group.typename !== "LayerSet" || group.name.indexOf("anim_") !== 0) continue;
 
         var isSelectedGroup = selectedByParent.hasOwnProperty(group.name);
-        if (!isSelectedGroup && !group.locked) {
-          group.visible = false;
+
+        // ✅ Skip hiding locked folders
+        if (!isSelectedGroup) {
+          if (!group.locked) {
+            group.visible = false;
+          }
           continue;
         }
 
@@ -66,7 +68,7 @@ function toggleOnionSkinMode() {
               break;
             }
 
-            var distance = i - selIdx; // Now reversed logic
+            var distance = i - selIdx;
 
             if (distance > 0 && distance <= beforeSteps) {
               layer.opacity = opacityMap[distance] || 0;
@@ -91,7 +93,6 @@ function toggleOnionSkinMode() {
 
   window.parent.postMessage(script, "*");
 }
-
 
 
 
