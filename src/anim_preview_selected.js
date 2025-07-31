@@ -1,69 +1,7 @@
-// ✅ anim_preview_selected.js — Only merges selected anim_* folders into 'anim_preview'
-
-// 🧱 Get selected anim_* folders by name (safe approach)
-function getSelectedTopLevelAnimFolders(doc) {
-  var selectedNames = [];
-
-  try {
-    var ref = new ActionReference();
-    ref.putProperty(charIDToTypeID("Prpr"), stringIDToTypeID("targetLayers"));
-    ref.putEnumerated(charIDToTypeID("Dcmn"), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
-    var desc = executeActionGet(ref);
-
-    if (!desc.hasKey(stringIDToTypeID("targetLayers"))) return [];
-
-    var selList = desc.getList(stringIDToTypeID("targetLayers"));
-    for (var i = 0; i < selList.count; i++) {
-      var selRef = selList.getReference(i);
-      if (selRef.getName) {
-        selectedNames.push(selRef.getName());
-      }
-    }
-  } catch (e) {
-    alert("❌ Could not read selected layer names.");
-    return [];
-  }
-
-  var selectedFolders = [];
-  for (var i = 0; i < doc.layers.length; i++) {
-    var layer = doc.layers[i];
-    if (
-      layer.typename === "LayerSet" &&
-      layer.name.indexOf("anim_") === 0 &&
-      layer.name !== "anim_preview" &&
-      selectedNames.includes(layer.name)
-    ) {
-      selectedFolders.push(layer);
-    }
-  }
-
-  return selectedFolders;
-}
-
-// 🧱 Build max frame count from selected folders
-function getSelectedAnimFoldersAndMaxFrames(doc) {
-  var animFolders = getSelectedTopLevelAnimFolders(doc);
-  var maxFrames = 0;
-
-  for (var i = 0; i < animFolders.length; i++) {
-    if (animFolders[i].layers.length > maxFrames) {
-      maxFrames = animFolders[i].layers.length;
-    }
-  }
-
-  return {
-    folders: animFolders,
-    maxFrames: maxFrames
-  };
-}
-
-// ✅ MAIN: Export only selected folders
 function exportGifFromSelected() {
-  const fps = getSelectedFPS();
+  const fps = getSelectedFPS(); // from UI
   const manual = document.getElementById("manualDelay").value;
   const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
-
-  console.log("🎯 Exporting selected folders only. Delay:", delay, "ms");
 
   const script = `
     (function () {
@@ -75,29 +13,88 @@ function exportGifFromSelected() {
 
       var delay = ${delay};
 
-      var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
-      if (!previewFolder) return;
+      // ✅ 1. Use targetLayers to collect selected anim_* folders by NAME
+      var selectedNames = [];
+      try {
+        var ref = new ActionReference();
+        ref.putProperty(charIDToTypeID("Prpr"), stringIDToTypeID("targetLayers"));
+        ref.putEnumerated(charIDToTypeID("Dcmn"), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+        var desc = executeActionGet(ref);
+        var selList = desc.getList(stringIDToTypeID("targetLayers"));
 
-      var getSelectedTopLevelAnimFolders = ${getSelectedTopLevelAnimFolders.toString()};
-      var getSelectedAnimFoldersAndMaxFrames = ${getSelectedAnimFoldersAndMaxFrames.toString()};
-      var data = getSelectedAnimFoldersAndMaxFrames(doc);
+        for (var i = 0; i < selList.count; i++) {
+          var layerRef = selList.getReference(i);
+          var index = layerRef.getIndex() - 1;
+          var layer = doc.layers[index];
+          if (
+            layer && layer.typename === "LayerSet" &&
+            layer.name.indexOf("anim_") === 0 &&
+            layer.name !== "anim_preview"
+          ) {
+            selectedNames.push(layer.name);
+          }
+        }
+      } catch (e) {
+        alert("❌ Could not read selected folders.");
+        return;
+      }
 
-      if (data.folders.length === 0) {
+      if (selectedNames.length === 0) {
         alert("❌ No anim_* folders selected.");
         return;
       }
 
-      (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
-      var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
+      // ✅ 2. Get only selected anim_* folders
+      var selectedFolders = [];
+      var maxFrames = 0;
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (
+          layer.typename === "LayerSet" &&
+          selectedNames.includes(layer.name)
+        ) {
+          selectedFolders.push(layer);
+          if (layer.layers.length > maxFrames) {
+            maxFrames = layer.layers.length;
+          }
+        }
+      }
+
+      if (selectedFolders.length === 0) {
+        alert("❌ No valid anim_* folders found.");
+        return;
+      }
+
+      var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
+      if (!previewFolder) return;
+
+      // ✅ 3. Only duplicate selected folders
+      for (var i = 0; i < selectedFolders.length; i++) {
+        var folder = selectedFolders[i];
+        if (folder.layers.length === 1) {
+          var base = folder.layers[0];
+          for (var j = 1; j < maxFrames; j++) {
+            var dup = base.duplicate();
+            folder.insertLayer(dup);
+          }
+        }
+      }
+
+      // ✅ 4. Build frame map from selected
+      var frameMap = (${buildFrameMap.toString()})(selectedFolders, maxFrames);
       if (frameMap.length === 0) {
-        alert("No eligible frames in selected folders.");
+        alert("No eligible frames.");
         return;
       }
 
       (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
-      (${fadeOutAnimFolders.toString()})(doc);
 
-      alert("✅ Selected folders merged into 'anim_preview'.\\nOther anim folders hidden.\\nYou can export via File > Export As > GIF.");
+      // ✅ 5. Only hide the folders we merged from
+      for (var i = 0; i < selectedFolders.length; i++) {
+        selectedFolders[i].visible = false;
+      }
+
+      alert("✅ Selected folders merged into 'anim_preview'.\\nYou can now export as GIF.");
     })();
   `;
 
