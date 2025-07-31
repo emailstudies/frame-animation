@@ -58,14 +58,15 @@ function getSelectedAnimFoldersAndMaxFrames(doc) {
   };
 }
 
-// 🧱 Export selected folders only
 function exportGifFromSelected() {
-  const fps = getSelectedFPS(); // from app.js
+  const fps = getSelectedFPS();
   const manual = document.getElementById("manualDelay").value;
   const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
 
+  console.log("🧪 Export selected with delay:", delay, "ms");
+
   const script = `
-    (${function () {
+    (function () {
       var doc = app.activeDocument;
       if (!doc) {
         alert("No active document.");
@@ -96,8 +97,8 @@ function exportGifFromSelected() {
       (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
       (${fadeOutAnimFolders.toString()})(doc);
 
-      alert("✅ Selected folders merged into 'anim_preview'.\nOther anim folders hidden.\nYou can export via File > Export As > GIF.");
-    }.toString()})();
+      alert("✅ Selected folders merged into 'anim_preview'.\\nOther anim folders hidden.\\nYou can export via File > Export As > GIF.");
+    })();
   `;
 
   window.parent.postMessage(script, "*");
