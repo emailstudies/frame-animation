@@ -166,11 +166,22 @@ function exportGif() {
         return;
       }
 
-      // 📝 Duplicate the document
-      var dupDoc = original.duplicate(original.name + "_preview");
+      // 🪄 Create duplicate document
+      var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
 
-      // 🧱 Your entire exportGif logic goes here, using dupDoc
-      (function (doc) {
+      for (var i = original.layers.length - 1; i >= 0; i--) {
+        var layer = original.layers[i];
+        if (layer.locked) continue;
+
+        app.activeDocument = original;
+        original.activeLayer = layer;
+        layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+      }
+
+      app.activeDocument = dupDoc; // Focus on duplicated doc
+
+      // 🧱 Now run the export logic inside dupDoc
+      (function(doc) {
         var delay = ${delay};
 
         var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
@@ -188,13 +199,14 @@ function exportGif() {
         (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
         (${fadeOutAnimFolders.toString()})(doc);
 
-        alert("✅ All frames merged into 'anim_preview'.\\nOriginal document left untouched.\\nYou can export this preview via File > Export As > GIF.");
+        alert("✅ All frames merged into 'anim_preview' in duplicated document.\\nYou can export via File > Export As > GIF.");
       })(dupDoc);
     })();
   `;
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 /* this creates the anim_preview in the same document - was not working well with Onion Skin Applied 
