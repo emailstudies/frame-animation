@@ -3,6 +3,8 @@ function exportGifFromSelected() {
   const manual = document.getElementById("manualDelay").value;
   const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
 
+  console.log("🎬 Export selected folders with delay:", delay, "ms");
+
   const script = `
     (function () {
       var doc = app.activeDocument;
@@ -11,62 +13,48 @@ function exportGifFromSelected() {
         return;
       }
 
-      // 📦 Get selected folder names from targetLayers
-      var selectedNames = [];
-      try {
-        var ref = new ActionReference();
-        ref.putProperty(charIDToTypeID("Prpr"), stringIDToTypeID("targetLayers"));
-        ref.putEnumerated(charIDToTypeID("Dcmn"), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
-        var desc = executeActionGet(ref);
-        var selIndexList = desc.getList(stringIDToTypeID("targetLayers"));
-
-        for (var i = 0; i < selIndexList.count; i++) {
-          var idx = selIndexList.getReference(i).getIndex() - 1; // Photoshop index is 1-based
-          var layer = doc.layers[idx];
-          if (layer && layer.typename === "LayerSet" && layer.name.indexOf("anim_") === 0 && layer.name !== "anim_preview") {
-            selectedNames.push(layer.name);
-          }
+      // 🧱 Grab selected top-level anim_* folders
+      var selected = [];
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (
+          layer.typename === "LayerSet" &&
+          layer.name.indexOf("anim_") === 0 &&
+          layer.name !== "anim_preview" &&
+          layer.selected
+        ) {
+          selected.push(layer);
         }
-      } catch (e) {
-        alert("❌ Could not read selected folders. Please select anim_* folders.");
-        return;
       }
 
-      if (selectedNames.length === 0) {
+      if (selected.length === 0) {
         alert("❌ No anim_* folders selected.");
         return;
       }
 
-      // 📦 Match names to LayerSet references
-      var folders = [];
-      for (var i = 0; i < doc.layers.length; i++) {
-        var layer = doc.layers[i];
-        if (layer.typename === "LayerSet" && selectedNames.indexOf(layer.name) !== -1) {
-          folders.push(layer);
+      var maxFrames = 0;
+      for (var i = 0; i < selected.length; i++) {
+        if (selected[i].layers.length > maxFrames) {
+          maxFrames = selected[i].layers.length;
         }
       }
 
-      var maxFrames = 0;
-      for (var i = 0; i < folders.length; i++) {
-        if (folders[i].layers.length > maxFrames) {
-          maxFrames = folders[i].layers.length;
-        }
-      }
+      var delay = ${delay};
 
       var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
       if (!previewFolder) return;
 
       (${duplicateSingleLayerFolders.toString()})(doc, maxFrames);
-      var frameMap = (${buildFrameMap.toString()})(folders, maxFrames);
+      var frameMap = (${buildFrameMap.toString()})(selected, maxFrames);
       if (frameMap.length === 0) {
-        alert("No frames found to merge.");
+        alert("❌ No eligible frames found in selected folders.");
         return;
       }
 
-      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, ${delay});
+      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
       (${fadeOutAnimFolders.toString()})(doc);
 
-      alert("✅ Selected folders merged into 'anim_preview'.\\nYou can export via File > Export As > GIF.");
+      alert("✅ Selected folders merged into 'anim_preview'.\\nOther anim folders hidden.\\nExport via File > Export As > GIF.");
     })();
   `;
 
