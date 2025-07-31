@@ -152,7 +152,85 @@ function fadeOutAnimFolders(doc) {
   }
 }
 
-/* this will do a post clean up with only first layer of preview visible and remove other folders */
+/* the first layer preview and delete all anim folders will be inline - no need for extra functions for these 2 */
+function exportGif() {
+  const fps = getSelectedFPS();
+  const manual = document.getElementById("manualDelay").value;
+  const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
+
+  const script = `
+    (function () {
+      var original = app.activeDocument;
+      if (!original) {
+        alert("No active document.");
+        return;
+      }
+
+      var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
+
+      for (var i = original.layers.length - 1; i >= 0; i--) {
+        var layer = original.layers[i];
+        if (layer.locked) continue;
+
+        app.activeDocument = original;
+        original.activeLayer = layer;
+        layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+      }
+
+      app.activeDocument = dupDoc;
+      var delay = ${delay};
+
+      var previewFolder = (${createAnimPreviewFolder.toString()})(dupDoc);
+      if (!previewFolder) return;
+
+      var data = (${getAnimFoldersAndMaxFrames.toString()})(dupDoc);
+      (${duplicateSingleLayerFolders.toString()})(dupDoc, data.maxFrames);
+
+      var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
+      if (frameMap.length === 0) {
+        alert("No eligible animation frames found.");
+        return;
+      }
+
+      (${mergeFrameGroups.toString()})(dupDoc, frameMap, previewFolder, delay);
+      (${fadeOutAnimFolders.toString()})(dupDoc);
+
+      // 🧹 Delete other anim folders (in this context)
+      for (var i = dupDoc.layers.length - 1; i >= 0; i--) {
+        var layer = dupDoc.layers[i];
+        if (
+          layer.typename === "LayerSet" &&
+          layer.name.startsWith("anim_") &&
+          layer.name !== "anim_preview"
+        ) {
+          try {
+            layer.remove();
+          } catch (e) {
+            alert("⚠️ Could not remove: " + layer.name);
+          }
+        }
+      }
+
+      // 🎬 Show only first anim_preview frame
+      for (var i = 0; i < dupDoc.layers.length; i++) {
+        var group = dupDoc.layers[i];
+        if (group.typename === "LayerSet" && group.name === "anim_preview") {
+          var layers = group.layers;
+          for (var j = 0; j < layers.length; j++) {
+            layers[j].visible = (j === layers.length - 1); // bottom-most
+          }
+        }
+      }
+
+      app.refresh();
+      alert("✅ All frames merged into 'anim_preview'. You can now export as GIF.");
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
+}
+
+/* this will do a post clean up with only first layer of preview visible and remove other folders - NOT WORKING
 function exportGif() {
   const fps = getSelectedFPS();
   const manual = document.getElementById("manualDelay").value;
