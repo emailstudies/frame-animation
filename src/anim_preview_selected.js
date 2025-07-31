@@ -43,6 +43,9 @@ function exportGifFromSelected() {
       (${duplicateSingleLayerFolders.toString()})(doc, maxFrames);
       alert("📌 Duplicated single-layer folders (if any).");
 
+      var frameMap = (${buildFrameMap.toString()})(selected, maxFrames);
+      alert("🧠 Frame map built: " + frameMap.length + " frames.");
+
     })();
   `;
 
