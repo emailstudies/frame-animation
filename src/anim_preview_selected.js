@@ -1,43 +1,3 @@
-function getSelectedAnimFolders(doc) {
-  var selected = [];
-
-  try {
-    var ref = new ActionReference();
-    ref.putProperty(charIDToTypeID("Prpr"), stringIDToTypeID("targetLayers"));
-    ref.putEnumerated(charIDToTypeID("Dcmn"), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
-    var desc = executeActionGet(ref);
-
-    if (!desc.hasKey(stringIDToTypeID("targetLayers"))) return [];
-
-    var selList = desc.getList(stringIDToTypeID("targetLayers"));
-    var selIndices = [];
-
-    for (var i = 0; i < selList.count; i++) {
-      var idx = selList.getReference(i).getIndex() - 1; // 0-based
-      selIndices.push(idx);
-    }
-
-    for (var j = 0; j < selIndices.length; j++) {
-      var i = selIndices[j];
-      var layer = doc.layers[i];
-      if (
-        layer &&
-        layer.typename === "LayerSet" &&
-        layer.name.indexOf("anim_") === 0 &&
-        layer.name !== "anim_preview"
-      ) {
-        selected.push(layer);
-      }
-    }
-
-  } catch (e) {
-    alert("❌ Could not detect selected folders.");
-    return [];
-  }
-
-  return selected;
-}
-
 function exportGifFromSelected() {
   const fps = getSelectedFPS();
   const manual = document.getElementById("manualDelay").value;
@@ -51,22 +11,39 @@ function exportGifFromSelected() {
         return;
       }
 
-      var delay = ${delay};
+      // 📦 Get selected folder names from targetLayers
+      var selectedNames = [];
+      try {
+        var ref = new ActionReference();
+        ref.putProperty(charIDToTypeID("Prpr"), stringIDToTypeID("targetLayers"));
+        ref.putEnumerated(charIDToTypeID("Dcmn"), charIDToTypeID("Ordn"), charIDToTypeID("Trgt"));
+        var desc = executeActionGet(ref);
+        var selIndexList = desc.getList(stringIDToTypeID("targetLayers"));
 
-      var createAnimPreviewFolder = ${createAnimPreviewFolder.toString()};
-      var duplicateSingleLayerFolders = ${duplicateSingleLayerFolders.toString()};
-      var buildFrameMap = ${buildFrameMap.toString()};
-      var mergeFrameGroups = ${mergeFrameGroups.toString()};
-      var fadeOutAnimFolders = ${fadeOutAnimFolders.toString()};
-      var getSelectedAnimFolders = ${getSelectedAnimFolders.toString()};
+        for (var i = 0; i < selIndexList.count; i++) {
+          var idx = selIndexList.getReference(i).getIndex() - 1; // Photoshop index is 1-based
+          var layer = doc.layers[idx];
+          if (layer && layer.typename === "LayerSet" && layer.name.indexOf("anim_") === 0 && layer.name !== "anim_preview") {
+            selectedNames.push(layer.name);
+          }
+        }
+      } catch (e) {
+        alert("❌ Could not read selected folders. Please select anim_* folders.");
+        return;
+      }
 
-      var previewFolder = createAnimPreviewFolder(doc);
-      if (!previewFolder) return;
-
-      var folders = getSelectedAnimFolders(doc);
-      if (folders.length === 0) {
+      if (selectedNames.length === 0) {
         alert("❌ No anim_* folders selected.");
         return;
+      }
+
+      // 📦 Match names to LayerSet references
+      var folders = [];
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (layer.typename === "LayerSet" && selectedNames.indexOf(layer.name) !== -1) {
+          folders.push(layer);
+        }
       }
 
       var maxFrames = 0;
@@ -76,17 +53,20 @@ function exportGifFromSelected() {
         }
       }
 
-      duplicateSingleLayerFolders(doc, maxFrames);
-      var frameMap = buildFrameMap(folders, maxFrames);
+      var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
+      if (!previewFolder) return;
+
+      (${duplicateSingleLayerFolders.toString()})(doc, maxFrames);
+      var frameMap = (${buildFrameMap.toString()})(folders, maxFrames);
       if (frameMap.length === 0) {
-        alert("No eligible frames in selected folders.");
+        alert("No frames found to merge.");
         return;
       }
 
-      mergeFrameGroups(doc, frameMap, previewFolder, delay);
-      fadeOutAnimFolders(doc);
+      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, ${delay});
+      (${fadeOutAnimFolders.toString()})(doc);
 
-      alert("✅ Selected folders merged into 'anim_preview'.\\nOther anim folders hidden.\\nYou can export via File > Export As > GIF.");
+      alert("✅ Selected folders merged into 'anim_preview'.\\nYou can export via File > Export As > GIF.");
     })();
   `;
 
