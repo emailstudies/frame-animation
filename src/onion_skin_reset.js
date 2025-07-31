@@ -10,30 +10,37 @@ function resetOnionSkin() {
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
 
-        // Only process anim_* folders (excluding anim_preview)
-        if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0 && group.name !== "anim_preview") {
+        if (
+          group.typename === "LayerSet" &&
+          group.name.indexOf("anim_") === 0 &&
+          group.name !== "anim_preview"
+        ) {
           try {
             group.visible = true;
           } catch (e) {
-            alert("⚠️ Couldn't change visibility of folder: " + group.name);
+            alert("⚠️ Could not unhide folder: " + group.name);
           }
 
-          // Restore opacity and visibility of the first frame only
-          if (group.layers.length > 0) {
-            var firstLayer = group.layers[0];
-            if (firstLayer.typename === "Layer") {
-              try {
-                firstLayer.visible = true;
-                firstLayer.opacity = 100;
-              } catch (e) {
-                alert("⚠️ Couldn't restore layer: " + firstLayer.name);
+          var layers = group.layers;
+          for (var j = 0; j < layers.length; j++) {
+            var layer = layers[j];
+            if (layer.typename !== "Layer") continue;
+
+            try {
+              if (j === 0) {
+                layer.visible = true;
+                layer.opacity = 100;
+              } else {
+                layer.opacity = 0;
               }
+            } catch (e) {
+              alert("⚠️ Failed to update layer: " + layer.name);
             }
           }
         }
       }
 
-      alert("✅ Onion skin reset: All anim_* folders made visible. First frame restored.");
+      alert("✅ Onion skin reset: Folders shown, first layer restored, others faded out.");
     })();
   `;
 
