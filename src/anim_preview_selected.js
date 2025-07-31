@@ -30,7 +30,7 @@ function exportGifFromSelected() {
         return;
       }
 
-      alert("✅ Selected: " + selected.length);
+      // alert("✅ Selected: " + selected.length);
 
       // 🧠 Determine max frame count
       var maxFrames = 0;
