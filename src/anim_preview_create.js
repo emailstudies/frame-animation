@@ -152,7 +152,71 @@ function fadeOutAnimFolders(doc) {
   }
 }
 
-/* this utilizes the beforeMergingInExport() in app.js */
+/* this will do a post clean up with only first layer of preview visible and remove other folders */
+function exportGif() {
+  const fps = getSelectedFPS();
+  const manual = document.getElementById("manualDelay").value;
+  const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
+
+  beforeMergingInExport(() => {
+    const script = `
+      (function () {
+        var original = app.activeDocument;
+        if (!original) {
+          alert("No active document.");
+          return;
+        }
+
+        // 🪄 Duplicate current document
+        var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
+
+        for (var i = original.layers.length - 1; i >= 0; i--) {
+          var layer = original.layers[i];
+          if (layer.locked) continue;
+
+          app.activeDocument = original;
+          original.activeLayer = layer;
+          layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+        }
+
+        // Switch to duplicated doc
+        app.activeDocument = dupDoc;
+
+        // Run export logic
+        (function(doc) {
+          var delay = ${delay};
+
+          var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
+          if (!previewFolder) return;
+
+          var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
+          (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
+
+          var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
+          if (frameMap.length === 0) {
+            alert("No eligible animation frames found.");
+            return;
+          }
+
+          (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
+          (${fadeOutAnimFolders.toString()})(doc);
+
+          // ⬇️ Extra post-merge cleanup
+          (${showOnlyFirstPreviewLayer.toString()})();
+          (${deleteOtherAnimFolders.toString()})();
+
+          alert("✅ All frames merged into 'anim_preview'.\\nOther anim folders deleted.\\nYou can export via File > Export As > GIF.");
+        })(dupDoc);
+      })();
+    `;
+
+    window.parent.postMessage(script, "*");
+  });
+}
+
+
+/* ------------------------------------------
+this utilizes the beforeMergingInExport() in app.js 
 
 function exportGif() {
   const fps = getSelectedFPS();
