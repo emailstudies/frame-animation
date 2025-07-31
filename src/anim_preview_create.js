@@ -52,7 +52,7 @@ function duplicateSingleLayerFolders(doc, maxFrames) {
           folder.insertLayer(dup);
           currentLayer = dup;
         }
-        console.log("📌 Duplicated " + folder.name + " to " + maxFrames + " frames.");
+        // console.log("📌 Duplicated " + folder.name + " to " + maxFrames + " frames.");
       }
     }
   }
@@ -100,7 +100,7 @@ function buildFrameMap(animFolders, maxFrames) {
     if (frameGroup.length > 0) frameMap.push(frameGroup);
   }
 
-  console.log("🗂 Frame map built: " + frameMap.length + " frames.");
+  // console.log("🗂 Frame map built: " + frameMap.length + " frames.");
   return frameMap;
 }
 
@@ -128,7 +128,7 @@ function mergeFrameGroups(doc, frameMap, previewFolder, delay) {
       var mergedLayer = doc.activeLayer;
       mergedLayer.name = "_a_Frame " + (f + 1) + "," + delay;
       mergedLayer.move(previewFolder, ElementPlacement.INSIDE);
-      console.log("✅ Merged frame " + (f + 1));
+      // console.log("✅ Merged frame " + (f + 1));
     } else if (duplicates.length === 1) {
       var only = duplicates[0];
       only.name = "_a_Frame " + (f + 1) + "," + delay;
@@ -147,7 +147,7 @@ function fadeOutAnimFolders(doc) {
       layer.name !== "anim_preview"
     ) {
       layer.visible = false;
-      console.log("🔕 Faded out: " + layer.name);
+      // console.log("🔕 Faded out: " + layer.name);
     }
   }
 }
@@ -158,7 +158,7 @@ function exportGif() {
   const manual = document.getElementById("manualDelay").value;
   const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
 
-  console.log("🎬 Export with delay:", delay, "ms");
+  // console.log("🎬 Export with delay:", delay, "ms");
 
   const script = `
     (function () {
