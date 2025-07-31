@@ -1,3 +1,12 @@
+document.getElementById("webPreviewAllBtn").onclick = function () {
+  const before = parseInt(document.getElementById("beforeSteps").value, 10);
+  const after = parseInt(document.getElementById("afterSteps").value, 10);
+
+  console.log("🧅 Onion Skin: Before =", before, "After =", after);
+  toggleOnionSkinMode(before, after);
+};
+
+
 // ✅ app.js (updated)
 function getSelectedFPS() {
   const fpsSelect = document.getElementById("fpsSelect");
