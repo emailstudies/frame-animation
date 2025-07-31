@@ -15,8 +15,16 @@ document.addEventListener("DOMContentLoaded", function () {
   }, 20); // delay to allow Photopea reset script to finish
 };
 
+  document.getElementById("previewAllBtn").onclick = function () {
+  beforeMergingInExport(() => {
+    setTimeout(() => {
+      exportGif(); // Call export only AFTER reset is done
+    }, 200); // Short delay to allow Photopea to complete
+  });
+};
+
   
-  document.getElementById("previewAllBtn").onclick = exportGif;
+  /* document.getElementById("previewAllBtn").onclick = exportGif; */
   document.getElementById("previewSelectedBtn").onclick = exportGifFromSelected;
   document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
 
