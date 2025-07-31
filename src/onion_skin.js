@@ -15,22 +15,17 @@ function toggleOnionSkinMode() {
       var beforeSteps = ${beforeSteps};
       var afterSteps = ${afterSteps};
 
-      // Opacity per step: nearest = 50, then 40, 30
       var opacityMap = { 1: 50, 2: 40, 3: 30 };
 
       var selectedByParent = {};
 
-      // Step 1: Group selected layer indexes by anim_* folder
+      // Collect selected layer indexes by anim_* folder
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
         if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
           for (var j = 0; j < group.layers.length; j++) {
             var layer = group.layers[j];
-            if (layer.selected) {
-              if (layer.typename === "LayerSet") {
-                alert("Only individual layers can be selected.");
-                return;
-              }
+            if (layer.selected && layer.typename !== "LayerSet") {
               if (!selectedByParent[group.name]) selectedByParent[group.name] = [];
               selectedByParent[group.name].push(j);
             }
@@ -66,18 +61,19 @@ function toggleOnionSkinMode() {
           for (var s = 0; s < selectedIndexes.length; s++) {
             var selIdx = selectedIndexes[s];
             if (i === selIdx) {
-              layer.opacity = 100; // selected layer
+              layer.opacity = 100; // Selected
               set = true;
               break;
             }
 
-            var dist = selIdx - i; // DOWN is before, UP is after
-            if (dist > 0 && dist <= beforeSteps) {
-              layer.opacity = opacityMap[dist] || 0;
+            var distance = i - selIdx; // Now reversed logic
+
+            if (distance > 0 && distance <= beforeSteps) {
+              layer.opacity = opacityMap[distance] || 0;
               set = true;
               break;
-            } else if (dist < 0 && Math.abs(dist) <= afterSteps) {
-              layer.opacity = opacityMap[Math.abs(dist)] || 0;
+            } else if (distance < 0 && Math.abs(distance) <= afterSteps) {
+              layer.opacity = opacityMap[Math.abs(distance)] || 0;
               set = true;
               break;
             }
@@ -95,6 +91,7 @@ function toggleOnionSkinMode() {
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 
