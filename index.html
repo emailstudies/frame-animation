@@ -126,23 +126,19 @@
   
   <div class="section">
   <h3>4. Web Preview</h3>
-  
-
-  <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
-  <label>
-    Before Steps:
-    <input type="range" id="beforeSteps" min="0" max="5" value="1" />
-  </label>
-  <label>
-    After Steps:
-    <input type="range" id="afterSteps" min="0" max="5" value="1" />
-  </label>
-</div>
-    <div style="display: flex; gap: 20 px;">
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <label for="beforeSteps">Before</label>
+    <input type="range" id="beforeSteps" min="0" max="3" value="1" />
+    
+    <input type="range" id="afterSteps" min="0" max="3" value="1" />
+    <label for="afterSteps">After</label>
+  </div>
+  <div style="margin-top: 10px;">
     <button id="webPreviewAllBtn">OnionSkinTest</button>
     <button id="webPreviewSelectedBtn">Web Preview Selected</button>
   </div>
 </div>
+
   
   <!-- Plugin Scripts -->
   
