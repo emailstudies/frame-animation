@@ -1,6 +1,6 @@
 // ✅ anim_preview_selected.js — Only merges selected anim_* folders into 'anim_preview'
 
-// 🧱 Helper to get selected top-level anim_* folders
+// 🧱 Helper: Get selected top-level anim_* folders
 function getSelectedTopLevelAnimFolders(doc) {
   var selected = [];
 
@@ -21,18 +21,17 @@ function getSelectedTopLevelAnimFolders(doc) {
     }
 
     for (var j = 0; j < selIndices.length; j++) {
-      var i = selIndices[j] - 1; // Photoshop uses 1-based indexing
-      if (doc.layers[i] && doc.layers[i].typename === "LayerSet") {
-        var layer = doc.layers[i];
-        if (
-          layer.name.indexOf("anim_") === 0 &&
-          layer.name !== "anim_preview"
-        ) {
-          selected.push(layer);
-        }
+      var i = selIndices[j] - 1; // 1-based to 0-based
+      var layer = doc.layers[i];
+      if (
+        layer &&
+        layer.typename === "LayerSet" &&
+        layer.name.indexOf("anim_") === 0 &&
+        layer.name !== "anim_preview"
+      ) {
+        selected.push(layer);
       }
     }
-
   } catch (e) {
     alert("❌ Could not detect selected layers.");
     return [];
@@ -41,7 +40,7 @@ function getSelectedTopLevelAnimFolders(doc) {
   return selected;
 }
 
-// 🧱 Build max frame count from selected anim_* folders
+// 🧱 Get selected folders and max frame count
 function getSelectedAnimFoldersAndMaxFrames(doc) {
   var animFolders = getSelectedTopLevelAnimFolders(doc);
   var maxFrames = 0;
@@ -58,12 +57,13 @@ function getSelectedAnimFoldersAndMaxFrames(doc) {
   };
 }
 
+// 🧱 Main function to run export from selected folders
 function exportGifFromSelected() {
-  const fps = getSelectedFPS();
+  const fps = getSelectedFPS(); // From app.js
   const manual = document.getElementById("manualDelay").value;
   const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
 
-  console.log("🧪 Export selected with delay:", delay, "ms");
+  console.log("🎯 Exporting selected anim_* folders. Delay:", delay);
 
   const script = `
     (function () {
@@ -80,24 +80,28 @@ function exportGifFromSelected() {
 
       var getSelectedTopLevelAnimFolders = ${getSelectedTopLevelAnimFolders.toString()};
       var getSelectedAnimFoldersAndMaxFrames = ${getSelectedAnimFoldersAndMaxFrames.toString()};
-      var data = getSelectedAnimFoldersAndMaxFrames(doc);
+      var duplicateSingleLayerFolders = ${duplicateSingleLayerFolders.toString()};
+      var buildFrameMap = ${buildFrameMap.toString()};
+      var mergeFrameGroups = ${mergeFrameGroups.toString()};
+      var fadeOutAnimFolders = ${fadeOutAnimFolders.toString()};
 
+      var data = getSelectedAnimFoldersAndMaxFrames(doc);
       if (data.folders.length === 0) {
         alert("❌ No anim_* folders selected.");
         return;
       }
 
-      (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
-      var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
+      duplicateSingleLayerFolders(doc, data.maxFrames);
+      var frameMap = buildFrameMap(data.folders, data.maxFrames);
       if (frameMap.length === 0) {
         alert("No eligible frames in selected folders.");
         return;
       }
 
-      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
-      (${fadeOutAnimFolders.toString()})(doc);
+      mergeFrameGroups(doc, frameMap, previewFolder, delay);
+      fadeOutAnimFolders(doc);
 
-      alert("✅ Selected folders merged into 'anim_preview'.\\nOther anim folders hidden.\\nYou can export via File > Export As > GIF.");
+      alert("✅ Selected folders merged into 'anim_preview'.\\nOther anim folders hidden.");
     })();
   `;
 
