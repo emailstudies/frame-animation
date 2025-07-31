@@ -20,7 +20,7 @@ function beforeMergingInExport(callback) {
             var layer = folder.layers[j];
             if (layer.typename !== "LayerSet") {
               layer.opacity = 100;
-              layer.visible = (j === folder.layers.length - 1); // Top frame visible
+              layer.visible = true;
             }
           }
         }
