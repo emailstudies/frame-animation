@@ -3,8 +3,6 @@ function exportGifFromSelected() {
   const manual = document.getElementById("manualDelay").value;
   const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
 
-  console.log("🎬 Export selected folders with delay:", delay, "ms");
-
   const script = `
     (function () {
       var doc = app.activeDocument;
@@ -13,7 +11,6 @@ function exportGifFromSelected() {
         return;
       }
 
-      // 🧱 Grab selected top-level anim_* folders
       var selected = [];
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
@@ -27,36 +24,14 @@ function exportGifFromSelected() {
         }
       }
 
-      if (selected.length === 0) {
-        alert("❌ No anim_* folders selected.");
-        return;
-      }
-
-      var maxFrames = 0;
-      for (var i = 0; i < selected.length; i++) {
-        if (selected[i].layers.length > maxFrames) {
-          maxFrames = selected[i].layers.length;
-        }
-      }
+      alert("✅ Selected: " + selected.length);
 
       var delay = ${delay};
-
       var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
       if (!previewFolder) return;
 
-      (${duplicateSingleLayerFolders.toString()})(doc, maxFrames);
-      var frameMap = (${buildFrameMap.toString()})(selected, maxFrames);
-      if (frameMap.length === 0) {
-        alert("❌ No eligible frames found in selected folders.");
-        return;
-      }
-
-      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
-      (${fadeOutAnimFolders.toString()})(doc);
-
-      alert("✅ Selected folders merged into 'anim_preview'.\\nOther anim folders hidden.\\nExport via File > Export As > GIF.");
+      alert("✅ Preview folder ready.");
     })();
   `;
-
   window.parent.postMessage(script, "*");
 }
