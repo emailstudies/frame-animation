@@ -52,13 +52,23 @@
   </div>
 
   <!-- Phase 3: Onion Skin -->
-<div class="section">
-  <h3>3. Onion Skin</h3>
-  <div style="display: flex; gap: 20 px;">
-    <button id="onionSkinBtn">Onion Skin On</button>
-    <button id="resetOnionSkinBtn">Onion Skin Reset</button>
+
+
+    <div class="section">
+  <h3>4. Web Preview</h3>
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <label for="beforeSteps">Before</label>
+    <input type="range" id="beforeSteps" min="0" max="3" value="1" />
+    
+    <input type="range" id="afterSteps" min="0" max="3" value="1" />
+    <label for="afterSteps">After</label>
+  </div>
+  <div style="margin-top: 10px;">
+    <button id="onionSkinBtn">Apply Onion Skin</button>
+    <button id="resetOnionSkinBtn">reset Onion Skin</button>
   </div>
 </div>
+
 
  <!--
   <!-- Phase 4: Export GIF (placeholder) 
@@ -88,13 +98,13 @@
 
     <span>or</span>
 
-    <label for="manualDelay">Hold (sec):</label>
+    <label for="manualDelay">Hold per frame (sec):</label>
     <input type="number" id="manualDelay" step="0.1" min="0" placeholder="e.g. 0.5" style="width: 60px;" />
   </div>
 
-  <div style="display: flex; gap: 20px;">
-    <button id="previewAllBtn">Preview All</button>
-    <button id="previewSelectedBtn">Preview Selected</button>
+  <div style="display: flex; gap: 10px;">
+    <button id="previewAllBtn">Export All</button>
+    <button id="previewSelectedBtn">Export Selected</button>
   </div>
 </div>
 
@@ -124,21 +134,13 @@
 
   <!-- Phase 5: Web Preview -->
   
-  <div class="section">
-  <h3>4. Web Preview</h3>
-  <div style="display: flex; align-items: center; gap: 10px;">
-    <label for="beforeSteps">Before</label>
-    <input type="range" id="beforeSteps" min="0" max="3" value="1" />
-    
-    <input type="range" id="afterSteps" min="0" max="3" value="1" />
-    <label for="afterSteps">After</label>
-  </div>
-  <div style="margin-top: 10px;">
-    <button id="webPreviewAllBtn">OnionSkinTest</button>
-    <button id="webPreviewSelectedBtn">Web Preview Selected</button>
+<div class="section">
+  <h3>3. Onion Skin</h3>
+  <div style="display: flex; gap: 20 px;">
+    <button id="AllBtn">Test All</button>
+    <button id="SelectedBtn">Test Selected</button>
   </div>
 </div>
-
   
   <!-- Plugin Scripts -->
   
