@@ -152,6 +152,53 @@ function fadeOutAnimFolders(doc) {
   }
 }
 
+/* this will create a clone of the document */
+function exportGif() {
+  const fps = getSelectedFPS();
+  const manual = document.getElementById("manualDelay").value;
+  const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
+
+  const script = `
+    (function () {
+      var original = app.activeDocument;
+      if (!original) {
+        alert("No active document.");
+        return;
+      }
+
+      // 📝 Duplicate the document
+      var dupDoc = original.duplicate(original.name + "_preview");
+
+      // 🧱 Your entire exportGif logic goes here, using dupDoc
+      (function (doc) {
+        var delay = ${delay};
+
+        var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
+        if (!previewFolder) return;
+
+        var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
+        (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
+
+        var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
+        if (frameMap.length === 0) {
+          alert("No eligible animation frames found.");
+          return;
+        }
+
+        (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
+        (${fadeOutAnimFolders.toString()})(doc);
+
+        alert("✅ All frames merged into 'anim_preview'.\\nOriginal document left untouched.\\nYou can export this preview via File > Export As > GIF.");
+      })(dupDoc);
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
+}
+
+
+/* this creates the anim_preview in the same document - was not working well with Onion Skin Applied 
+
 // 🧱 MAIN wrapper to run everything in order
 function exportGif() {
   const fps = getSelectedFPS();
@@ -192,7 +239,7 @@ function exportGif() {
   window.parent.postMessage(script, "*");
 }
 
-
+*/
 
 
 
