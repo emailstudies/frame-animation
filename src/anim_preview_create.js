@@ -166,7 +166,7 @@ function exportGif() {
         return;
       }
 
-      // 🪄 Create duplicate document
+      // 🪄 Step 1: Duplicate document
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
 
       for (var i = original.layers.length - 1; i >= 0; i--) {
@@ -178,34 +178,34 @@ function exportGif() {
         layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
       }
 
-      app.activeDocument = dupDoc; // Focus on duplicated doc
+      app.activeDocument = dupDoc; // Set context to duplicated doc
 
-      // 🧱 Now run the export logic inside dupDoc
-      (function(doc) {
-        var delay = ${delay};
+      // 🧱 Step 2: Run export logic in dupDoc
+      var doc = app.activeDocument;
+      var delay = ${delay};
 
-        var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
-        if (!previewFolder) return;
+      var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
+      if (!previewFolder) return;
 
-        var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
-        (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
+      var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
+      (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
 
-        var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
-        if (frameMap.length === 0) {
-          alert("No eligible animation frames found.");
-          return;
-        }
+      var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
+      if (frameMap.length === 0) {
+        alert("No eligible animation frames found.");
+        return;
+      }
 
-        (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
-        (${fadeOutAnimFolders.toString()})(doc);
+      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
+      (${fadeOutAnimFolders.toString()})(doc);
 
-        alert("✅ All frames merged into 'anim_preview' in duplicated document.\\nYou can export via File > Export As > GIF.");
-      })(dupDoc);
+      alert("✅ All frames merged into 'anim_preview' in duplicated document.\\nYou can export via File > Export As > GIF.");
     })();
   `;
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 
