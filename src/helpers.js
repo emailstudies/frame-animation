@@ -68,20 +68,29 @@ function showOnlyFirstPreviewLayer() {
 function deleteOtherAnimFolders() {
   const script = `
     (function () {
-      var doc = app.activeDocument;
-      if (!doc) return;
+      function deleteAnimFolders(layerGroup) {
+        for (var i = layerGroup.layers.length - 1; i >= 0; i--) {
+          var layer = layerGroup.layers[i];
 
-      for (var i = doc.layers.length - 1; i >= 0; i--) {
-        var layer = doc.layers[i];
-        if (
-          layer.typename === "LayerSet" &&
-          layer.name.startsWith("anim_") &&
-          layer.name !== "anim_preview"
-        ) {
-          layer.remove();
+          if (layer.typename === "LayerSet") {
+            if (layer.name.startsWith("anim_") && layer.name !== "anim_preview") {
+              try {
+                layer.remove();
+              } catch (e) {
+                // maybe locked
+                try { layer.visible = true; layer.locked = false; layer.remove(); } catch (e2) {}
+              }
+            } else {
+              // recurse into nested folders
+              deleteAnimFolders(layer);
+            }
+          }
         }
       }
 
+      var doc = app.activeDocument;
+      if (!doc) return;
+      deleteAnimFolders(doc);
       app.refresh();
     })();
   `;
