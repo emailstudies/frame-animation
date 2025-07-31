@@ -12,27 +12,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const before = parseInt(document.getElementById("beforeSteps").value, 10);
     const after = parseInt(document.getElementById("afterSteps").value, 10);
     toggleOnionSkinMode(before, after); // apply new onion skin after reset
-  }, 250); // delay to allow Photopea reset script to finish
+  }, 200); // delay to allow Photopea reset script to finish
 };
 
   
- /* document.getElementById("previewAllBtn").onclick = exportGif;
-  document.getElementById("previewSelectedBtn").onclick = exportGifFromSelected; */
+  document.getElementById("previewAllBtn").onclick = exportGif;
+  document.getElementById("previewSelectedBtn").onclick = exportGifFromSelected;
   document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
-
-  document.getElementById("previewAllBtn").onclick = function () {
-  resetOnionSkin();
-  setTimeout(() => {
-    exportGif();
-  }, 150); // Wait for reset to finish
-};
-
-document.getElementById("previewSelectedBtn").onclick = function () {
-  resetOnionSkin();
-  setTimeout(() => {
-    exportGifFromSelected();
-  }, 150); // Wait for reset to finish
-};
 
 });
 
