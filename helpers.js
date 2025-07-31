@@ -36,3 +36,55 @@ function updateDelayInputState() {
   const manualDelay = document.getElementById("manualDelay").value.trim();
   fpsSelect.disabled = manualDelay !== "";
 }
+
+function showOnlyFirstPreviewLayer() {
+  const script = `
+    (function () {
+      var doc = app.activeDocument;
+      var previewFolder = null;
+
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
+          previewFolder = layer;
+          break;
+        }
+      }
+
+      if (!previewFolder) return;
+
+      var layers = previewFolder.layers;
+      for (var j = 0; j < layers.length; j++) {
+        layers[j].visible = (j === layers.length - 1); // Show only first (bottom-most)
+      }
+
+      app.refresh();
+    })();
+  `;
+  window.parent.postMessage(script, "*");
+}
+
+
+function deleteOtherAnimFolders() {
+  const script = `
+    (function () {
+      var doc = app.activeDocument;
+      if (!doc) return;
+
+      for (var i = doc.layers.length - 1; i >= 0; i--) {
+        var layer = doc.layers[i];
+        if (
+          layer.typename === "LayerSet" &&
+          layer.name.startsWith("anim_") &&
+          layer.name !== "anim_preview"
+        ) {
+          layer.remove();
+        }
+      }
+
+      app.refresh();
+    })();
+  `;
+  window.parent.postMessage(script, "*");
+}
+
