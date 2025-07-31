@@ -166,10 +166,9 @@ function exportGif() {
         return;
       }
 
-      // 📄 Duplicate document
+      // 🪄 Step 1: Duplicate document
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
 
-      // 🔁 Copy all unlocked layers in reverse
       for (var i = original.layers.length - 1; i >= 0; i--) {
         var layer = original.layers[i];
         if (layer.locked) continue;
@@ -180,14 +179,16 @@ function exportGif() {
       }
 
       app.activeDocument = dupDoc;
+
+      // 🧱 Step 2: Run merging logic on duplicated document
+      var doc = app.activeDocument;
       var delay = ${delay};
 
-      // 🔧 Begin merging logic
-      var previewFolder = (${createAnimPreviewFolder.toString()})();
+      var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
       if (!previewFolder) return;
 
-      var data = (${getAnimFoldersAndMaxFrames.toString()})();
-      (${duplicateSingleLayerFolders.toString()})(data.maxFrames);
+      var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
+      (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
 
       var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
       if (frameMap.length === 0) {
@@ -195,43 +196,40 @@ function exportGif() {
         return;
       }
 
-      (${mergeFrameGroups.toString()})(frameMap, previewFolder, delay);
-      (${fadeOutAnimFolders.toString()})();
+      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
+      (${fadeOutAnimFolders.toString()})(doc);
 
-      // 🧹 Delete all other anim_* folders except anim_preview
-      for (var i = dupDoc.layers.length - 1; i >= 0; i--) {
-        var layer = dupDoc.layers[i];
+      // 🧹 Step 3: Remove all anim_* folders except anim_preview
+      for (var i = doc.layers.length - 1; i >= 0; i--) {
+        var layer = doc.layers[i];
         if (
           layer.typename === "LayerSet" &&
           layer.name.startsWith("anim_") &&
           layer.name !== "anim_preview"
         ) {
-          try {
-            layer.remove();
-          } catch (e) {
-            alert("⚠️ Could not remove: " + layer.name);
-          }
+          try { layer.remove(); } catch (e) {}
         }
       }
 
-      // 👁️ Show only the first frame in anim_preview
-      for (var i = 0; i < dupDoc.layers.length; i++) {
-        var group = dupDoc.layers[i];
+      // 🎬 Step 4: Show only first frame in anim_preview
+      for (var i = 0; i < doc.layers.length; i++) {
+        var group = doc.layers[i];
         if (group.typename === "LayerSet" && group.name === "anim_preview") {
           var layers = group.layers;
           for (var j = 0; j < layers.length; j++) {
-            layers[j].visible = (j === layers.length - 1); // Show bottom-most
+            layers[j].visible = (j === layers.length - 1); // Show only bottom-most
           }
         }
       }
 
       app.refresh();
-      alert("✅ All frames merged into 'anim_preview'.\\nYou can now export via File > Export As > GIF.");
+      alert("✅ All frames merged into 'anim_preview'. You can now export via File > Export As > GIF.");
     })();
   `;
 
   window.parent.postMessage(script, "*");
 }
+
 
 /* this will do a post clean up with only first layer of preview visible and remove other folders - NOT WORKING
 function exportGif() {
