@@ -166,8 +166,10 @@ function exportGif() {
         return;
       }
 
+      // 📄 Duplicate document
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
 
+      // 🔁 Copy all unlocked layers in reverse
       for (var i = original.layers.length - 1; i >= 0; i--) {
         var layer = original.layers[i];
         if (layer.locked) continue;
@@ -180,11 +182,12 @@ function exportGif() {
       app.activeDocument = dupDoc;
       var delay = ${delay};
 
-      var previewFolder = (${createAnimPreviewFolder.toString()})(dupDoc);
+      // 🔧 Begin merging logic
+      var previewFolder = (${createAnimPreviewFolder.toString()})();
       if (!previewFolder) return;
 
-      var data = (${getAnimFoldersAndMaxFrames.toString()})(dupDoc);
-      (${duplicateSingleLayerFolders.toString()})(dupDoc, data.maxFrames);
+      var data = (${getAnimFoldersAndMaxFrames.toString()})();
+      (${duplicateSingleLayerFolders.toString()})(data.maxFrames);
 
       var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
       if (frameMap.length === 0) {
@@ -192,10 +195,10 @@ function exportGif() {
         return;
       }
 
-      (${mergeFrameGroups.toString()})(dupDoc, frameMap, previewFolder, delay);
-      (${fadeOutAnimFolders.toString()})(dupDoc);
+      (${mergeFrameGroups.toString()})(frameMap, previewFolder, delay);
+      (${fadeOutAnimFolders.toString()})();
 
-      // 🧹 Delete other anim folders (in this context)
+      // 🧹 Delete all other anim_* folders except anim_preview
       for (var i = dupDoc.layers.length - 1; i >= 0; i--) {
         var layer = dupDoc.layers[i];
         if (
@@ -211,19 +214,19 @@ function exportGif() {
         }
       }
 
-      // 🎬 Show only first anim_preview frame
+      // 👁️ Show only the first frame in anim_preview
       for (var i = 0; i < dupDoc.layers.length; i++) {
         var group = dupDoc.layers[i];
         if (group.typename === "LayerSet" && group.name === "anim_preview") {
           var layers = group.layers;
           for (var j = 0; j < layers.length; j++) {
-            layers[j].visible = (j === layers.length - 1); // bottom-most
+            layers[j].visible = (j === layers.length - 1); // Show bottom-most
           }
         }
       }
 
       app.refresh();
-      alert("✅ All frames merged into 'anim_preview'. You can now export as GIF.");
+      alert("✅ All frames merged into 'anim_preview'.\\nYou can now export via File > Export As > GIF.");
     })();
   `;
 
