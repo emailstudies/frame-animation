@@ -152,65 +152,61 @@ function fadeOutAnimFolders(doc) {
   }
 }
 
-/* this utilizes the beforeMergingInExport() */
+/* this utilizes the beforeMergingInExport() in app.js */
 
 function exportGif() {
-  // Step 1: Reset visibility and opacity before exporting
-  beforeMergingInExport();
+  const fps = getSelectedFPS();
+  const manual = document.getElementById("manualDelay").value;
+  const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
 
-  // Step 2: Slight delay to let Photopea apply changes
-  setTimeout(() => {
-    const fps = getSelectedFPS();
-    const manual = document.getElementById("manualDelay").value;
-    const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
+  const script = `
+    (function () {
+      var original = app.activeDocument;
+      if (!original) {
+        alert("No active document.");
+        return;
+      }
 
-    const script = `
-      (function () {
-        var original = app.activeDocument;
-        if (!original) {
-          alert("No active document.");
-          return;
-        }
+      // 🪄 Step 1: Duplicate document
+      var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
 
-        var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
+      for (var i = original.layers.length - 1; i >= 0; i--) {
+        var layer = original.layers[i];
+        if (layer.locked) continue;
 
-        for (var i = original.layers.length - 1; i >= 0; i--) {
-          var layer = original.layers[i];
-          if (layer.locked) continue;
+        app.activeDocument = original;
+        original.activeLayer = layer;
+        layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+      }
 
-          app.activeDocument = original;
-          original.activeLayer = layer;
-          layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
-        }
+      app.activeDocument = dupDoc;
 
-        app.activeDocument = dupDoc;
+      // 🧱 Step 2: Run merging logic
+      var doc = app.activeDocument;
+      var delay = ${delay};
 
-        (function(doc) {
-          var delay = ${delay};
+      var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
+      if (!previewFolder) return;
 
-          var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
-          if (!previewFolder) return;
+      var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
+      (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
 
-          var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
-          (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
+      var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
+      if (frameMap.length === 0) {
+        alert("No eligible animation frames found.");
+        return;
+      }
 
-          var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
-          if (frameMap.length === 0) {
-            alert("No eligible animation frames found.");
-            return;
-          }
+      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
+      (${fadeOutAnimFolders.toString()})(doc);
 
-          (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
-          (${fadeOutAnimFolders.toString()})(doc);
+      alert("✅ All frames merged into 'anim_preview' in duplicated document.\\nYou can export via File > Export As > GIF.");
+    })();
+  `;
 
-          alert("✅ All frames merged into 'anim_preview' in duplicated document.\\nYou can export via File > Export As > GIF.");
-        })(dupDoc);
-      })();
-    `;
-
-    window.parent.postMessage(script, "*");
-  }, 200); // Let Photopea finish layer state changes
+  window.parent.postMessage(script, "*");
 }
+
 
 /*-----------------------------------------------------------
 
