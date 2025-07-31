@@ -7,6 +7,43 @@ function resetOnionSkin() {
         return;
       }
 
+      // Loop through all anim_* folders except anim_preview
+      for (var i = 0; i < doc.layers.length; i++) {
+        var folder = doc.layers[i];
+        if (
+          folder.typename === "LayerSet" &&
+          folder.name.startsWith("anim_") &&
+          folder.name !== "anim_preview"
+        ) {
+          folder.visible = true;
+
+          var layers = folder.layers;
+          for (var j = 0; j < layers.length; j++) {
+            var layer = layers[j];
+            if (layer.typename !== "LayerSet") {
+              layer.opacity = 100;
+              layer.visible = (j === layers.length - 1); // Only topmost frame visible
+            }
+          }
+        }
+      }
+
+      alert("🔄 Onion skin reset: visibility and opacity restored.");
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
+}
+
+/* function resetOnionSkin() {
+  const script = `
+    (function () {
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No active document.");
+        return;
+      }
+
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
 
