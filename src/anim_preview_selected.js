@@ -48,7 +48,7 @@ function exportGifFromSelected() {
 
       // 🧱 Duplicate single-frame folders
       (${duplicateSingleLayerFolders.toString()})(doc, maxFrames);
-      alert("📌 Duplicated single-layer folders (if any).");
+      // alert("📌 Duplicated single-layer folders (if any).");
 
       // 🧠 Build frame map (reverse-indexed)
       function buildFrameMap(animFolders, maxFrames) {
@@ -69,7 +69,7 @@ function exportGifFromSelected() {
       }
 
       var frameMap = buildFrameMap(selected, maxFrames);
-      alert("🧠 Frame map built: " + frameMap.length + " frames.");
+      // alert("🧠 Frame map built: " + frameMap.length + " frames.");
 
       // 🎞 Merge frame layers into preview
       function mergeFrameGroups(doc, frameMap, previewFolder, delay) {
