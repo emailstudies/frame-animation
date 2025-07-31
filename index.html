@@ -123,10 +123,23 @@
 
 
   <!-- Phase 5: Web Preview -->
+  
   <div class="section">
   <h3>4. Web Preview</h3>
-  <div style="display: flex; gap: 20 px;">
-    <button id="webPreviewAllBtn">Web Preview All</button>
+  
+
+  <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+  <label>
+    Before Steps:
+    <input type="range" id="beforeSteps" min="0" max="5" value="1" />
+  </label>
+  <label>
+    After Steps:
+    <input type="range" id="afterSteps" min="0" max="5" value="1" />
+  </label>
+</div>
+    <div style="display: flex; gap: 20 px;">
+    <button id="webPreviewAllBtn">OnionSkinTest</button>
     <button id="webPreviewSelectedBtn">Web Preview Selected</button>
   </div>
 </div>
