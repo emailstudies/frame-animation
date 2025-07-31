@@ -15,6 +15,22 @@ document.addEventListener("DOMContentLoaded", function () {
   }, 20); // delay to allow Photopea reset script to finish
 };
 
+  
+  document.getElementById("previewAllBtn").onclick = function () {
+  beforeMergingInExport(() => {
+    setTimeout(() => {
+      exportGif();
+
+      // Cleanup after export
+      setTimeout(() => {
+        showOnlyFirstPreviewLayer();
+        deleteOtherAnimFolders();
+      }, 300); // Allow time for exportGif to complete
+    }, 200);
+  });
+};
+
+/*
   document.getElementById("previewAllBtn").onclick = function () {
   beforeMergingInExport(() => {
     setTimeout(() => {
