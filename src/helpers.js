@@ -68,32 +68,43 @@ function showOnlyFirstPreviewLayer() {
 function deleteOtherAnimFolders() {
   const script = `
     (function () {
-      function deleteAnimFolders(layerGroup) {
-        for (var i = layerGroup.layers.length - 1; i >= 0; i--) {
-          var layer = layerGroup.layers[i];
+      var targetName = localStorage.getItem("animPreviewDocName");
+      if (!targetName) {
+        alert("❌ animPreviewDocName not found in localStorage.");
+        return;
+      }
 
-          if (layer.typename === "LayerSet") {
-            if (layer.name.startsWith("anim_") && layer.name !== "anim_preview") {
-              try {
-                layer.remove();
-              } catch (e) {
-                // maybe locked
-                try { layer.visible = true; layer.locked = false; layer.remove(); } catch (e2) {}
-              }
-            } else {
-              // recurse into nested folders
-              deleteAnimFolders(layer);
-            }
-          }
+      var targetDoc = null;
+      for (var i = 0; i < app.documents.length; i++) {
+        if (app.documents[i].name === targetName) {
+          targetDoc = app.documents[i];
+          break;
         }
       }
 
-      var doc = app.activeDocument;
-      if (!doc) return;
-      deleteAnimFolders(doc);
-      app.refresh();
+      if (!targetDoc) {
+        alert("❌ anim_preview document not found.");
+        return;
+      }
+
+      app.activeDocument = targetDoc;
+
+      for (var i = targetDoc.layers.length - 1; i >= 0; i--) {
+        var layer = targetDoc.layers[i];
+        if (
+          layer.typename === "LayerSet" &&
+          layer.name.startsWith("anim_") &&
+          layer.name !== "anim_preview"
+        ) {
+          try {
+            layer.remove();
+          } catch (e) {
+            alert("⚠️ Could not remove: " + layer.name);
+          }
+        }
+      }
     })();
   `;
+
   window.parent.postMessage(script, "*");
 }
-
