@@ -24,14 +24,27 @@ function exportGifFromSelected() {
         }
       }
 
-      alert("✅ Selected: " + selected.length);
+      if (selected.length === 0) {
+        alert("❌ No anim_* folders selected.");
+        return;
+      }
+
+      var maxFrames = 0;
+      for (var i = 0; i < selected.length; i++) {
+        if (selected[i].layers.length > maxFrames) {
+          maxFrames = selected[i].layers.length;
+        }
+      }
 
       var delay = ${delay};
       var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
       if (!previewFolder) return;
 
-      alert("✅ Preview folder ready.");
+      (${duplicateSingleLayerFolders.toString()})(doc, maxFrames);
+      alert("📌 Duplicated single-layer folders (if any).");
+
     })();
   `;
+
   window.parent.postMessage(script, "*");
 }
