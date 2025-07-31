@@ -1,8 +1,8 @@
 // ✅ anim_preview_selected.js — Only merges selected anim_* folders into 'anim_preview'
 
-// 🧱 Helper: Get selected top-level anim_* folders
+// 🧱 Get selected anim_* folders by name (safe approach)
 function getSelectedTopLevelAnimFolders(doc) {
-  var selected = [];
+  var selectedNames = [];
 
   try {
     var ref = new ActionReference();
@@ -12,35 +12,35 @@ function getSelectedTopLevelAnimFolders(doc) {
 
     if (!desc.hasKey(stringIDToTypeID("targetLayers"))) return [];
 
-    var selIndexList = desc.getList(stringIDToTypeID("targetLayers"));
-    var selIndices = [];
-
-    for (var i = 0; i < selIndexList.count; i++) {
-      var idx = selIndexList.getReference(i).getIndex();
-      selIndices.push(idx);
-    }
-
-    for (var j = 0; j < selIndices.length; j++) {
-      var i = selIndices[j] - 1; // 1-based to 0-based
-      var layer = doc.layers[i];
-      if (
-        layer &&
-        layer.typename === "LayerSet" &&
-        layer.name.indexOf("anim_") === 0 &&
-        layer.name !== "anim_preview"
-      ) {
-        selected.push(layer);
+    var selList = desc.getList(stringIDToTypeID("targetLayers"));
+    for (var i = 0; i < selList.count; i++) {
+      var selRef = selList.getReference(i);
+      if (selRef.getName) {
+        selectedNames.push(selRef.getName());
       }
     }
   } catch (e) {
-    alert("❌ Could not detect selected layers.");
+    alert("❌ Could not read selected layer names.");
     return [];
   }
 
-  return selected;
+  var selectedFolders = [];
+  for (var i = 0; i < doc.layers.length; i++) {
+    var layer = doc.layers[i];
+    if (
+      layer.typename === "LayerSet" &&
+      layer.name.indexOf("anim_") === 0 &&
+      layer.name !== "anim_preview" &&
+      selectedNames.includes(layer.name)
+    ) {
+      selectedFolders.push(layer);
+    }
+  }
+
+  return selectedFolders;
 }
 
-// 🧱 Get selected folders and max frame count
+// 🧱 Build max frame count from selected folders
 function getSelectedAnimFoldersAndMaxFrames(doc) {
   var animFolders = getSelectedTopLevelAnimFolders(doc);
   var maxFrames = 0;
@@ -57,13 +57,13 @@ function getSelectedAnimFoldersAndMaxFrames(doc) {
   };
 }
 
-// 🧱 Main function to run export from selected folders
+// ✅ MAIN: Export only selected folders
 function exportGifFromSelected() {
-  const fps = getSelectedFPS(); // From app.js
+  const fps = getSelectedFPS();
   const manual = document.getElementById("manualDelay").value;
   const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
 
-  console.log("🎯 Exporting selected anim_* folders. Delay:", delay);
+  console.log("🎯 Exporting selected folders only. Delay:", delay, "ms");
 
   const script = `
     (function () {
@@ -80,28 +80,24 @@ function exportGifFromSelected() {
 
       var getSelectedTopLevelAnimFolders = ${getSelectedTopLevelAnimFolders.toString()};
       var getSelectedAnimFoldersAndMaxFrames = ${getSelectedAnimFoldersAndMaxFrames.toString()};
-      var duplicateSingleLayerFolders = ${duplicateSingleLayerFolders.toString()};
-      var buildFrameMap = ${buildFrameMap.toString()};
-      var mergeFrameGroups = ${mergeFrameGroups.toString()};
-      var fadeOutAnimFolders = ${fadeOutAnimFolders.toString()};
-
       var data = getSelectedAnimFoldersAndMaxFrames(doc);
+
       if (data.folders.length === 0) {
         alert("❌ No anim_* folders selected.");
         return;
       }
 
-      duplicateSingleLayerFolders(doc, data.maxFrames);
-      var frameMap = buildFrameMap(data.folders, data.maxFrames);
+      (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
+      var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
       if (frameMap.length === 0) {
         alert("No eligible frames in selected folders.");
         return;
       }
 
-      mergeFrameGroups(doc, frameMap, previewFolder, delay);
-      fadeOutAnimFolders(doc);
+      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
+      (${fadeOutAnimFolders.toString()})(doc);
 
-      alert("✅ Selected folders merged into 'anim_preview'.\\nOther anim folders hidden.");
+      alert("✅ Selected folders merged into 'anim_preview'.\\nOther anim folders hidden.\\nYou can export via File > Export As > GIF.");
     })();
   `;
 
