@@ -22,12 +22,14 @@ function resetOnionSkin() {
           }
 
           var layers = group.layers;
-          for (var j = 0; j < layers.length; j++) {
+          var frameCount = layers.length;
+
+          for (var j = 0; j < frameCount; j++) {
             var layer = layers[j];
             if (layer.typename !== "Layer") continue;
 
             try {
-              if (j === 0) {
+              if (j === frameCount - 1) {
                 layer.visible = true;
                 layer.opacity = 100;
               } else {
@@ -40,7 +42,7 @@ function resetOnionSkin() {
         }
       }
 
-      alert("✅ Onion skin reset: Folders shown, first layer restored, others faded out.");
+      alert("✅ Onion skin reset: Folders shown, first (bottom-most) frame restored.");
     })();
   `;
 
