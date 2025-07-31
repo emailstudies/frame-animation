@@ -11,6 +11,7 @@ function exportGifFromSelected() {
         return;
       }
 
+      // ✅ Collect selected anim_* folders
       var selected = [];
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
@@ -29,6 +30,7 @@ function exportGifFromSelected() {
         return;
       }
 
+      // ✅ Determine max number of frames across selected folders
       var maxFrames = 0;
       for (var i = 0; i < selected.length; i++) {
         if (selected[i].layers.length > maxFrames) {
@@ -37,15 +39,25 @@ function exportGifFromSelected() {
       }
 
       var delay = ${delay};
+
       var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
       if (!previewFolder) return;
+      alert("✅ Preview folder ready.");
 
       (${duplicateSingleLayerFolders.toString()})(doc, maxFrames);
       alert("📌 Duplicated single-layer folders (if any).");
 
       var frameMap = (${buildFrameMap.toString()})(selected, maxFrames);
+      if (frameMap.length === 0) {
+        alert("❌ No eligible frames found in selected folders.");
+        return;
+      }
       alert("🧠 Frame map built: " + frameMap.length + " frames.");
 
+      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
+      (${fadeOutAnimFolders.toString()})(doc);
+
+      alert("✅ Selected folders merged into 'anim_preview'.\\nOther anim folders hidden.\\nExport via File > Export As > GIF.");
     })();
   `;
 
