@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
 };
 
   
-  document.getElementById("previewAllBtn").onclick = function () {
+  /*document.getElementById("previewAllBtn").onclick = function () {
   beforeMergingInExport(() => {
     setTimeout(() => {
       exportGif();
@@ -28,9 +28,9 @@ document.addEventListener("DOMContentLoaded", function () {
       }, 300); // Allow time for exportGif to complete
     }, 200);
   });
-};
+}; */
 
-/*
+
   document.getElementById("previewAllBtn").onclick = function () {
   beforeMergingInExport(() => {
     setTimeout(() => {
