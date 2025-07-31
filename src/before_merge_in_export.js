@@ -1,4 +1,44 @@
-/* this is the code that what making all layers to 100% and only 1 visible beofr emerging layers - did not work with onion skin */
+function beforeMergingInExport(callback) {
+  const script = `
+    (function () {
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No active document.");
+        return;
+      }
+
+      for (var i = 0; i < doc.layers.length; i++) {
+        var folder = doc.layers[i];
+        if (
+          folder.typename === "LayerSet" &&
+          folder.name.startsWith("anim_") &&
+          folder.name !== "anim_preview"
+        ) {
+          folder.visible = true;
+
+          for (var j = 0; j < folder.layers.length; j++) {
+            var layer = folder.layers[j];
+            if (layer.typename !== "LayerSet") {
+              layer.opacity = 100;
+              layer.visible = (j === folder.layers.length - 1); // Top frame visible
+            }
+          }
+        }
+      }
+      app.refresh(); // Force refresh in Photopea
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
+
+  // Small delay to ensure Photopea completes execution
+  if (typeof callback === "function") {
+    setTimeout(callback, 300); // Adjust if needed
+  }
+}
+
+
+/* this is the code that what making all layers to 100% and only 1 visible beofr emerging layers - did not work with onion skin 
 function beforeMergingInExport() {
   const script = `
     (function () {
@@ -34,4 +74,4 @@ function beforeMergingInExport() {
   `;
 
   window.parent.postMessage(script, "*");
-}
+} */
