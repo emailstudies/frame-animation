@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const before = parseInt(document.getElementById("beforeSteps").value, 10);
     const after = parseInt(document.getElementById("afterSteps").value, 10);
     toggleOnionSkinMode(before, after); // apply new onion skin after reset
-  }, 100); // delay to allow Photopea reset script to finish
+  }, 20); // delay to allow Photopea reset script to finish
 };
 
   
