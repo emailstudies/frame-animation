@@ -1,91 +1,84 @@
+// 🧅 onion_skin.js
 function toggleOnionSkinMode() {
-  const before = parseInt(document.getElementById("beforeSlider").value, 10);
-  const after = parseInt(document.getElementById("afterSlider").value, 10);
-
   const script = `
     (function () {
       var doc = app.activeDocument;
-      if (!doc) { alert("No active document."); return; }
+      if (!doc) {
+        alert("No active document.");
+        return;
+      }
 
-      var before = ${before};
-      var after = ${after};
+      var beforeSteps = parseInt(document.getElementById("beforeSteps").value, 10);
+      var afterSteps = parseInt(document.getElementById("afterSteps").value, 10);
 
-      var selectedMap = {};
+      console.log("\uD83E\uDD05 Onion Skin: Before = " + beforeSteps + " After = " + afterSteps);
 
+      var selectedByParent = {}; // { parentName: [selectedLayerIndexes] }
+
+      // Collect selected layers grouped by parent anim_* folder
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
         if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
           for (var j = 0; j < group.layers.length; j++) {
             var layer = group.layers[j];
-            if (layer.selected && layer.typename !== "LayerSet") {
-              if (!selectedMap[group.name]) selectedMap[group.name] = [];
-              selectedMap[group.name].push(j);
+            if (layer.selected) {
+              if (layer.typename === "LayerSet") {
+                alert("Only individual layers can be selected for Onion Skin.");
+                return;
+              }
+              if (!selectedByParent[group.name]) selectedByParent[group.name] = [];
+              selectedByParent[group.name].push(j);
             }
           }
         }
       }
 
-      var selectedFolders = Object.keys(selectedMap);
-      if (selectedFolders.length === 0) {
-        alert("❌ No valid anim_* layers selected.");
+      var parentNames = Object.keys(selectedByParent);
+      if (parentNames.length === 0) {
+        alert("No eligible layers selected. Select layers inside anim_* folders.");
         return;
       }
 
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
+
         if (group.typename !== "LayerSet" || group.name.indexOf("anim_") !== 0) continue;
+        if (!group.visible && !group.locked) group.visible = false; // Hide non-selected folders if not locked
 
-        var isSelectedFolder = selectedFolders.includes(group.name);
-        if (!isSelectedFolder && !group.allLocked) {
-          group.visible = false;
-          console.log("👻 Hiding unrelated folder:", group.name);
-          continue;
-        }
+        var isSelectedFolder = !!selectedByParent[group.name];
+        group.visible = isSelectedFolder || group.locked;
 
-        var selectedIndexes = selectedMap[group.name] || [];
-        var layers = group.layers;
+        var selectedIndexes = selectedByParent[group.name] || [];
 
-        for (var j = 0; j < layers.length; j++) {
-          var layer = layers[j];
-          if (layer.typename === "LayerSet") continue;
+        for (var j = 0; j < group.layers.length; j++) {
+          var layer = group.layers[j];
+          if (layer.typename === "LayerSet" || layer.locked) continue;
 
-          var opacity = 0;
-          var visible = false;
+          let opacity = 0;
+          if (selectedIndexes.includes(j)) {
+            opacity = 100;
+          } else {
+            for (let s = 0; s < selectedIndexes.length; s++) {
+              const index = selectedIndexes[s];
+              const dist = j - index;
 
-          for (var k = 0; k < selectedIndexes.length; k++) {
-            var idx = selectedIndexes[k];
-
-            if (j === idx) {
-              opacity = 100;
-              visible = true;
-              break;
-            }
-
-            var dist = Math.abs(j - idx);
-            if (j < idx && dist <= before) { // before layer
-              opacity = 50 - (dist - 1) * 10;
-              visible = true;
-              break;
-            }
-            if (j > idx && dist <= after) { // after layer
-              opacity = 50 - (dist - 1) * 10;
-              visible = true;
-              break;
+              if (dist < 0 && Math.abs(dist) <= beforeSteps) {
+                opacity = Math.max(opacity, 100 - (Math.abs(dist) * 30));
+              } else if (dist > 0 && dist <= afterSteps) {
+                opacity = Math.max(opacity, 100 - (dist * 30));
+              }
             }
           }
 
-          layer.visible = visible;
-          layer.opacity = opacity;
-          console.log("🧅", group.name + "/" + layer.name, "→ opacity:", opacity);
+          layer.opacity = Math.max(0, Math.min(opacity, 100));
         }
       }
-
-      console.log("✅ Onion skin applied (before:", before, "after:", after + ")");
     })();
   `;
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 
