@@ -1,5 +1,4 @@
-// ✅ Updated Onion Skin Logic with Before/After Sliders
-function toggleOnionSkinMode(beforeSteps = 1, afterSteps = 1) {
+function toggleOnionSkinMode(beforeSteps, afterSteps) {
   const script = `
     (function () {
       var doc = app.activeDocument;
@@ -8,76 +7,102 @@ function toggleOnionSkinMode(beforeSteps = 1, afterSteps = 1) {
         return;
       }
 
-      // Group selected layers by their anim_* folder
-      var selectedByParent = {};
+      var selectedByParent = {}; // { parentName: [selectedLayerIndexes] }
+      var selectedParentNames = [];
+
+      // 🧱 Collect selected layers inside anim_* folders
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
         if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
+          if (group.locked) continue;
           for (var j = 0; j < group.layers.length; j++) {
             var layer = group.layers[j];
-            if (layer.selected && layer.typename !== "LayerSet") {
-              if (!selectedByParent[group.name]) selectedByParent[group.name] = [];
+            if (layer.selected) {
+              if (layer.typename === "LayerSet") {
+                alert("Only individual layers can be selected for Onion Skin.");
+                return;
+              }
+              if (!selectedByParent[group.name]) {
+                selectedByParent[group.name] = [];
+                selectedParentNames.push(group.name);
+              }
               selectedByParent[group.name].push(j);
             }
           }
         }
       }
 
-      var parentNames = Object.keys(selectedByParent);
-      if (parentNames.length === 0) {
+      if (selectedParentNames.length === 0) {
         alert("No eligible layers selected. Select layers inside anim_* folders.");
         return;
       }
 
-      // Hide unselected anim_* folders (if not locked)
+      // 🧱 Hide unselected anim folders (if not locked)
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
-        if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0 && parentNames.indexOf(group.name) === -1) {
-          if (!group.allLocked && !group.visible) continue; // Already hidden
-          group.visible = false;
+        if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
+          if (!selectedParentNames.includes(group.name) && !group.locked) {
+            group.visible = false;
+          } else {
+            group.visible = true;
+          }
         }
       }
 
-      // Apply onion skin to selected anim folders
-      for (var p = 0; p < doc.layers.length; p++) {
-        var group = doc.layers[p];
-        if (group.typename !== "LayerSet" || parentNames.indexOf(group.name) === -1) continue;
+      // 🧅 Onion skin application
+      for (var i = 0; i < doc.layers.length; i++) {
+        var group = doc.layers[i];
+        if (
+          group.typename !== "LayerSet" ||
+          group.name.indexOf("anim_") !== 0 ||
+          !selectedByParent[group.name]
+        ) continue;
 
-        var selectedIndexes = selectedByParent[group.name] || [];
+        var selectedIndexes = selectedByParent[group.name];
         var layers = group.layers;
 
-        for (var i = 0; i < layers.length; i++) {
-          var layer = layers[i];
+        for (var j = 0; j < layers.length; j++) {
+          var layer = layers[j];
           if (layer.typename === "LayerSet" || layer.locked) continue;
 
-          var opacity = 0;
-          for (var s = 0; s < selectedIndexes.length; s++) {
-            var selIdx = selectedIndexes[s];
-            var diff = i - selIdx;
+          let relativeDistance = null;
 
-            if (diff === 0) {
-              opacity = 100;
-              break;
-            } else if (diff < 0 && Math.abs(diff) <= beforeSteps) {
-              opacity = 20 + (beforeSteps - Math.abs(diff)) * 10; // Eg: 2 steps: [30%, 40%]
-              break;
+          for (var s = 0; s < selectedIndexes.length; s++) {
+            var diff = j - selectedIndexes[s];
+
+            if (diff < 0 && Math.abs(diff) <= beforeSteps) {
+              if (relativeDistance === null || Math.abs(diff) < Math.abs(relativeDistance)) {
+                relativeDistance = diff;
+              }
             } else if (diff > 0 && diff <= afterSteps) {
-              opacity = 20 + (afterSteps - diff) * 10;
+              if (relativeDistance === null || diff < relativeDistance) {
+                relativeDistance = diff;
+              }
+            } else if (diff === 0) {
+              relativeDistance = 0;
               break;
             }
           }
 
-          layer.opacity = opacity;
+          if (relativeDistance === 0) {
+            // Keep original opacity
+          } else if (relativeDistance !== null) {
+            var opacity =
+              relativeDistance < 0
+                ? 100 - (beforeSteps - Math.abs(relativeDistance) + 1) * 20
+                : 100 - (afterSteps - relativeDistance + 1) * 20;
+            layer.opacity = Math.max(10, Math.min(opacity, 100)); // Clamp to 10–100
+          } else {
+            layer.opacity = 0;
+          }
         }
       }
 
-      console.log("🧅 Onion Skin applied (Before = " + ${beforeSteps} + ", After = " + ${afterSteps} + ")");
+      console.log("🧅 Onion skin applied with", beforeSteps, "before &", afterSteps, "after.");
     })();
   `;
-
   window.parent.postMessage(script, "*");
 }
-
 
 
 
