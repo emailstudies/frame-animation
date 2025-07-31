@@ -1,60 +1,4 @@
-/* making only first layer visible */
-
 function beforeMergingInExport(callback) {
-  const script = `
-    (function () {
-      var doc = app.activeDocument;
-      if (!doc) {
-        alert("No active document.");
-        return;
-      }
-
-      // Step 1: Reset anim_* folders (except anim_preview)
-      for (var i = 0; i < doc.layers.length; i++) {
-        var folder = doc.layers[i];
-        if (
-          folder.typename === "LayerSet" &&
-          folder.name.startsWith("anim_") &&
-          folder.name !== "anim_preview"
-        ) {
-          folder.visible = true;
-
-          for (var j = 0; j < folder.layers.length; j++) {
-            var layer = folder.layers[j];
-            if (layer.typename !== "LayerSet") {
-              layer.opacity = 100;
-              layer.visible = true;
-            }
-          }
-        }
-      }
-
-      // Step 2: If anim_preview exists, show only its first (bottom-most) layer
-      for (var i = 0; i < doc.layers.length; i++) {
-        var layer = doc.layers[i];
-        if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
-          var previewLayers = layer.layers;
-          for (var j = 0; j < previewLayers.length; j++) {
-            previewLayers[j].visible = (j === previewLayers.length - 1); // Show only bottom-most
-          }
-        }
-      }
-
-      app.refresh();
-    })();
-  `;
-
-  window.parent.postMessage(script, "*");
-
-  if (typeof callback === "function") {
-    setTimeout(callback, 150); // delay to allow reset to apply before proceeding
-  }
-}
-
-
-
-
-/* function beforeMergingInExport(callback) {
   const script = `
     (function () {
       var doc = app.activeDocument;
@@ -89,7 +33,7 @@ function beforeMergingInExport(callback) {
 
   // Small delay to ensure Photopea completes execution
   if (typeof callback === "function") {
-    setTimeout(callback, 300); // Adjust if needed
+    setTimeout(callback, 150); // Adjust if needed
   }
 }
 
