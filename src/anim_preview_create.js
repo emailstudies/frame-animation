@@ -152,7 +152,107 @@ function fadeOutAnimFolders(doc) {
   }
 }
 
+function exportGif() {
+  const fps = getSelectedFPS();
+  const manual = document.getElementById("manualDelay").value;
+  const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
+
+  const script = `
+    (function () {
+      var original = app.activeDocument;
+      if (!original) {
+        alert("No active document.");
+        return;
+      }
+
+      // 🪄 Step 1: Duplicate document
+      var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
+      app.activeDocument = dupDoc;
+
+      // 🎨 Step 2: Fill background layer with white
+      var bgLayer = dupDoc.artLayers.add();
+      bgLayer.name = "Background";
+      dupDoc.activeLayer = bgLayer;
+      app.foregroundColor.rgb.red = 255;
+      app.foregroundColor.rgb.green = 255;
+      app.foregroundColor.rgb.blue = 255;
+      app.activeDocument.selection.selectAll();
+      app.activeDocument.selection.fill(app.foregroundColor);
+      app.activeDocument.selection.deselect();
+      bgLayer.move(dupDoc, ElementPlacement.PLACEATEND);
+
+      // 📤 Step 3: Copy only non-background layers from original
+      for (var i = original.layers.length - 1; i >= 0; i--) {
+        var layer = original.layers[i];
+        if (layer.locked) continue;
+
+        // ❌ Skip backgrounds
+        if (layer.name.toLowerCase().indexOf("background") !== -1) continue;
+
+        try {
+          app.activeDocument = original;
+          original.activeLayer = layer;
+          layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+        } catch (e) {
+          console.log("❌ Failed to copy: " + layer.name);
+        }
+      }
+
+      app.activeDocument = dupDoc;
+
+      // 🧱 Step 4: Run merging logic on duplicated document
+      var doc = app.activeDocument;
+      var delay = ${delay};
+
+      var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
+      if (!previewFolder) return;
+
+      var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
+      (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
+
+      var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
+      if (frameMap.length === 0) {
+        alert("No eligible animation frames found.");
+        return;
+      }
+
+      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
+      (${fadeOutAnimFolders.toString()})(doc);
+
+      // 🧹 Step 5: Remove all anim_* folders except anim_preview
+      for (var i = doc.layers.length - 1; i >= 0; i--) {
+        var layer = doc.layers[i];
+        if (
+          layer.typename === "LayerSet" &&
+          layer.name.indexOf("anim_") === 0 &&
+          layer.name !== "anim_preview"
+        ) {
+          try { layer.remove(); } catch (e) {}
+        }
+      }
+
+      // 👁 Step 6: Show only first preview frame
+      for (var i = 0; i < doc.layers.length; i++) {
+        var group = doc.layers[i];
+        if (group.typename === "LayerSet" && group.name === "anim_preview") {
+          var layers = group.layers;
+          for (var j = 0; j < layers.length; j++) {
+            layers[j].visible = (j === layers.length - 1); // show bottom-most
+          }
+        }
+      }
+
+      app.refresh();
+      alert("✅ All frames merged into 'anim_preview'.\\nBackground filled white.\\nYou can now export via File > Export As > GIF.");
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
+}
+
+
 /* the first layer preview and delete all anim folders will be inline - no need for extra functions for these 2 */
+/* this was creating a background copy and a transparent background in the dup doc
 function exportGif() {
   const fps = getSelectedFPS();
   const manual = document.getElementById("manualDelay").value;
@@ -230,68 +330,6 @@ function exportGif() {
   window.parent.postMessage(script, "*");
 }
 
-
-/* this will do a post clean up with only first layer of preview visible and remove other folders - NOT WORKING
-function exportGif() {
-  const fps = getSelectedFPS();
-  const manual = document.getElementById("manualDelay").value;
-  const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
-
-  beforeMergingInExport(() => {
-    const script = `
-      (function () {
-        var original = app.activeDocument;
-        if (!original) {
-          alert("No active document.");
-          return;
-        }
-
-        // 🪄 Duplicate current document
-        var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
-
-        for (var i = original.layers.length - 1; i >= 0; i--) {
-          var layer = original.layers[i];
-          if (layer.locked) continue;
-
-          app.activeDocument = original;
-          original.activeLayer = layer;
-          layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
-        }
-
-        // Switch to duplicated doc
-        app.activeDocument = dupDoc;
-
-        // Run export logic
-        (function(doc) {
-          var delay = ${delay};
-
-          var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
-          if (!previewFolder) return;
-
-          var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
-          (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
-
-          var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
-          if (frameMap.length === 0) {
-            alert("No eligible animation frames found.");
-            return;
-          }
-
-          (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
-          (${fadeOutAnimFolders.toString()})(doc);
-
-          // ⬇️ Extra post-merge cleanup
-          (${showOnlyFirstPreviewLayer.toString()})();
-          (${deleteOtherAnimFolders.toString()})();
-
-          alert("✅ All frames merged into 'anim_preview'.\\nOther anim folders deleted.\\nYou can export via File > Export As > GIF.");
-        })(dupDoc);
-      })();
-    `;
-
-    window.parent.postMessage(script, "*");
-  });
-}
 
 
 /* ------------------------------------------
