@@ -32,41 +32,28 @@ function exportGifFromSelected() {
 
       console.log("✅ Selected folders to export: " + selected.length);
 
-      // ✅ Step 2: Optional background layer
-      var background = null;
-      for (var i = original.layers.length - 1; i >= 0; i--) {
-        var layer = original.layers[i];
+      // 🎨 Step 1.5: Capture background color of original doc (bottom layer if present)
+      var bgColor = null;
+      try {
+        var bottomLayer = original.layers[original.layers.length - 1];
         if (
-          layer.typename !== "LayerSet" &&
-          !layer.locked &&
-          /background|bg/i.test(layer.name)
+          bottomLayer &&
+          bottomLayer.kind === LayerKind.NORMAL &&
+          !bottomLayer.allLocked
         ) {
-          background = layer;
-          break;
+          original.activeLayer = bottomLayer;
+          bgColor = bottomLayer.pixelColor;
+          console.log("🎨 Captured background color.");
         }
+      } catch (e) {
+        console.log("⚠️ Could not capture background color: " + e);
       }
-      if (background) console.log("🟨 Background layer found: " + background.name);
-      else console.log("⚠️ No background layer found.");
 
-      // 🪄 Step 3: Duplicate clean document
+      // 🪄 Step 2: Duplicate document
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
-      app.activeDocument = dupDoc;
+      console.log("📄 Duplicated document created.");
 
-      // Clean any initial layers in new document
-      while (dupDoc.layers.length > 0) {
-        try { dupDoc.layers[0].remove(); } catch (e) {}
-      }
-      console.log("🧹 Cleaned new document.");
-
-      // Copy background if available
-      if (background) {
-        app.activeDocument = original;
-        original.activeLayer = background;
-        background.duplicate(dupDoc, ElementPlacement.PLACEATEND);
-        console.log("✅ Background layer duplicated.");
-      }
-
-      // ✅ Step 4: Copy selected folders into dupDoc
+      // 🧱 Step 3: Copy only selected folders into new document
       for (var i = selected.length - 1; i >= 0; i--) {
         var folder = selected[i];
         if (folder.locked) continue;
@@ -80,7 +67,7 @@ function exportGifFromSelected() {
         }
       }
 
-      // ✅ Step 5: Apply animation merge logic
+      // 🧠 Step 4: Process duplicated document
       app.activeDocument = dupDoc;
       var doc = dupDoc;
       var delay = ${delay};
@@ -108,7 +95,7 @@ function exportGifFromSelected() {
       (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
       (${fadeOutAnimFolders.toString()})(doc);
 
-      // 🧹 Step 6: Remove all anim_* folders except anim_preview
+      // 🧹 Step 5: Remove all anim_* folders except anim_preview
       for (var i = doc.layers.length - 1; i >= 0; i--) {
         var layer = doc.layers[i];
         if (
@@ -125,15 +112,42 @@ function exportGifFromSelected() {
         }
       }
 
-      // 👁 Step 7: Show only first frame
+      // 👁 Step 6: Show only the first preview frame
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
         if (group.typename === "LayerSet" && group.name === "anim_preview") {
           var layers = group.layers;
           for (var j = 0; j < layers.length; j++) {
-            layers[j].visible = (j === layers.length - 1); // bottom-most
+            layers[j].visible = (j === layers.length - 1); // show bottom-most
           }
         }
+      }
+
+      // 🎨 Step 7: Fill background layer if it's still empty
+      if (bgColor) {
+        try {
+          var bgLayer = doc.layers[doc.layers.length - 1];
+          if (
+            bgLayer &&
+            bgLayer.kind === LayerKind.NORMAL &&
+            !bgLayer.allLocked &&
+            bgLayer.layers === undefined // Not a group
+          ) {
+            doc.activeLayer = bgLayer;
+            doc.selection.selectAll();
+            doc.selection.clear(); // clear any content
+            doc.selection.fill(bgColor);
+            doc.selection.deselect();
+            bgLayer.name = "_a_FilledBackground";
+            console.log("✅ Background layer filled.");
+          } else {
+            console.log("ℹ️ Background layer not suitable for fill.");
+          }
+        } catch (e) {
+          console.log("⚠️ Could not fill background: " + e);
+        }
+      } else {
+        console.log("ℹ️ No background color available to fill.");
       }
 
       app.refresh();
@@ -145,7 +159,7 @@ function exportGifFromSelected() {
 }
 
 
-/* worked but removes the background 
+/* worked but background layer was transparent
 function exportGifFromSelected() {
   const fps = getSelectedFPS();
   const manual = document.getElementById("manualDelay").value;
