@@ -30,41 +30,55 @@ function exportGifFromSelected() {
         return;
       }
 
+      console.log("✅ Selected folders to export: " + selected.length);
+
       // 🪄 Step 2: Duplicate document
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
+      console.log("📄 Duplicated document created.");
 
-      for (var i = original.layers.length - 1; i >= 0; i--) {
-        var layer = original.layers[i];
-        if (layer.locked) continue;
-
-        if (layer.typename === "LayerSet" && layer.name.indexOf("anim_") === 0 && layer.name !== "anim_preview" && layer.selected) {
+      // 🧱 Step 3: Copy only selected folders into new document
+      for (var i = selected.length - 1; i >= 0; i--) {
+        var folder = selected[i];
+        if (folder.locked) continue;
+        try {
           app.activeDocument = original;
-          original.activeLayer = layer;
-          layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+          original.activeLayer = folder;
+          folder.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+          console.log("✅ Duplicated folder: " + folder.name);
+        } catch (e) {
+          console.log("❌ Failed to duplicate: " + folder.name + " — " + e);
         }
       }
 
+      // 🧠 Step 4: Process duplicated document
       app.activeDocument = dupDoc;
       var doc = dupDoc;
-
       var delay = ${delay};
 
       var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
-      if (!previewFolder) return;
+      if (!previewFolder) {
+        console.log("❌ Failed to create anim_preview folder.");
+        return;
+      }
 
       var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
+      console.log("📊 Max frames: " + data.maxFrames);
+
       (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
+      console.log("📌 Duplicated single-layer folders (if needed).");
 
       var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
+      console.log("🧠 Frame map built with " + frameMap.length + " frames.");
+
       if (frameMap.length === 0) {
-        alert("No eligible animation frames found.");
+        alert("❌ No eligible animation frames found.");
         return;
       }
 
       (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
       (${fadeOutAnimFolders.toString()})(doc);
 
-      // 🧹 Remove all anim_* folders except anim_preview
+      // 🧹 Step 5: Remove all anim_* folders except anim_preview
       for (var i = doc.layers.length - 1; i >= 0; i--) {
         var layer = doc.layers[i];
         if (
@@ -72,17 +86,22 @@ function exportGifFromSelected() {
           layer.name.indexOf("anim_") === 0 &&
           layer.name !== "anim_preview"
         ) {
-          try { layer.remove(); } catch (e) {}
+          try {
+            layer.remove();
+            console.log("🗑 Removed: " + layer.name);
+          } catch (e) {
+            console.log("❌ Failed to remove: " + layer.name);
+          }
         }
       }
 
-      // 👁 Show only the first frame of anim_preview
+      // 👁 Step 6: Show only the first preview frame
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
         if (group.typename === "LayerSet" && group.name === "anim_preview") {
           var layers = group.layers;
           for (var j = 0; j < layers.length; j++) {
-            layers[j].visible = (j === layers.length - 1);
+            layers[j].visible = (j === layers.length - 1); // show bottom-most
           }
         }
       }
