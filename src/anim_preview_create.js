@@ -165,42 +165,47 @@ function exportGif() {
         return;
       }
 
-      // 🪄 Step 1: Duplicate document
+      // 🪄 Step 1: Create new doc
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
       app.activeDocument = dupDoc;
 
-      // 🎨 Step 2: Fill background layer with white
-      var bgLayer = dupDoc.artLayers.add();
-      bgLayer.name = "Background";
-      dupDoc.activeLayer = bgLayer;
-      app.foregroundColor.rgb.red = 255;
-      app.foregroundColor.rgb.green = 255;
-      app.foregroundColor.rgb.blue = 255;
-      app.activeDocument.selection.selectAll();
-      app.activeDocument.selection.fill(app.foregroundColor);
-      app.activeDocument.selection.deselect();
-      bgLayer.move(dupDoc, ElementPlacement.PLACEATEND);
+      // 🎨 Step 2: Fill white background
+      try {
+        var white = new SolidColor();
+        white.rgb.red = 255;
+        white.rgb.green = 255;
+        white.rgb.blue = 255;
 
-      // 📤 Step 3: Copy only non-background layers from original
+        dupDoc.selection.selectAll();
+        dupDoc.selection.fill(white);
+        dupDoc.selection.deselect();
+
+        var bgLayer = dupDoc.artLayers.add();
+        bgLayer.name = "Background";
+        bgLayer.move(dupDoc.layers[dupDoc.layers.length - 1], ElementPlacement.PLACEAFTER);
+        console.log("✅ White background created.");
+      } catch (e) {
+        console.log("❌ Background fill error: " + e);
+      }
+
+      // 🧱 Step 3: Copy all non-background, non-locked layers from original
       for (var i = original.layers.length - 1; i >= 0; i--) {
         var layer = original.layers[i];
         if (layer.locked) continue;
+        if (
+          layer.name.toLowerCase().includes("background") &&
+          layer.typename !== "LayerSet"
+        ) continue; // ⛔ Skip any plain background fills
 
-        // ❌ Skip backgrounds
-        if (layer.name.toLowerCase().indexOf("background") !== -1) continue;
-
-        try {
-          app.activeDocument = original;
-          original.activeLayer = layer;
-          layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
-        } catch (e) {
-          console.log("❌ Failed to copy: " + layer.name);
-        }
+        app.activeDocument = original;
+        original.activeLayer = layer;
+        layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+        console.log("✅ Duplicated: " + layer.name);
       }
 
       app.activeDocument = dupDoc;
 
-      // 🧱 Step 4: Run merging logic on duplicated document
+      // 🔄 Step 4: Run merging logic
       var doc = app.activeDocument;
       var delay = ${delay};
 
@@ -212,14 +217,14 @@ function exportGif() {
 
       var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
       if (frameMap.length === 0) {
-        alert("No eligible animation frames found.");
+        alert("❌ No eligible animation frames found.");
         return;
       }
 
       (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
       (${fadeOutAnimFolders.toString()})(doc);
 
-      // 🧹 Step 5: Remove all anim_* folders except anim_preview
+      // 🧹 Step 5: Remove anim_* folders except anim_preview
       for (var i = doc.layers.length - 1; i >= 0; i--) {
         var layer = doc.layers[i];
         if (
@@ -231,19 +236,19 @@ function exportGif() {
         }
       }
 
-      // 👁 Step 6: Show only first preview frame
+      // 👁 Step 6: Show only first preview layer
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
         if (group.typename === "LayerSet" && group.name === "anim_preview") {
           var layers = group.layers;
           for (var j = 0; j < layers.length; j++) {
-            layers[j].visible = (j === layers.length - 1); // show bottom-most
+            layers[j].visible = (j === layers.length - 1); // Show bottom-most only
           }
         }
       }
 
       app.refresh();
-      alert("✅ All frames merged into 'anim_preview'.\\nBackground filled white.\\nYou can now export via File > Export As > GIF.");
+      alert("✅ All frames merged into 'anim_preview'. White background added. You can now export via File > Export As > GIF.");
     })();
   `;
 
