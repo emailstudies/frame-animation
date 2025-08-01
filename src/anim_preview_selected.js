@@ -32,26 +32,31 @@ function exportGifFromSelected() {
 
       console.log("✅ Selected folders to export: " + selected.length);
 
-      // 🎨 Step 1.5: Capture background color of original doc (bottom layer if present)
-      var bgColor = null;
-      try {
-        var bottomLayer = original.layers[original.layers.length - 1];
-        if (
-          bottomLayer &&
-          bottomLayer.kind === LayerKind.NORMAL &&
-          !bottomLayer.allLocked
-        ) {
-          original.activeLayer = bottomLayer;
-          bgColor = bottomLayer.pixelColor;
-          console.log("🎨 Captured background color.");
-        }
-      } catch (e) {
-        console.log("⚠️ Could not capture background color: " + e);
-      }
-
       // 🪄 Step 2: Duplicate document
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
       console.log("📄 Duplicated document created.");
+
+      // 🎨 Step 2.1: Fill bottom-most background layer with white
+      try {
+        app.activeDocument = dupDoc;
+        var bgLayer = dupDoc.layers[dupDoc.layers.length - 1];
+        if (bgLayer && bgLayer.kind === LayerKind.NORMAL && !bgLayer.allLocked) {
+          dupDoc.activeLayer = bgLayer;
+          dupDoc.selection.selectAll();
+          dupDoc.selection.fill(app.foregroundColor = new SolidColor());
+          app.foregroundColor.rgb.red = 255;
+          app.foregroundColor.rgb.green = 255;
+          app.foregroundColor.rgb.blue = 255;
+          dupDoc.selection.fill(app.foregroundColor);
+          dupDoc.selection.deselect();
+          bgLayer.name = "_a_WhiteBackground";
+          console.log("✅ White background filled.");
+        } else {
+          console.log("⚠️ No suitable background layer to fill.");
+        }
+      } catch (e) {
+        console.log("❌ Failed to fill white background: " + e);
+      }
 
       // 🧱 Step 3: Copy only selected folders into new document
       for (var i = selected.length - 1; i >= 0; i--) {
@@ -123,33 +128,6 @@ function exportGifFromSelected() {
         }
       }
 
-      // 🎨 Step 7: Fill background layer if it's still empty
-      if (bgColor) {
-        try {
-          var bgLayer = doc.layers[doc.layers.length - 1];
-          if (
-            bgLayer &&
-            bgLayer.kind === LayerKind.NORMAL &&
-            !bgLayer.allLocked &&
-            bgLayer.layers === undefined // Not a group
-          ) {
-            doc.activeLayer = bgLayer;
-            doc.selection.selectAll();
-            doc.selection.clear(); // clear any content
-            doc.selection.fill(bgColor);
-            doc.selection.deselect();
-            bgLayer.name = "_a_FilledBackground";
-            console.log("✅ Background layer filled.");
-          } else {
-            console.log("ℹ️ Background layer not suitable for fill.");
-          }
-        } catch (e) {
-          console.log("⚠️ Could not fill background: " + e);
-        }
-      } else {
-        console.log("ℹ️ No background color available to fill.");
-      }
-
       app.refresh();
       alert("✅ Selected folders exported to 'anim_preview'. You can now export via File > Export As > GIF.");
     })();
@@ -157,6 +135,7 @@ function exportGifFromSelected() {
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 /* worked but background layer was transparent
