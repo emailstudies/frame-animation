@@ -32,30 +32,28 @@ function exportGifFromSelected() {
 
       console.log("✅ Selected folders to export: " + selected.length);
 
-      // 🪄 Step 2: Duplicate document
+      // 🪄 Step 2: Duplicate document with white background
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
-      console.log("📄 Duplicated document created.");
+      app.activeDocument = dupDoc;
 
-      // 🎨 Step 2.1: Fill bottom-most background layer with white
+      // 🎨 Fill background layer with white
       try {
-        app.activeDocument = dupDoc;
-        var bgLayer = dupDoc.layers[dupDoc.layers.length - 1];
-        if (bgLayer && bgLayer.kind === LayerKind.NORMAL && !bgLayer.allLocked) {
-          dupDoc.activeLayer = bgLayer;
-          dupDoc.selection.selectAll();
-          dupDoc.selection.fill(app.foregroundColor = new SolidColor());
-          app.foregroundColor.rgb.red = 255;
-          app.foregroundColor.rgb.green = 255;
-          app.foregroundColor.rgb.blue = 255;
-          dupDoc.selection.fill(app.foregroundColor);
-          dupDoc.selection.deselect();
-          bgLayer.name = "_a_WhiteBackground";
-          console.log("✅ White background filled.");
-        } else {
-          console.log("⚠️ No suitable background layer to fill.");
-        }
+        var bgLayer = dupDoc.layers[dupDoc.layers.length - 1]; // bottom-most layer
+        dupDoc.activeLayer = bgLayer;
+
+        var white = new SolidColor();
+        white.rgb.red = 255;
+        white.rgb.green = 255;
+        white.rgb.blue = 255;
+
+        dupDoc.selection.selectAll();
+        dupDoc.selection.fill(white);
+        dupDoc.selection.deselect();
+
+        bgLayer.name = "Background";
+        console.log("✅ White background filled.");
       } catch (e) {
-        console.log("❌ Failed to fill white background: " + e);
+        console.log("❌ Failed to fill background: " + e);
       }
 
       // 🧱 Step 3: Copy only selected folders into new document
@@ -135,6 +133,7 @@ function exportGifFromSelected() {
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 
