@@ -165,12 +165,15 @@ function exportGif() {
         return;
       }
 
-      // 🪄 Step 1: Create new doc
+      // 🪄 Step 1: Duplicate document
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
       app.activeDocument = dupDoc;
 
-      // 🎨 Step 2: Fill white background
+      // 🎨 Fill background with white if possible
       try {
+        var bgLayer = dupDoc.layers[dupDoc.layers.length - 1]; // bottom-most
+        dupDoc.activeLayer = bgLayer;
+
         var white = new SolidColor();
         white.rgb.red = 255;
         white.rgb.green = 255;
@@ -180,35 +183,36 @@ function exportGif() {
         dupDoc.selection.fill(white);
         dupDoc.selection.deselect();
 
-        var bgLayer = dupDoc.artLayers.add();
         bgLayer.name = "Background";
-        bgLayer.move(dupDoc.layers[dupDoc.layers.length - 1], ElementPlacement.PLACEAFTER);
-        console.log("✅ White background created.");
+        console.log("✅ White background filled.");
       } catch (e) {
-        console.log("❌ Background fill error: " + e);
+        console.log("⚠️ Background fill failed: " + e);
       }
 
-      // 🧱 Step 3: Copy all non-background, non-locked layers from original
+      // 🧱 Step 2: Copy all unlocked layers except background
       for (var i = original.layers.length - 1; i >= 0; i--) {
         var layer = original.layers[i];
         if (layer.locked) continue;
-        if (
-          layer.name.toLowerCase().includes("background") &&
-          layer.typename !== "LayerSet"
-        ) continue; // ⛔ Skip any plain background fills
 
-        app.activeDocument = original;
-        original.activeLayer = layer;
-        layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
-        console.log("✅ Duplicated: " + layer.name);
+        if (
+          layer.typename === "ArtLayer" &&
+          layer.name.toLowerCase().includes("background")
+        ) continue; // ❌ skip background layers from original
+
+        try {
+          app.activeDocument = original;
+          original.activeLayer = layer;
+          layer.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+        } catch (e) {
+          console.log("❌ Failed to duplicate layer: " + e);
+        }
       }
 
       app.activeDocument = dupDoc;
-
-      // 🔄 Step 4: Run merging logic
-      var doc = app.activeDocument;
+      var doc = dupDoc;
       var delay = ${delay};
 
+      // 🧱 Step 3: Merge frame groups into anim_preview
       var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
       if (!previewFolder) return;
 
@@ -224,36 +228,52 @@ function exportGif() {
       (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
       (${fadeOutAnimFolders.toString()})(doc);
 
-      // 🧹 Step 5: Remove anim_* folders except anim_preview
+      // 🧹 Step 4: Delete anim_* folders except anim_preview
       for (var i = doc.layers.length - 1; i >= 0; i--) {
         var layer = doc.layers[i];
         if (
           layer.typename === "LayerSet" &&
-          layer.name.indexOf("anim_") === 0 &&
+          layer.name.startsWith("anim_") &&
           layer.name !== "anim_preview"
         ) {
           try { layer.remove(); } catch (e) {}
         }
       }
 
-      // 👁 Step 6: Show only first preview layer
+      // 👁 Step 5: Show only the first frame in anim_preview
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
         if (group.typename === "LayerSet" && group.name === "anim_preview") {
           var layers = group.layers;
           for (var j = 0; j < layers.length; j++) {
-            layers[j].visible = (j === layers.length - 1); // Show bottom-most only
+            layers[j].visible = (j === layers.length - 1); // show only bottom-most
           }
         }
       }
 
+      // 🧽 Step 6: Remove bottom layer if it’s an empty background
+      try {
+        var lastLayer = doc.layers[doc.layers.length - 1];
+        if (
+          lastLayer.name.toLowerCase().includes("background") &&
+          lastLayer.bounds[2] - lastLayer.bounds[0] === 0 &&
+          lastLayer.bounds[3] - lastLayer.bounds[1] === 0
+        ) {
+          lastLayer.remove();
+          console.log("🗑 Removed empty background layer.");
+        }
+      } catch (e) {
+        console.log("⚠️ Error checking background layer: " + e);
+      }
+
       app.refresh();
-      alert("✅ All frames merged into 'anim_preview'. White background added. You can now export via File > Export As > GIF.");
+      alert("✅ All frames merged into 'anim_preview'. You can now export via File > Export As > GIF.");
     })();
   `;
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 /* the first layer preview and delete all anim folders will be inline - no need for extra functions for these 2 */
