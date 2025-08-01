@@ -32,6 +32,154 @@ function exportGifFromSelected() {
 
       console.log("✅ Selected folders to export: " + selected.length);
 
+      // ✅ Step 2: Optional background layer
+      var background = null;
+      for (var i = original.layers.length - 1; i >= 0; i--) {
+        var layer = original.layers[i];
+        if (
+          layer.typename !== "LayerSet" &&
+          !layer.locked &&
+          /background|bg/i.test(layer.name)
+        ) {
+          background = layer;
+          break;
+        }
+      }
+      if (background) console.log("🟨 Background layer found: " + background.name);
+      else console.log("⚠️ No background layer found.");
+
+      // 🪄 Step 3: Duplicate clean document
+      var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
+      app.activeDocument = dupDoc;
+
+      // Clean any initial layers in new document
+      while (dupDoc.layers.length > 0) {
+        try { dupDoc.layers[0].remove(); } catch (e) {}
+      }
+      console.log("🧹 Cleaned new document.");
+
+      // Copy background if available
+      if (background) {
+        app.activeDocument = original;
+        original.activeLayer = background;
+        background.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+        console.log("✅ Background layer duplicated.");
+      }
+
+      // ✅ Step 4: Copy selected folders into dupDoc
+      for (var i = selected.length - 1; i >= 0; i--) {
+        var folder = selected[i];
+        if (folder.locked) continue;
+        try {
+          app.activeDocument = original;
+          original.activeLayer = folder;
+          folder.duplicate(dupDoc, ElementPlacement.PLACEATEND);
+          console.log("✅ Duplicated folder: " + folder.name);
+        } catch (e) {
+          console.log("❌ Failed to duplicate: " + folder.name + " — " + e);
+        }
+      }
+
+      // ✅ Step 5: Apply animation merge logic
+      app.activeDocument = dupDoc;
+      var doc = dupDoc;
+      var delay = ${delay};
+
+      var previewFolder = (${createAnimPreviewFolder.toString()})(doc);
+      if (!previewFolder) {
+        console.log("❌ Failed to create anim_preview folder.");
+        return;
+      }
+
+      var data = (${getAnimFoldersAndMaxFrames.toString()})(doc);
+      console.log("📊 Max frames: " + data.maxFrames);
+
+      (${duplicateSingleLayerFolders.toString()})(doc, data.maxFrames);
+      console.log("📌 Duplicated single-layer folders (if needed).");
+
+      var frameMap = (${buildFrameMap.toString()})(data.folders, data.maxFrames);
+      console.log("🧠 Frame map built with " + frameMap.length + " frames.");
+
+      if (frameMap.length === 0) {
+        alert("❌ No eligible animation frames found.");
+        return;
+      }
+
+      (${mergeFrameGroups.toString()})(doc, frameMap, previewFolder, delay);
+      (${fadeOutAnimFolders.toString()})(doc);
+
+      // 🧹 Step 6: Remove all anim_* folders except anim_preview
+      for (var i = doc.layers.length - 1; i >= 0; i--) {
+        var layer = doc.layers[i];
+        if (
+          layer.typename === "LayerSet" &&
+          layer.name.indexOf("anim_") === 0 &&
+          layer.name !== "anim_preview"
+        ) {
+          try {
+            layer.remove();
+            console.log("🗑 Removed: " + layer.name);
+          } catch (e) {
+            console.log("❌ Failed to remove: " + layer.name);
+          }
+        }
+      }
+
+      // 👁 Step 7: Show only first frame
+      for (var i = 0; i < doc.layers.length; i++) {
+        var group = doc.layers[i];
+        if (group.typename === "LayerSet" && group.name === "anim_preview") {
+          var layers = group.layers;
+          for (var j = 0; j < layers.length; j++) {
+            layers[j].visible = (j === layers.length - 1); // bottom-most
+          }
+        }
+      }
+
+      app.refresh();
+      alert("✅ Selected folders exported to 'anim_preview'. You can now export via File > Export As > GIF.");
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
+}
+
+
+/* worked but removes the background 
+function exportGifFromSelected() {
+  const fps = getSelectedFPS();
+  const manual = document.getElementById("manualDelay").value;
+  const delay = manual ? Math.round(parseFloat(manual) * 1000) : fpsToDelay(fps);
+
+  const script = `
+    (function () {
+      var original = app.activeDocument;
+      if (!original) {
+        alert("No active document.");
+        return;
+      }
+
+      // ✅ Step 1: Gather selected anim_* folders
+      var selected = [];
+      for (var i = 0; i < original.layers.length; i++) {
+        var layer = original.layers[i];
+        if (
+          layer.typename === "LayerSet" &&
+          layer.name.indexOf("anim_") === 0 &&
+          layer.name !== "anim_preview" &&
+          layer.selected
+        ) {
+          selected.push(layer);
+        }
+      }
+
+      if (selected.length === 0) {
+        alert("❌ No anim_* folders selected.");
+        return;
+      }
+
+      console.log("✅ Selected folders to export: " + selected.length);
+
       // 🪄 Step 2: Duplicate document
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
       console.log("📄 Duplicated document created.");
