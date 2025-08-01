@@ -35,13 +35,22 @@ document.addEventListener("DOMContentLoaded", function () {
   beforeMergingInExport(() => {
     setTimeout(() => {
       exportGif(); // Call export only AFTER reset is done
-    }, 200); // Short delay to allow Photopea to complete
+    }, 150); // Short delay to allow Photopea to complete
   });
 };
 
   
   /* document.getElementById("previewAllBtn").onclick = exportGif; */
-  document.getElementById("previewSelectedBtn").onclick = exportGifFromSelected;
+
+  document.getElementById("previewSelectedBtn").onclick = function () {
+  beforeMergingInExport(() => {
+    setTimeout(() => {
+      exportGifFromSelected(); // Run export after onion skin reset
+    }, 150); // Small delay ensures reset completes
+  });
+};
+
+  /* document.getElementById("previewSelectedBtn").onclick = exportGifFromSelected; */
   document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
 
 });
