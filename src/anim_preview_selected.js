@@ -220,3 +220,4 @@ function exportGifFromSelected() {
 
   window.parent.postMessage(script, "*");
 }
+*/
