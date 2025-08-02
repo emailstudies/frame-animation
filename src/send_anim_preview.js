@@ -1,0 +1,57 @@
+window.addEventListener("message", (event) => {
+  if (event.data !== "EXPORT_ANIM_PREVIEW_FRAMES") return;
+
+  const script = `
+    (function () {
+      try {
+        var doc = app.activeDocument;
+        var previewFolder = null;
+
+        for (var i = 0; i < doc.layerSets.length; i++) {
+          if (doc.layerSets[i].name === "anim_preview") {
+            previewFolder = doc.layerSets[i];
+            break;
+          }
+        }
+
+        if (!previewFolder) {
+          app.echoToOE("❌ 'anim_preview' folder not found.");
+          return;
+        }
+
+        var temp = app.documents.add(
+          doc.width,
+          doc.height,
+          doc.resolution,
+          "_temp_export",
+          NewDocumentMode.RGB
+        );
+
+        for (var i = previewFolder.layers.length - 1; i >= 0; i--) {
+          var layer = previewFolder.layers[i];
+          if (layer.kind !== undefined && !layer.locked) {
+            app.activeDocument = temp;
+            while (temp.layers.length > 0) temp.layers[0].remove();
+
+            app.activeDocument = doc;
+            doc.activeLayer = layer;
+            layer.duplicate(temp, ElementPlacement.PLACEATBEGINNING);
+
+            app.activeDocument = temp;
+            var png = temp.saveToOE("png");
+            app.sendToOE(png);
+          }
+        }
+
+        app.activeDocument = temp;
+        temp.close(SaveOptions.DONOTSAVECHANGES);
+        app.echoToOE("✅ anim_preview PNGs exported");
+      } catch (e) {
+        app.echoToOE("❌ ERROR: " + e.message);
+      }
+    })();
+  `;
+
+  parent.postMessage(script, "*");
+  console.log("📤 Export script sent to Photopea");
+});
