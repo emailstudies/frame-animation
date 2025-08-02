@@ -15,6 +15,26 @@ document.addEventListener("DOMContentLoaded", function () {
   }, 20); // delay to allow Photopea reset script to finish
 };
 
+   /* document.getElementById("previewSelectedBtn").onclick = exportGifFromSelected; */
+  document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
+
+  document.getElementById("previewSelectedBtn").onclick = function () {
+  beforeMergingInExport(() => {
+    setTimeout(() => {
+      exportGifFromSelected(); // Run export after onion skin reset
+    }, 150); // Small delay ensures reset completes
+  });
+};
+
+ document.getElementById("previewAllBtn").onclick = function () {
+  beforeMergingInExport(() => {
+    setTimeout(() => {
+      exportGif(); // Call export only AFTER reset is done
+    }, 150); // Short delay to allow Photopea to complete
+  });
+};
+
+ 
   
   /*document.getElementById("previewAllBtn").onclick = function () {
   beforeMergingInExport(() => {
@@ -31,27 +51,12 @@ document.addEventListener("DOMContentLoaded", function () {
 }; */
 
 
-  document.getElementById("previewAllBtn").onclick = function () {
-  beforeMergingInExport(() => {
-    setTimeout(() => {
-      exportGif(); // Call export only AFTER reset is done
-    }, 150); // Short delay to allow Photopea to complete
-  });
-};
+ 
 
   
   /* document.getElementById("previewAllBtn").onclick = exportGif; */
 
-  document.getElementById("previewSelectedBtn").onclick = function () {
-  beforeMergingInExport(() => {
-    setTimeout(() => {
-      exportGifFromSelected(); // Run export after onion skin reset
-    }, 150); // Small delay ensures reset completes
-  });
-};
-
-  /* document.getElementById("previewSelectedBtn").onclick = exportGifFromSelected; */
-  document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
+  
  
   document.getElementById("browserPreviewAllBtn").onclick = async () => {
   exportPreviewFramesToFlipbook();
@@ -78,7 +83,7 @@ document.getElementById("browserPreviewSelectedBtn").onclick = () => {
 
 
 
-});
+}); /*closing the DOM thing */
 
 
 // -----------------------------------------------------------
