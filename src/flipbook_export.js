@@ -1,9 +1,11 @@
+// flipbook_export.js
+
 document.addEventListener("DOMContentLoaded", () => {
   const collectedFrames = [];
   let previewTab = null;
 
-  document.getElementById("browserPreviewAllBtn").onclick =
-  document.getElementById("browserPreviewSelectedBtn").onclick = () => {
+  // Expose this to global for external use (like from app.js)
+  window.exportPreviewFramesToFlipbook = () => {
     collectedFrames.length = 0;
     previewTab = window.open("flipbook.html", "_blank");
 
@@ -26,6 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        // Wait for flipbook.html to load, then send frames
         setTimeout(() => {
           previewTab?.postMessage(collectedFrames, "*");
           console.log("📨 Sent frames to flipbook tab");
