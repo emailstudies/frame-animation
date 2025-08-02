@@ -27,10 +27,10 @@ function exportPreviewFramesToFlipbook() {
         gotDone = true;
       }
 
-      // ✅ Only send when both parts are received
-      if (gotDone && base64Image) {
+      if (base64Image && gotDone) {
         window.removeEventListener("message", handleFrame);
         console.log("🚀 Sending frame to flipbook");
+
         previewWindow.postMessage({
           type: "frames",
           data: [base64Image],
@@ -41,14 +41,25 @@ function exportPreviewFramesToFlipbook() {
     window.addEventListener("message", handleFrame);
 
     const script = `
-      var f = app.activeDocument.layers.find(l => l.name === "anim_preview" && l.type === "layerSection");
+      var f = null;
+      for (var i = 0; i < app.activeDocument.layers.length; i++) {
+        var layer = app.activeDocument.layers[i];
+        if (layer.name === "anim_preview" && layer.type === "layerSection") {
+          f = layer;
+          break;
+        }
+      }
+
       if (f) {
-        f.layers.forEach((l, i) => l.visible = (i === 0));
+        for (var i = 0; i < f.layers.length; i++) {
+          f.layers[i].visible = (i === 0);
+        }
         app.activeDocument.saveToOE("png");
       } else {
         app.echoToOE("❌ anim_preview not found");
       }
     `;
+
     console.log("🛠 Sending save script for layer 0");
     parent.postMessage(script, "*");
   }
