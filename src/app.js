@@ -52,9 +52,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
   /* document.getElementById("previewSelectedBtn").onclick = exportGifFromSelected; */
   document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
+ 
+  document.getElementById("browserPreviewAllBtn").onclick = async () => {
+  exportPreviewFramesToFlipbook();
+};
 
   /* adding the flipbook paer */
-  document.getElementById("browserPreviewAllBtn").onclick = () => {
+ /* document.getElementById("browserPreviewAllBtn").onclick = () => {
   beforeMergingInExport(() => {
     setTimeout(async () => {
       await exportGif();
@@ -70,7 +74,7 @@ document.getElementById("browserPreviewSelectedBtn").onclick = () => {
       exportPreviewFramesToFlipbook();
     }, 150);
   });
-};
+}; */
 
 
 
