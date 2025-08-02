@@ -1,17 +1,15 @@
-// src/flipbook_export.js
-
 document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("webPreviewSelectedBtn");
   const collectedFrames = [];
   let previewTab = null;
 
-  btn.onclick = () => {
+  document.getElementById("browserPreviewAllBtn").onclick =
+  document.getElementById("browserPreviewSelectedBtn").onclick = () => {
     collectedFrames.length = 0;
     previewTab = window.open("flipbook.html", "_blank");
 
     setTimeout(() => {
-      parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
-      console.log("▶️ Started frame export");
+      parent.postMessage("EXPORT_ANIM_PREVIEW_FRAMES", "*");
+      console.log("▶️ Started anim_preview export");
     }, 300);
   };
 
@@ -28,10 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        // Wait for the tab to be ready (optional delay)
         setTimeout(() => {
           previewTab?.postMessage(collectedFrames, "*");
-          console.log("📨 Sent frames to preview tab");
+          console.log("📨 Sent frames to flipbook tab");
         }, 500);
       } else if (event.data.startsWith("❌")) {
         alert(event.data);
