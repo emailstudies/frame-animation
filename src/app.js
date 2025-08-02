@@ -41,10 +41,10 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("browserPreviewSelectedBtn").onclick = () => {
   const script = `
     try {
-      beforeMergingInExport(() => {
+      
         exportGifFromSelected();
         app.echoToOE("built");
-      });
+     
     } catch (e) {
       app.echoToOE("❌ " + e.message);
     }
