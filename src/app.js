@@ -53,6 +53,18 @@ document.addEventListener("DOMContentLoaded", function () {
   /* document.getElementById("previewSelectedBtn").onclick = exportGifFromSelected; */
   document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
 
+  /* adding the flipbook paer */
+  document.getElementById("browserPreviewAllBtn").onclick = async () => {
+  await exportGif();
+  exportPreviewFramesToFlipbook();
+};
+
+document.getElementById("browserPreviewSelectedBtn").onclick = async () => {
+  await exportGifFromSelected();
+  exportPreviewFramesToFlipbook();
+};
+
+
 });
 
 
