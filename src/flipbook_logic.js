@@ -1,72 +1,15 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("browserPreviewSelectedBtn");
-  if (!btn) return;
-
-  let previewWindow = null;
+function flipbook_logic() {
   const collectedFrames = [];
+  let previewWindow = window.open("", "_blank");
 
-  btn.onclick = () => {
-    // ✅ Open new tab immediately
-    previewWindow = window.open("", "_blank");
-    collectedFrames.length = 0;
-
-    const script = `
-      (function () {
-        try {
-          exportGif(); // This will create anim_preview
-
-          // Delay the export so anim_preview has time to be built
-          setTimeout(function () {
-            try {
-              var doc = app.activeDocument;
-              var animFolder = null;
-
-              // Find the anim_preview folder
-              for (var i = 0; i < doc.layerSets.length; i++) {
-                if (doc.layerSets[i].name === "anim_preview") {
-                  animFolder = doc.layerSets[i];
-                  break;
-                }
-              }
-
-              if (!animFolder || animFolder.artLayers.length === 0) {
-                app.echoToOE("❌ anim_preview folder not found or empty.");
-                return;
-              }
-
-              // Hide all layers
-              for (var i = 0; i < animFolder.artLayers.length; i++) {
-                animFolder.artLayers[i].visible = false;
-              }
-
-              // Show and export each frame
-              for (var i = 0; i < animFolder.artLayers.length; i++) {
-                var layer = animFolder.artLayers[i];
-                layer.visible = true;
-                app.activeDocument.saveToOE("png");
-                layer.visible = false;
-              }
-
-              app.echoToOE("done");
-            } catch (e2) {
-              app.echoToOE("❌ " + e2.message);
-            }
-          }, 300); // Wait 500ms for exportGif to finish
-        } catch (e) {
-          app.echoToOE("❌ " + e.message);
-        }
-      })();
-    `;
-
-    parent.postMessage(script, "*");
-    console.log("📤 Sent exportGif + delayed export script to Photopea");
-  };
-
-  window.addEventListener("message", (event) => {
+  window.addEventListener("message", function handler(event) {
     if (event.data instanceof ArrayBuffer) {
       collectedFrames.push(event.data);
     } else if (typeof event.data === "string") {
-      if (event.data === "done") {
+      if (event.data.trim() === "done") {
+        // Stop listening
+        window.removeEventListener("message", handler);
+
         if (!previewWindow || collectedFrames.length === 0) return;
 
         const frameJS = collectedFrames
@@ -124,15 +67,51 @@ document.addEventListener("DOMContentLoaded", () => {
   </script>
 </body>
 </html>`;
-
         previewWindow.document.open();
         previewWindow.document.write(html);
         previewWindow.document.close();
-        collectedFrames.length = 0;
       } else if (event.data.startsWith("❌")) {
         previewWindow?.document.write(`<h2 style="color:red;">${event.data}</h2>`);
         previewWindow?.document.close();
+        window.removeEventListener("message", handler);
       }
     }
   });
-});
+
+  // Send script to Photopea to export each visible frame from anim_preview
+  const frameExportScript = `
+    try {
+      var doc = app.activeDocument;
+      var animFolder = null;
+
+      for (var i = 0; i < doc.layerSets.length; i++) {
+        if (doc.layerSets[i].name === "anim_preview") {
+          animFolder = doc.layerSets[i];
+          break;
+        }
+      }
+
+      if (!animFolder || animFolder.artLayers.length === 0) {
+        app.echoToOE("❌ anim_preview folder not found or empty.");
+        return;
+      }
+
+      for (var i = 0; i < animFolder.artLayers.length; i++) {
+        animFolder.artLayers[i].visible = false;
+      }
+
+      for (var i = 0; i < animFolder.artLayers.length; i++) {
+        var layer = animFolder.artLayers[i];
+        layer.visible = true;
+        app.activeDocument.saveToOE("png");
+        layer.visible = false;
+      }
+
+      app.echoToOE("done");
+    } catch (e) {
+      app.echoToOE("❌ " + e.message);
+    }
+  `;
+  parent.postMessage(frameExportScript, "*");
+  console.log("📤 Sent anim_preview frame export script");
+}
