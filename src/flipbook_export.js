@@ -11,21 +11,30 @@ function exportPreviewFramesToFlipbook() {
   window.addEventListener("message", handleReady);
 
   function exportOneFrame() {
+    let base64Image = null;
+    let gotDone = false;
+
     const handleFrame = function (e) {
       if (e.data instanceof ArrayBuffer) {
-        const base64 = "data:image/png;base64," + btoa(
+        console.log("🟢 Received ArrayBuffer");
+        base64Image = "data:image/png;base64," + btoa(
           String.fromCharCode(...new Uint8Array(e.data))
         );
-        console.log("🟢 Received first frame");
+      }
 
-        // Send it to the flipbook
+      if (e.data === "done") {
+        console.log("✅ Received 'done' from Photopea");
+        gotDone = true;
+      }
+
+      // ✅ Only send when both parts are received
+      if (gotDone && base64Image) {
+        window.removeEventListener("message", handleFrame);
+        console.log("🚀 Sending frame to flipbook");
         previewWindow.postMessage({
           type: "frames",
-          data: [base64],
+          data: [base64Image],
         }, "*");
-      } else if (e.data === "done") {
-        console.log("✅ Photopea finished saveToOE");
-        window.removeEventListener("message", handleFrame);
       }
     };
 
