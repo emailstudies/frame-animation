@@ -36,19 +36,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
  
   
-  /*document.getElementById("previewAllBtn").onclick = function () {
-  beforeMergingInExport(() => {
-    setTimeout(() => {
-      exportGif();
+ /* FLIPBOOK */
 
-      // Cleanup after export
-      setTimeout(() => {
-        showOnlyFirstPreviewLayer();
-        deleteOtherAnimFolders();
-      }, 300); // Allow time for exportGif to complete
-    }, 200);
-  });
-}; */
+  document.getElementById("browserPreviewSelectedBtn").onclick = () => {
+  const script = `
+    try {
+      beforeMergingInExport(() => {
+        exportGifFromSelected();
+        app.echoToOE("built");
+      });
+    } catch (e) {
+      app.echoToOE("❌ " + e.message);
+    }
+  `;
+  parent.postMessage(script, "*");
+
+  // Once anim_preview is built, call flipbook_logic
+  const handler = (event) => {
+    if (typeof event.data === "string" && event.data.trim() === "built") {
+      window.removeEventListener("message", handler);
+      setTimeout(() => flipbook_logic(), 200); // Give a tiny delay if needed
+    }
+  };
+  window.addEventListener("message", handler);
+};
+
 
 
  
