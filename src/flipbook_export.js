@@ -1,16 +1,17 @@
 function exportPreviewFramesToFlipbook() {
   const previewWindow = window.open("flipbook.html", "_blank");
 
-  // Step 1: Wait for flipbook to be ready
+  // Step 1: Wait for flipbook to signal it's ready
   const handleReady = function (e) {
     if (e.data === "ready-for-frames") {
       window.removeEventListener("message", handleReady);
-      exportOneFrame();
+      exportTopmostFrame();
     }
   };
   window.addEventListener("message", handleReady);
 
-  function exportOneFrame() {
+  // Step 2: Export only the topmost layer of anim_preview
+  function exportTopmostFrame() {
     let base64Image = null;
     let gotDone = false;
 
@@ -40,7 +41,7 @@ function exportPreviewFramesToFlipbook() {
 
     window.addEventListener("message", handleFrame);
 
-    // ✅ Send only a string as postMessage to Photopea
+    // ✅ Script to find anim_preview and export topmost visible frame
     const script = `
       var f = null;
       for (var i = 0; i < app.activeDocument.layers.length; i++) {
@@ -51,17 +52,23 @@ function exportPreviewFramesToFlipbook() {
         }
       }
 
-      if (f) {
+      if (f && f.layers.length > 0) {
+        var topIndex = f.layers.length - 1;
+        var target = f.layers[topIndex];
+
+        app.echoToOE("✅ Exporting layer: " + target.name + ", type: " + target.type);
+
         for (var i = 0; i < f.layers.length; i++) {
-          f.layers[i].visible = (i === 0);
+          f.layers[i].visible = (i === topIndex);
         }
+
         app.activeDocument.saveToOE("png");
       } else {
-        app.echoToOE("❌ anim_preview not found");
+        app.echoToOE("❌ anim_preview not found or empty");
       }
     `;
 
-    console.log("🛠 Sending save script for layer 0");
-    parent.postMessage(script, "*"); // ✅ Only string sent to Photopea
+    console.log("🛠 Sending save script for topmost frame");
+    parent.postMessage(script, "*");
   }
 }
