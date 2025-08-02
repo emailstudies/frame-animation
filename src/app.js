@@ -54,15 +54,24 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
 
   /* adding the flipbook paer */
-  document.getElementById("browserPreviewAllBtn").onclick = async () => {
-  await exportGif();
-  exportPreviewFramesToFlipbook();
+  document.getElementById("browserPreviewAllBtn").onclick = () => {
+  beforeMergingInExport(() => {
+    setTimeout(async () => {
+      await exportGif();
+      exportPreviewFramesToFlipbook();
+    }, 150);
+  });
 };
 
-document.getElementById("browserPreviewSelectedBtn").onclick = async () => {
-  await exportGifFromSelected();
-  exportPreviewFramesToFlipbook();
+document.getElementById("browserPreviewSelectedBtn").onclick = () => {
+  beforeMergingInExport(() => {
+    setTimeout(async () => {
+      await exportGifFromSelected();
+      exportPreviewFramesToFlipbook();
+    }, 150);
+  });
 };
+
 
 
 });
