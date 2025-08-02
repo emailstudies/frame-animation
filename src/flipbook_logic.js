@@ -6,43 +6,52 @@ document.addEventListener("DOMContentLoaded", () => {
   const collectedFrames = [];
 
   btn.onclick = () => {
-    // ✅ Open new tab immediately for flipbook
+    // ✅ Open new tab immediately
     previewWindow = window.open("", "_blank");
     collectedFrames.length = 0;
 
     const script = `
       (function () {
         try {
-          var doc = app.activeDocument;
-          var animFolder = null;
+          exportGif(); // This will create anim_preview
 
-          // Find the 'anim_preview' folder
-          for (var i = 0; i < doc.layerSets.length; i++) {
-            if (doc.layerSets[i].name === "anim_preview") {
-              animFolder = doc.layerSets[i];
-              break;
+          // Delay the export so anim_preview has time to be built
+          setTimeout(function () {
+            try {
+              var doc = app.activeDocument;
+              var animFolder = null;
+
+              // Find the anim_preview folder
+              for (var i = 0; i < doc.layerSets.length; i++) {
+                if (doc.layerSets[i].name === "anim_preview") {
+                  animFolder = doc.layerSets[i];
+                  break;
+                }
+              }
+
+              if (!animFolder || animFolder.artLayers.length === 0) {
+                app.echoToOE("❌ anim_preview folder not found or empty.");
+                return;
+              }
+
+              // Hide all layers
+              for (var i = 0; i < animFolder.artLayers.length; i++) {
+                animFolder.artLayers[i].visible = false;
+              }
+
+              // Show and export each frame
+              for (var i = 0; i < animFolder.artLayers.length; i++) {
+                var layer = animFolder.artLayers[i];
+                layer.visible = true;
+                app.activeDocument.saveToOE("png");
+                layer.visible = false;
+              }
+
+              app.echoToOE("done");
+            } catch (e2) {
+              app.echoToOE("❌ " + e2.message);
             }
-          }
-
-          if (!animFolder || animFolder.artLayers.length === 0) {
-            app.echoToOE("❌ anim_preview folder not found or empty.");
-            return;
-          }
-
-          // Hide all layers first
-          for (var i = 0; i < animFolder.artLayers.length; i++) {
-            animFolder.artLayers[i].visible = false;
-          }
-
-          // Loop through each layer, make visible, export, hide again
-          for (var i = 0; i < animFolder.artLayers.length; i++) {
-            var layer = animFolder.artLayers[i];
-            layer.visible = true;
-            app.activeDocument.saveToOE("png");
-            layer.visible = false;
-          }
-
-          app.echoToOE("done");
+          }, 300); // Wait 500ms for exportGif to finish
         } catch (e) {
           app.echoToOE("❌ " + e.message);
         }
@@ -50,10 +59,9 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
 
     parent.postMessage(script, "*");
-    console.log("📤 Sent anim_preview export script to Photopea");
+    console.log("📤 Sent exportGif + delayed export script to Photopea");
   };
 
-  // Collect frames and display them once all are received
   window.addEventListener("message", (event) => {
     if (event.data instanceof ArrayBuffer) {
       collectedFrames.push(event.data);
