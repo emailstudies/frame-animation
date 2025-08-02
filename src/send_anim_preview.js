@@ -21,6 +21,14 @@ window.addEventListener("message", (event) => {
           return;
         }
 
+        var numLayers = previewFolder.layers.length;
+        app.echoToOE("📂 Found anim_preview with " + numLayers + " layers");
+
+        if (numLayers === 0) {
+          app.echoToOE("❌ 'anim_preview' has no layers.");
+          return;
+        }
+
         var temp = app.documents.add(
           doc.width,
           doc.height,
@@ -32,6 +40,8 @@ window.addEventListener("message", (event) => {
         for (var i = previewFolder.layers.length - 1; i >= 0; i--) {
           var layer = previewFolder.layers[i];
           if (layer.kind !== undefined && !layer.locked) {
+            app.echoToOE("🔁 Exporting frame: " + layer.name);
+
             app.activeDocument = temp;
             while (temp.layers.length > 0) temp.layers[0].remove();
 
@@ -42,6 +52,8 @@ window.addEventListener("message", (event) => {
             app.activeDocument = temp;
             var png = temp.saveToOE("png");
             app.sendToOE(png);
+          } else {
+            app.echoToOE("⏭️ Skipping locked or invalid layer: " + layer.name);
           }
         }
 
