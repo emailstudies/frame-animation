@@ -58,9 +58,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   
  
-  document.getElementById("browserPreviewAllBtn").onclick = async () => {
+/*  document.getElementById("browserPreviewAllBtn").onclick = async () => {
   exportPreviewFramesToFlipbook();
-};
+}; */
 
   /* adding the flipbook paer */
  /* document.getElementById("browserPreviewAllBtn").onclick = () => {
