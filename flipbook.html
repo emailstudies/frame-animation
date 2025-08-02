@@ -1,73 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
   <title>Flipbook Preview</title>
   <style>
-    body {
+    html, body {
       margin: 0;
-      padding: 20px;
-      background: #1e1e1e;
-      color: white;
-      font-family: sans-serif;
+      background: #111;
+      overflow: hidden;
+      height: 100%;
       display: flex;
-      flex-direction: column;
-      align-items: center;
       justify-content: center;
-    }
-    #mainImage {
-      max-width: 90vw;
-      max-height: 80vh;
-      border: 2px solid white;
-      margin-bottom: 20px;
-    }
-    #controls {
-      display: flex;
-      gap: 12px;
       align-items: center;
     }
-    input[type="number"] {
-      width: 60px;
-    }
+    canvas { image-rendering: pixelated; }
   </style>
 </head>
 <body>
-  <img id="mainImage" />
-  <div id="controls">
-    <button onclick="togglePlayback()">▶️ Play / ⏸ Pause</button>
-    <label>FPS: <input id="fps" type="number" value="12" min="1" max="60" /></label>
-  </div>
-
-  <script>
-    let frames = [], current = 0, playing = false, interval = null;
-
-    window.onload = () => {
-      window.opener?.postMessage("ready-for-frames", "*");
-    };
-
-    window.addEventListener("message", function (e) {
-      if (e.data?.type === "frames") {
-        frames = e.data.data;
-        current = 0;
-        document.getElementById("mainImage").src = frames[0];
-      }
-    });
-
-    function togglePlayback() {
-      if (!frames.length) return;
-
-      if (playing) {
-        clearInterval(interval);
-        playing = false;
-      } else {
-        const fps = parseInt(document.getElementById("fps").value, 10);
-        interval = setInterval(() => {
-          current = (current + 1) % frames.length;
-          document.getElementById("mainImage").src = frames[current];
-        }, 1000 / fps);
-        playing = true;
-      }
-    }
-  </script>
+  <canvas id="previewCanvas"></canvas>
+  <script src="./src/flipbook_canvas.js"></script>
 </body>
 </html>
