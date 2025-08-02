@@ -1,3 +1,5 @@
+// send_anim_preview.js
+
 window.addEventListener("message", (event) => {
   if (event.data !== "EXPORT_ANIM_PREVIEW_FRAMES") return;
 
@@ -45,7 +47,8 @@ window.addEventListener("message", (event) => {
 
         app.activeDocument = temp;
         temp.close(SaveOptions.DONOTSAVECHANGES);
-        app.echoToOE("✅ anim_preview PNGs exported");
+
+        app.echoToOE("✅ Export complete");
       } catch (e) {
         app.echoToOE("❌ ERROR: " + e.message);
       }
