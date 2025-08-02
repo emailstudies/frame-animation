@@ -52,8 +52,6 @@ window.addEventListener("message", (event) => {
             app.activeDocument = temp;
             var png = temp.saveToOE("png");
             app.sendToOE(png);
-          } else {
-            app.echoToOE("⏭️ Skipping locked or invalid layer: " + layer.name);
           }
         }
 
