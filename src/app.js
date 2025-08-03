@@ -36,36 +36,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
  
   
- /* FLIPBOOK */
-
-  document.getElementById("browserPreviewSelectedBtn").onclick = () => {
-  const script = `
-    try {
-      
-        exportGifFromSelected();
-        app.echoToOE("built");
-     
-    } catch (e) {
-      app.echoToOE("❌ " + e.message);
-    }
-  `;
-  parent.postMessage(script, "*");
-
-  // Once anim_preview is built, call flipbook_logic
-  const handler = (event) => {
-    if (typeof event.data === "string" && event.data.trim() === "built") {
-      window.removeEventListener("message", handler);
-      setTimeout(() => flipbook_logic(), 200); // Give a tiny delay if needed
-    }
-  };
-  window.addEventListener("message", handler);
-};
-
-
-
- 
-
-  
   /* document.getElementById("previewAllBtn").onclick = exportGif; */
 
   
@@ -75,7 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {
 }; */
 
   /* adding the flipbook paer */
- /* document.getElementById("browserPreviewAllBtn").onclick = () => {
+ document.getElementById("browserPreviewAllBtn").onclick = () => {
   beforeMergingInExport(() => {
     setTimeout(async () => {
       await exportGif();
@@ -84,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 };
 
-document.getElementById("browserPreviewSelectedBtn").onclick = () => {
+/* document.getElementById("browserPreviewSelectedBtn").onclick = () => {
   beforeMergingInExport(() => {
     setTimeout(async () => {
       await exportGifFromSelected();
