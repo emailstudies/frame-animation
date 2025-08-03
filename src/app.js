@@ -45,21 +45,33 @@ document.addEventListener("DOMContentLoaded", function () {
 }; */
 
   /* adding the flipbook paer - FLIPBOOK*/
-
-  document.getElementById("browserPreviewAllBtn").onclick = () => {
+  
+document.getElementById("browserPreviewAllBtn").onclick = () => {
+  // Step 1: Prepare layers if needed
   beforeMergingInExport(() => {
+
+    // Step 2: Set up listener BEFORE sending exportGif()
     const handler = (event) => {
-      if (typeof event.data === "string" && event.data.trim() === "✅ anim_preview created - done") {
-        console.log("✅ Confirmed: anim_preview created.");
-        window.removeEventListener("message", handler);
-        exportPreviewFramesToFlipbook(); // Safe to start extracting frames now
+      if (typeof event.data === "string") {
+        console.log("📩 Raw message from Photopea:", event.data);
+
+        if (event.data.trim() === "✅ anim_preview created - done") {
+          console.log("✅ Confirmed: anim_preview created.");
+          window.removeEventListener("message", handler);
+
+          // Step 3: Now start collecting frames
+          exportPreviewFramesToFlipbook();
+        }
       }
     };
 
     window.addEventListener("message", handler);
-    exportGif(); // This posts the script to Photopea
+
+    // Step 4: Trigger exportGif, which should end with app.echoToOE("✅ anim_preview created - done");
+    exportGif();
   });
 };
+
 
 
  /* document.getElementById("browserPreviewAllBtn").onclick = () => {
