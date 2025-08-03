@@ -267,7 +267,7 @@ function exportGif() {
       }
 
       app.refresh();
-      app.echoToOE("done");  // ✅ Signal to browser that we're done
+      
       alert("✅ All frames merged into 'anim_preview'. You can now export via File > Export As > GIF.");
 
       
