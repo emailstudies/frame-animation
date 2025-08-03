@@ -112,7 +112,7 @@ function exportNextFrame() {
       for (var i = 0; i < doc.layers.length; i++) {
         var layer = doc.layers[i];
         if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
-          group = layer;
+          group = layer; 
           break;
         }
       }
