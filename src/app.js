@@ -44,14 +44,34 @@ document.addEventListener("DOMContentLoaded", function () {
   exportPreviewFramesToFlipbook();
 }; */
 
-  /* adding the flipbook paer */
- document.getElementById("browserPreviewAllBtn").onclick = () => {
-  beforeMergingInExport(() => {
-    setTimeout(async () => {
-      await exportGif();
+  /* adding the flipbook paer - FLIPBOOK*/
+ 
+document.getElementById("browserPreviewAllBtn").onclick = () => {
+  const buildScript = `
+    try {
+      beforeMergingInExport(() => {
+        exportGif();
+        app.echoToOE("done");
+      });
+    } catch (e) {
+      app.echoToOE("❌ " + e.message);
+    }
+  `;
+
+  parent.postMessage(buildScript, "*");
+
+  // Wait for Photopea to say it's done, then continue
+  const handler = (event) => {
+    if (typeof event.data === "string" && event.data.trim() === "done") {
+      console.log("✅ exportGif finished, now checking anim_preview");
+      window.removeEventListener("message", handler);
+
+      // Now call your flipbook logic
       exportPreviewFramesToFlipbook();
-    }, 150);
-  });
+    }
+  };
+
+  window.addEventListener("message", handler);
 };
 
 /* document.getElementById("browserPreviewSelectedBtn").onclick = () => {
