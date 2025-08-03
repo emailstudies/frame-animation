@@ -45,7 +45,15 @@ document.addEventListener("DOMContentLoaded", function () {
 }; */
 
   /* adding the flipbook paer - FLIPBOOK*/
-  
+
+  // Filtered global listener for only this plugin's messages
+window.addEventListener("message", (event) => {
+  if (typeof event.data === "string" && event.data.startsWith("[flipbook]")) {
+    const cleanMsg = event.data.replace("[flipbook] ", "").trim();
+    console.log("📩 Flipbook Plugin Message:", cleanMsg);
+  }
+});
+
 // 📩 Global listener to log Photopea echo messages
 /*window.addEventListener("message", (event) => {
   if (typeof event.data === "string") {
