@@ -28,44 +28,53 @@ function generateFlipbookHTML(frames) {
     const frames = [];
     ${base64Snippets}
 
-    console.log("📦 Loaded", frames.length, "frame URLs.");
-    console.log("🧪 Frame base64 preview:", frames.map(f => f.slice(0, 50)));
+    // 🧪 Debug: Check base64 differences
+    console.log("🧪 Base64 snippet diff check:");
+    frames.forEach((f, i) => {
+      console.log("Frame", i, "starts with:", f.slice(0, 80));
+    });
+
+    const images = frames.map(src => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
 
     const canvas = document.getElementById("previewCanvas");
     const ctx = canvas.getContext("2d");
     const fps = 12;
     let index = 0;
 
-    const images = [];
-    let loaded = 0;
+    function preloadImages(images, callback) {
+      let loaded = 0;
+      const total = images.length;
 
-    for (let i = 0; i < frames.length; i++) {
-      const img = new Image();
-      img.onload = () => {
-        console.log("✅ Frame", i, "loaded");
-        loaded++;
-        if (loaded === frames.length) {
-          console.log("🚀 All frames loaded. Starting loop.");
-          startLoop();
-        }
-      };
-      img.onerror = () => console.error("❌ Failed to load frame", i);
-      images.push(img);
-      img.src = frames[i]; // important: assign src after handlers
+      images.forEach((img, i) => {
+        img.onload = () => {
+          console.log("✅ Frame", i, "loaded");
+          loaded++;
+          if (loaded === total) callback();
+        };
+        img.onerror = () => {
+          console.error("❌ Failed to load image", img.src);
+        };
+      });
     }
 
     function startLoop() {
-      console.log("🎞️ Starting animation loop");
       canvas.width = images[0].width;
       canvas.height = images[0].height;
 
+      console.log("🚀 All frames loaded. Starting loop.");
       setInterval(() => {
-        console.log("🖼️ Showing frame", index);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(images[index], 0, 0);
+        console.log("🖼️ Showing frame", index);
         index = (index + 1) % images.length;
       }, 1000 / fps);
     }
+
+    preloadImages(images, startLoop);
   </script>
 </body>
 </html>`;
