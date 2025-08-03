@@ -46,6 +46,83 @@ document.addEventListener("DOMContentLoaded", function () {
 
   /* adding the flipbook paer - FLIPBOOK----------------------------------------------------------------*/
 
+  document.getElementById("browserPreviewAllBtn").onclick = () => {
+  beforeMergingInExport(() => {
+    const handler = (event) => {
+      if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ anim_preview created - done") {
+        console.log("✅ Confirmed: anim_preview created.");
+        window.removeEventListener("message", handler);
+        exportPreviewFramesToFlipbook();  // Step 1: Prep and send init message
+      }
+    };
+
+    window.addEventListener("message", handler);
+    exportGif();
+  });
+};
+
+const flipbookFrames = [];
+
+window.addEventListener("message", (event) => {
+  // Handle raw image buffers
+  if (event.data instanceof ArrayBuffer) {
+    flipbookFrames.push(event.data);
+    console.log("📥 Received frame #" + flipbookFrames.length);
+    return;
+  }
+
+  // Handle string messages
+  if (typeof event.data !== "string" || !event.data.startsWith("[flipbook]")) return;
+
+  const msg = event.data.replace("[flipbook]", "").trim();
+
+  if (msg.startsWith("✅ Exported all frames to OE.")) {
+    console.log("📸 Flipbook: Received " + flipbookFrames.length + " frames.");
+
+    if (flipbookFrames.length === 0) {
+      alert("❌ No flipbook frames received.");
+      return;
+    }
+
+    const html = generateFlipbookHTML(flipbookFrames);
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const win = window.open();
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+
+    flipbookFrames.length = 0;
+    return;
+  }
+
+  if (msg.startsWith("📦 init")) {
+    const count = parseInt(msg.split("init")[1].trim());
+    console.log(`📦 Total Flipbook Frames: ${count}`);
+    continueFlipbookExport(count);  // Step 2: Start looped export
+    return;
+  }
+
+  if (msg.startsWith("🔁 Frame")) {
+    console.log("🖼️", msg);
+    exportNextFrame();
+    return;
+  }
+
+  if (msg.startsWith("📦")) {
+    console.log("🧮 Frame Count:", msg);
+    return;
+  }
+
+  if (msg.startsWith("❌")) {
+    console.warn("⚠️ Flipbook Error:", msg);
+    return;
+  }
+
+  console.log("📩 Flipbook Plugin Message:", msg);
+});
+
+
   // Filtered global listener for only this plugin's messages
 /*window.addEventListener("message", (event) => {
   if (typeof event.data === "string" && event.data.startsWith("[flipbook]")) {
@@ -70,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function () {
 }); */
 
 
-  document.getElementById("browserPreviewAllBtn").onclick = () => {
+/*  document.getElementById("browserPreviewAllBtn").onclick = () => {
   beforeMergingInExport(() => {
     const handler = (event) => {
       if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ anim_preview created - done") {
