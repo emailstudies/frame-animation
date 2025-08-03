@@ -3,29 +3,35 @@ function exportPreviewFramesToFlipbook() {
     (function () {
       try {
         var doc = app.activeDocument;
-        var previewFolder = null;
+        var output = [];
 
-        // Find the 'anim_preview' folder
+        output.push("📄 Active document: " + doc.name);
+        output.push("🔍 Scanning for 'anim_preview'...");
+
+        var found = false;
+
         for (var i = 0; i < doc.layers.length; i++) {
           var layer = doc.layers[i];
+          if (layer.typename === "LayerSet") {
+            output.push("📁 Found folder: " + layer.name);
+          }
+
           if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
-            previewFolder = layer;
+            found = true;
+            output.push("✅ Found anim_preview with " + layer.layers.length + " layers.");
             break;
           }
         }
 
-        if (!previewFolder) {
-          app.echoToOE("❌ anim_preview not found");
-          return;
+        if (!found) {
+          output.push("❌ anim_preview not found");
         }
 
-        var numFrames = previewFolder.layers.length;
-        app.echoToOE("✅ anim_preview has " + numFrames + " frame(s)");
+        app.echoToOE(output.join("\\n"));
       } catch (e) {
-        app.echoToOE("❌ Error: " + e.message);
+        app.echoToOE("❌ Script error: " + e.message);
       }
     })();
   `;
-
   parent.postMessage(script, "*");
 }
