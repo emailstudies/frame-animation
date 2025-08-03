@@ -47,32 +47,24 @@ document.addEventListener("DOMContentLoaded", function () {
   /* adding the flipbook paer - FLIPBOOK*/
  
 document.getElementById("browserPreviewAllBtn").onclick = () => {
-  const buildScript = `
-    try {
-      beforeMergingInExport(() => {
-        exportGif();
-        app.echoToOE("done");
-      });
-    } catch (e) {
-      app.echoToOE("❌ " + e.message);
-    }
-  `;
+  beforeMergingInExport(() => {
+    exportGif();  // ⏳ Starts building anim_preview in Photopea
+  });
 
-  parent.postMessage(buildScript, "*");
-
-  // Wait for Photopea to say it's done, then continue
+  // 📬 Listen for "done" message from Photopea
   const handler = (event) => {
     if (typeof event.data === "string" && event.data.trim() === "done") {
-      console.log("✅ exportGif finished, now checking anim_preview");
+      console.log("✅ exportGif complete — now checking anim_preview");
       window.removeEventListener("message", handler);
 
-      // Now call your flipbook logic
+      // ▶️ Now start the flipbook export
       exportPreviewFramesToFlipbook();
     }
   };
 
   window.addEventListener("message", handler);
 };
+
 
 /* document.getElementById("browserPreviewSelectedBtn").onclick = () => {
   beforeMergingInExport(() => {
