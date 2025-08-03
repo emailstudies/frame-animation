@@ -37,21 +37,18 @@ function exportPreviewFramesToFlipbook() {
 
         // 4. Export each frame
         for (var i = frameCount - 1; i >= 0; i--) {
-          // Hide all preview layers first
           for (var j = 0; j < frameCount; j++) {
             previewGroup.layers[j].visible = false;
           }
 
-          // Show the current frame layer
           var currentLayer = previewGroup.layers[i];
           currentLayer.visible = true;
+          app.refresh();
 
-          app.refresh();          // Trigger UI update
-          var forceRedraw = doc.width; // Dummy read to force redraw
-          $.sleep(100);           // Small delay to ensure refresh (adjust if needed)
+          // Force a brief delay for redraw
+          for (var wait = 0; wait < 10000000; wait++) {}
 
           app.echoToOE("[flipbook] 🔁 Exporting frame " + (frameCount - 1 - i) + ": " + currentLayer.name);
-
           doc.saveToOE("png");
         }
 
