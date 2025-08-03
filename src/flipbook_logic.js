@@ -1,4 +1,58 @@
-// flipbook_export.js - exporting anim_preview frames one by one
+function previewInPhotopeaFlipbook() {
+  const script = `
+    (function () {
+      try {
+        var doc = app.activeDocument;
+        var group = null;
+
+        // Find anim_preview group
+        for (var i = 0; i < doc.layers.length; i++) {
+          var layer = doc.layers[i];
+          if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
+            group = layer;
+            break;
+          }
+        }
+
+        if (!group) {
+          app.echoToOE("[flipbook] ❌ anim_preview group not found.");
+          return;
+        }
+
+        var frames = group.layers;
+        var total = frames.length;
+        var current = 0;
+
+        // Hide all layers first
+        for (var i = 0; i < total; i++) frames[i].visible = false;
+        group.visible = true;
+        app.refresh();
+
+        // Start preview loop
+        var intervalID = setInterval(() => {
+          for (var i = 0; i < total; i++) frames[i].visible = false;
+          frames[current].visible = true;
+          app.refresh();
+
+          current = (current + 1) % total;
+        }, 1000 / 12);  // 12 fps
+
+        app.echoToOE("[flipbook] ▶️ Live preview started at 12 FPS.");
+        // Stop after a loop or leave it running
+        // setTimeout(() => clearInterval(intervalID), total * (1000 / 12));
+      } catch (e) {
+        app.echoToOE("[flipbook] ❌ ERROR in live preview: " + e.message);
+      }
+    })();
+  `;
+
+  parent.postMessage(script, "*");
+}
+
+
+
+
+/* // flipbook_export.js - exporting anim_preview frames one by one
 
 let frameIndex = 0;
 let totalFrames = 0;
@@ -83,3 +137,4 @@ function exportNextFrame() {
   parent.postMessage(script, "*");
   frameIndex++;
 }
+*/
