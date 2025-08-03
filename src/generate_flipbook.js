@@ -1,24 +1,31 @@
-function generateFlipbookHTML(frames) {
-  const encoded = frames.map((ab, i) => {
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-    return `frames[${i}] = "data:image/png;base64,${base64}";`;
-  }).join("\n");
+function generateFlipbookHTML(framesArray) {
+  const base64Strings = framesArray.map(ab =>
+    btoa(String.fromCharCode(...new Uint8Array(ab)))
+  );
 
-  return `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head>
   <title>Flipbook Preview</title>
   <style>
-    html, body { margin: 0; background: #111; overflow: hidden; height: 100%; display: flex; justify-content: center; align-items: center; }
+    html, body {
+      margin: 0;
+      background: #111;
+      overflow: hidden;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
     canvas { image-rendering: pixelated; }
   </style>
 </head>
 <body>
   <canvas id="previewCanvas"></canvas>
   <script>
-    const frames = [];
-    ${encoded}
+    const frames = ${JSON.stringify(
+      base64Strings.map(str => "data:image/png;base64," + str)
+    )};
 
     const images = frames.map(src => {
       const img = new Image();
