@@ -4,6 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("updateLayerNumbersBtn").onclick = handleUpdateLayerNumbers;
  /* document.getElementById("onionSkinBtn").onclick = toggleOnionSkinMode; */
   document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin;
+  document.getElementById("browserPreviewAllBtn").onclick = previewInPhotopeaFlipbook;
+
 
   /* doing the reset first before the onion skin happens */
   document.getElementById("onionSkinBtn").onclick = function () {
@@ -44,7 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
   exportPreviewFramesToFlipbook();
 }; */
 
-  /* adding the flipbook paer - FLIPBOOK----------------------------------------------------------------*/
+  /* adding the flipbook paer - FLIPBOOK----------------------------------------------------------------
 
   document.getElementById("browserPreviewAllBtn").onclick = () => {
   beforeMergingInExport(() => {
