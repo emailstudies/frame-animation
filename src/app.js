@@ -44,15 +44,15 @@ document.addEventListener("DOMContentLoaded", function () {
   exportPreviewFramesToFlipbook();
 }; */
 
-  /* adding the flipbook paer - FLIPBOOK*/
+  /* adding the flipbook paer - FLIPBOOK----------------------------------------------------------------*/
 
   // Filtered global listener for only this plugin's messages
-window.addEventListener("message", (event) => {
+/*window.addEventListener("message", (event) => {
   if (typeof event.data === "string" && event.data.startsWith("[flipbook]")) {
     const cleanMsg = event.data.replace("[flipbook] ", "").trim();
     console.log("📩 Flipbook Plugin Message:", cleanMsg);
   }
-});
+}); */
 
 // 📩 Global listener to log Photopea echo messages
 /*window.addEventListener("message", (event) => {
@@ -69,32 +69,36 @@ window.addEventListener("message", (event) => {
   }
 }); */
 
-// 🔘 Button handler for browser preview of all anim folders
-document.getElementById("browserPreviewAllBtn").onclick = () => {
-  // Step 1: Prepare layers if needed
+
+  document.getElementById("browserPreviewAllBtn").onclick = () => {
   beforeMergingInExport(() => {
-
-    // Step 2: Set up listener BEFORE sending exportGif()
     const handler = (event) => {
-      if (typeof event.data === "string") {
-        console.log("📩 Raw message from Photopea:", event.data);
-
-        if (event.data.trim() === "✅ anim_preview created - done") {
-          console.log("✅ Confirmed: anim_preview created.");
-          window.removeEventListener("message", handler);
-
-          // Step 3: Now start collecting frames
-          exportPreviewFramesToFlipbook();
-        }
+      if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ anim_preview created - done") {
+        console.log("✅ Confirmed: anim_preview created.");
+        window.removeEventListener("message", handler);
+        exportPreviewFramesToFlipbook();  // Run only after exportGif completes
       }
     };
 
     window.addEventListener("message", handler);
-
-    // Step 4: Trigger exportGif, which should end with app.echoToOE("✅ anim_preview created - done");
-    exportGif();
+    exportGif();  // This should end with app.echoToOE("[flipbook] ✅ anim_preview created - done")
   });
 };
+
+// Flipbook-specific global listener
+window.addEventListener("message", (event) => {
+  if (typeof event.data === "string" && event.data.startsWith("[flipbook]")) {
+    const msg = event.data.replace("[flipbook] ", "").trim();
+
+    if (msg.startsWith("📦")) {
+      console.log("🧮 Frame Count:", msg);  // e.g., "anim_preview contains 10 frames."
+    } else if (msg.startsWith("❌")) {
+      console.warn("⚠️ Flipbook Error:", msg);
+    } else {
+      console.log("📩 Flipbook Plugin Message:", msg);
+    }
+  }
+});
 
 
 
