@@ -106,16 +106,18 @@ window.addEventListener("message", (event) => {
 window.addEventListener("message", (event) => {
   if (event.data instanceof ArrayBuffer) {
     flipbookFrames.push(event.data);
+    console.log("📥 Received frame #" + flipbookFrames.length);
   } else if (typeof event.data === "string") {
     const msg = event.data.trim();
 
     if (msg === "[flipbook] ✅ Exported all frames to OE.") {
+      console.log("📸 Flipbook: Received " + flipbookFrames.length + " frames.");
+
       if (flipbookFrames.length === 0) {
         alert("❌ No flipbook frames received.");
         return;
       }
 
-      // Launch flipbook preview
       const html = generateFlipbookHTML(flipbookFrames);
       const blob = new Blob([html], { type: "text/html" });
       const url = URL.createObjectURL(blob);
@@ -124,7 +126,6 @@ window.addEventListener("message", (event) => {
       win.document.write(html);
       win.document.close();
 
-      // Clear frames buffer
       flipbookFrames.length = 0;
     }
   }
