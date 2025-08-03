@@ -46,6 +46,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
   /* adding the flipbook paer - FLIPBOOK*/
   
+// 📩 Global listener to log Photopea echo messages
+window.addEventListener("message", (event) => {
+  if (typeof event.data === "string") {
+    if (event.data.startsWith("📦")) {
+      console.log(event.data); // e.g., frame count
+    } else if (event.data.startsWith("❌")) {
+      console.warn(event.data); // e.g., missing preview group
+    } else if (event.data.startsWith("✅")) {
+      console.log(event.data); // success messages
+    } else {
+      console.log("📩 Message from Photopea:", event.data);
+    }
+  }
+});
+
+// 🔘 Button handler for browser preview of all anim folders
 document.getElementById("browserPreviewAllBtn").onclick = () => {
   // Step 1: Prepare layers if needed
   beforeMergingInExport(() => {
@@ -71,6 +87,7 @@ document.getElementById("browserPreviewAllBtn").onclick = () => {
     exportGif();
   });
 };
+
 
 
 
