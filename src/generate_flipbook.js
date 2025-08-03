@@ -1,5 +1,5 @@
 function generateFlipbookHTML(frames) {
-  const base64Frames = frames.map((ab, i) => {
+  const base64Snippets = frames.map((ab, i) => {
     const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
     return `frames[${i}] = "data:image/png;base64,${base64}";`;
   }).join("\n");
@@ -11,23 +11,22 @@ function generateFlipbookHTML(frames) {
     <title>Flipbook Preview</title>
     <style>
       html, body {
-        margin: 0; background: #111;
+        margin: 0;
+        background: #111;
         overflow: hidden;
         height: 100%;
         display: flex;
         justify-content: center;
         align-items: center;
       }
-      canvas {
-        image-rendering: pixelated;
-      }
+      canvas { image-rendering: pixelated; }
     </style>
   </head>
   <body>
     <canvas id="previewCanvas"></canvas>
     <script>
       const frames = [];
-      ${base64Frames}
+      ${base64Snippets}
 
       const images = frames.map(src => {
         const img = new Image();
@@ -40,31 +39,30 @@ function generateFlipbookHTML(frames) {
       const fps = 12;
       let index = 0;
 
-      const preload = () => {
+      function preloadImages(imgArray, callback) {
         let loaded = 0;
-        images.forEach(img => {
+        imgArray.forEach(img => {
           img.onload = () => {
             loaded++;
-            if (loaded === images.length) {
-              startLoop();
-            }
+            if (loaded === imgArray.length) callback();
           };
         });
-      };
+      }
 
-      const startLoop = () => {
+      function startLoop() {
         canvas.width = images[0].width;
         canvas.height = images[0].height;
+
         setInterval(() => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(images[index], 0, 0);
           index = (index + 1) % images.length;
         }, 1000 / fps);
-      };
+      }
 
-      preload();
+      preloadImages(images, startLoop);
     </script>
   </body>
 </html>
-  `;
+`;
 }
