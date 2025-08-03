@@ -1,65 +1,85 @@
+// flipbook_export.js - exporting anim_preview frames one by one
+
+let frameIndex = 0;
+let totalFrames = 0;
+
 function exportPreviewFramesToFlipbook() {
-  console.log("🚀 Running exportPreviewFramesToFlipbook()");
+  console.log("🚀 Starting flipbook export");
+  frameIndex = 0;
 
-  const script = `
+  const initScript = `
     (function () {
-      try {
-        var doc = app.activeDocument;
-        var previewGroup = null;
+      var doc = app.activeDocument;
+      var previewGroup = null;
 
-        // 1. Find anim_preview group
-        for (var i = 0; i < doc.layers.length; i++) {
-          var layer = doc.layers[i];
-          if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
-            previewGroup = layer;
-            break;
-          }
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
+          previewGroup = layer;
+          break;
         }
-
-        if (!previewGroup) {
-          app.echoToOE("[flipbook] ❌ anim_preview not found");
-          return;
-        }
-
-        // 2. Hide all other top-level layers
-        for (var i = 0; i < doc.layers.length; i++) {
-          var layer = doc.layers[i];
-          if (layer !== previewGroup) {
-            layer.visible = false;
-          }
-        }
-
-        // 3. Make anim_preview group visible
-        previewGroup.visible = true;
-
-        var frameCount = previewGroup.layers.length;
-        app.echoToOE("[flipbook] 📦 anim_preview contains " + frameCount + " frames.");
-
-        // 4. Export each frame
-        for (var i = frameCount - 1; i >= 0; i--) {
-          for (var j = 0; j < frameCount; j++) {
-            previewGroup.layers[j].visible = false;
-          }
-
-          var currentLayer = previewGroup.layers[i];
-          currentLayer.visible = true;
-          app.refresh();
-
-          // Force a brief delay for redraw
-          for (var wait = 0; wait < 10000000; wait++) {}
-
-          app.echoToOE("[flipbook] 🔁 Exporting frame " + (frameCount - 1 - i) + ": " + currentLayer.name);
-          doc.saveToOE("png");
-        }
-
-        app.echoToOE("[flipbook] ✅ Exported all frames to OE.");
-      } catch (e) {
-        app.echoToOE("[flipbook] ❌ ERROR: " + e.message);
       }
+
+      if (!previewGroup) {
+        app.echoToOE("[flipbook] ❌ anim_preview not found");
+        return;
+      }
+
+      for (var i = 0; i < doc.layers.length; i++) {
+        doc.layers[i].visible = (doc.layers[i] === previewGroup);
+      }
+
+      previewGroup.visible = true;
+
+      app.echoToOE("[flipbook] 📦 init " + previewGroup.layers.length);
     })();
   `;
 
-  setTimeout(() => {
-    parent.postMessage(script, "*");
-  }, 50);
+  parent.postMessage(initScript, "*");
+}
+
+// continue frame export after receiving frame count from Photopea
+function continueFlipbookExport(total) {
+  totalFrames = total;
+  exportNextFrame();
+}
+
+function exportNextFrame() {
+  if (frameIndex >= totalFrames) {
+    parent.postMessage(`app.echoToOE("[flipbook] ✅ Exported all frames to OE.");`, "*");
+    return;
+  }
+
+  const script = `
+    (function () {
+      var doc = app.activeDocument;
+      var group = null;
+
+      for (var i = 0; i < doc.layers.length; i++) {
+        var layer = doc.layers[i];
+        if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
+          group = layer;
+          break;
+        }
+      }
+
+      if (!group) {
+        app.echoToOE("[flipbook] ❌ anim_preview group missing during export");
+        return;
+      }
+
+      for (var j = 0; j < group.layers.length; j++) {
+        group.layers[j].visible = false;
+      }
+
+      var currentLayer = group.layers[${totalFrames - 1 - frameIndex}];
+      currentLayer.visible = true;
+      app.refresh();
+      app.echoToOE("[flipbook] 🔁 Frame ${frameIndex}: " + currentLayer.name);
+      doc.saveToOE("png");
+    })();
+  `;
+
+  parent.postMessage(script, "*");
+  frameIndex++;
 }
