@@ -123,7 +123,7 @@ function exportNextFrame() {
       }
 
       for (var j = 0; j < group.layers.length; j++) {
-        group.layers[j].visible = false;
+        group.layers[j].visible = false; 
       }
 
       var currentLayer = group.layers[${totalFrames - 1 - frameIndex}];
