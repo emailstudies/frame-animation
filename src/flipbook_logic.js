@@ -1,4 +1,5 @@
 function exportPreviewFramesToFlipbook() {
+  console.log("🚀 Running exportPreviewFramesToFlipbook()");
   const script = `
     (function () {
       var doc = app.activeDocument;
