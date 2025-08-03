@@ -7,11 +7,14 @@ function exportPreviewFramesToFlipbook() {
         var doc = app.activeDocument;
         var previewGroup = null;
 
+        // Locate anim_preview folder
         for (var i = 0; i < doc.layers.length; i++) {
           var layer = doc.layers[i];
           if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
             previewGroup = layer;
-            break;
+          } else {
+            // Turn off visibility for all other LayerSets and Layers at root
+            layer.visible = false;
           }
         }
 
@@ -20,6 +23,10 @@ function exportPreviewFramesToFlipbook() {
           return;
         }
 
+        // Ensure anim_preview itself is visible
+        previewGroup.visible = true;
+
+        // Count how many frames are inside
         var frameCount = previewGroup.layers.length;
         app.echoToOE("[flipbook] 📦 anim_preview contains " + frameCount + " frames.");
         app.refresh();
@@ -29,8 +36,7 @@ function exportPreviewFramesToFlipbook() {
     })();
   `;
 
-  // Add slight delay to allow Photopea to finalize frame structure
   setTimeout(() => {
     window.parent.postMessage(script, "*");
-  }, 50); // 200ms is a safe bet
+  }, 50);
 }
