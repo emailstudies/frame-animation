@@ -269,7 +269,7 @@ function exportGif() {
       app.refresh();
       
       alert("✅ All frames merged into 'anim_preview'. You can now export via File > Export As > GIF.");
-      app.echoToOE("✅ anim_preview created - done");
+      app.echoToOE("[flipbook] ✅ anim_preview created - done");
 
       
       
