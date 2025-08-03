@@ -26,8 +26,6 @@ function exportPreviewFramesToFlipbook() {
   window.addEventListener("message", function handleResponse(event) {
     if (typeof event.data === "string") {
       console.log("📩 Message from Photopea:", event.data);
-
-      // Stop listening after the first response
       window.removeEventListener("message", handleResponse);
     }
   });
