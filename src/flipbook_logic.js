@@ -5,38 +5,55 @@ function exportPreviewFramesToFlipbook() {
     (function () {
       try {
         var doc = app.activeDocument;
-        var previewGroup = null;
+        var animGroup = null;
 
-        // Locate anim_preview folder
+        // Step 1: Find 'anim_preview'
         for (var i = 0; i < doc.layers.length; i++) {
           var layer = doc.layers[i];
           if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
-            previewGroup = layer;
-          } else {
-            // Turn off visibility for all other LayerSets and Layers at root
+            animGroup = layer;
+            break;
+          }
+        }
+
+        if (!animGroup) {
+          app.echoToOE("[flipbook] ❌ anim_preview not found.");
+          return;
+        }
+
+        // Step 2: Hide all other folders and root-level layers
+        for (var i = 0; i < doc.layers.length; i++) {
+          var layer = doc.layers[i];
+          if (layer !== animGroup) {
             layer.visible = false;
           }
         }
 
-        if (!previewGroup) {
-          app.echoToOE("[flipbook] ❌ anim_preview not found");
-          return;
+        var frames = animGroup.layers;
+        app.echoToOE("[flipbook] 📦 anim_preview contains " + frames.length + " frames.");
+
+        // Step 3: Export each layer one at a time
+        for (var i = frames.length - 1; i >= 0; i--) {
+          // Hide all layers first
+          for (var j = 0; j < frames.length; j++) {
+            frames[j].visible = false;
+          }
+
+          // Show only current frame
+          frames[i].visible = true;
+
+          app.refresh();
+          app.saveToOE("png");
         }
 
-        // Ensure anim_preview itself is visible
-        previewGroup.visible = true;
-
-        // Count how many frames are inside
-        var frameCount = previewGroup.layers.length;
-        app.echoToOE("[flipbook] 📦 anim_preview contains " + frameCount + " frames.");
-        app.refresh();
-      } catch (e) {
-        app.echoToOE("[flipbook] ❌ Error checking anim_preview: " + e.toString());
+        app.echoToOE("[flipbook] ✅ Exported all frames to OE.");
+      } catch (err) {
+        app.echoToOE("[flipbook] ❌ Error: " + err.toString());
       }
     })();
   `;
 
-  setTimeout(() => {
-    window.parent.postMessage(script, "*");
-  }, 50);
+  
+// Post to Photopea
+  window.parent.postMessage(script, "*");
 }
