@@ -48,18 +48,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.getElementById("browserPreviewAllBtn").onclick = () => {
   beforeMergingInExport(() => {
-    // 1. Add listener BEFORE sending the script
     const handler = (event) => {
-      if (typeof event.data === "string" && event.data.trim() === "done") {
-        console.log("✅ Photopea script done — now checking anim_preview");
+      if (typeof event.data === "string" && event.data.trim() === "✅ anim_preview created - done") {
+        console.log("✅ Confirmed: anim_preview created.");
         window.removeEventListener("message", handler);
-        exportPreviewFramesToFlipbook();  // Trigger next step only after Photopea completes script
+        exportPreviewFramesToFlipbook(); // Safe to start extracting frames now
       }
     };
-    window.addEventListener("message", handler);
 
-    // 2. Now send the script string via exportGif (this posts to Photopea)
-    exportGif();
+    window.addEventListener("message", handler);
+    exportGif(); // This posts the script to Photopea
   });
 };
 
