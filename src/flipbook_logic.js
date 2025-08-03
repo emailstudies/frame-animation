@@ -21,31 +21,37 @@ function exportPreviewFramesToFlipbook() {
           return;
         }
 
-        // 2. Hide all other top-level layers except anim_preview
+        // 2. Hide all other top-level layers
         for (var i = 0; i < doc.layers.length; i++) {
           var layer = doc.layers[i];
-          layer.visible = (layer === previewGroup);
+          if (layer !== previewGroup) {
+            layer.visible = false;
+          }
         }
 
-        // 3. Show the group
+        // 3. Make anim_preview group visible
         previewGroup.visible = true;
 
         var frameCount = previewGroup.layers.length;
         app.echoToOE("[flipbook] 📦 anim_preview contains " + frameCount + " frames.");
 
-        // 4. Export frames in order (0 to N-1)
-        for (var i = 0; i < frameCount; i++) {
-          // Hide all
+        // 4. Export each frame
+        for (var i = frameCount - 1; i >= 0; i--) {
+          // Hide all preview layers first
           for (var j = 0; j < frameCount; j++) {
             previewGroup.layers[j].visible = false;
           }
 
-          // Show this one
+          // Show the current frame layer
           var currentLayer = previewGroup.layers[i];
           currentLayer.visible = true;
-          app.refresh();
 
-          app.echoToOE("[flipbook] 🔁 Exporting frame " + i + ": " + currentLayer.name);
+          app.refresh();          // Trigger UI update
+          var forceRedraw = doc.width; // Dummy read to force redraw
+          $.sleep(100);           // Small delay to ensure refresh (adjust if needed)
+
+          app.echoToOE("[flipbook] 🔁 Exporting frame " + (frameCount - 1 - i) + ": " + currentLayer.name);
+
           doc.saveToOE("png");
         }
 
