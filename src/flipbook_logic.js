@@ -35,8 +35,8 @@ function exportPreviewFramesToFlipbook() {
         var frameCount = previewGroup.layers.length;
         app.echoToOE("[flipbook] 📦 anim_preview contains " + frameCount + " frames.");
 
-        // 4. Export each visible frame
-        for (var i = frameCount - 1; i >= 0; i--) {
+        // 4. Export each visible frame (from first to last)
+        for (var i = 0; i < frameCount; i++) {
           // Hide all preview layers first
           for (var j = 0; j < frameCount; j++) {
             previewGroup.layers[j].visible = false;
