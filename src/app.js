@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
   /* adding the flipbook paer - FLIPBOOK*/
   
 // 📩 Global listener to log Photopea echo messages
-window.addEventListener("message", (event) => {
+/*window.addEventListener("message", (event) => {
   if (typeof event.data === "string") {
     if (event.data.startsWith("📦")) {
       console.log(event.data); // e.g., frame count
@@ -59,7 +59,7 @@ window.addEventListener("message", (event) => {
       console.log("📩 Message from Photopea:", event.data);
     }
   }
-});
+}); */
 
 // 🔘 Button handler for browser preview of all anim folders
 document.getElementById("browserPreviewAllBtn").onclick = () => {
