@@ -1,4 +1,4 @@
-export function exportPreviewFramesToFlipbook() {
+function exportPreviewFramesToFlipbook() {
   console.log("🚀 Running exportPreviewFramesToFlipbook()");
 
   const script = `
