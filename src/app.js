@@ -100,6 +100,37 @@ window.addEventListener("message", (event) => {
   }
 });
 
+  // for the flipbook
+  const flipbookFrames = [];
+
+window.addEventListener("message", (event) => {
+  if (event.data instanceof ArrayBuffer) {
+    flipbookFrames.push(event.data);
+  } else if (typeof event.data === "string") {
+    const msg = event.data.trim();
+
+    if (msg === "[flipbook] ✅ Exported all frames to OE.") {
+      if (flipbookFrames.length === 0) {
+        alert("❌ No flipbook frames received.");
+        return;
+      }
+
+      // Launch flipbook preview
+      const html = generateFlipbookHTML(flipbookFrames);
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const win = window.open();
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+
+      // Clear frames buffer
+      flipbookFrames.length = 0;
+    }
+  }
+});
+
+
 
 
 
