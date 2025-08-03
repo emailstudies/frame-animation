@@ -16,15 +16,15 @@ function exportPreviewFramesToFlipbook() {
         }
 
         if (!previewGroup) {
-          app.echoToOE("❌ anim_preview not found");
+          app.echoToOE("[flipbook] ❌ anim_preview not found");
           return;
         }
 
         var frameCount = previewGroup.layers.length;
-        app.echoToOE("📦 anim_preview contains " + frameCount + " frames.");
+        app.echoToOE("[flipbook] 📦 anim_preview contains " + frameCount + " frames.");
         app.refresh();
       } catch (e) {
-        app.echoToOE("❌ Error checking anim_preview: " + e.toString());
+        app.echoToOE("[flipbook] ❌ Error checking anim_preview: " + e.toString());
       }
     })();
   `;
