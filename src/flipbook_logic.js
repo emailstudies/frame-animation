@@ -1,32 +1,30 @@
 function exportPreviewFramesToFlipbook() {
   const script = `
-    try {
-      var doc = app.activeDocument;
-      var animFolder = null;
+    (function () {
+      try {
+        var doc = app.activeDocument;
+        var previewGroup = null;
 
-      for (var i = 0; i < doc.layerSets.length; i++) {
-        if (doc.layerSets[i].name === "anim_preview") {
-          animFolder = doc.layerSets[i];
-          break;
+        for (var i = 0; i < doc.layers.length; i++) {
+          var layer = doc.layers[i];
+          if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
+            previewGroup = layer;
+            break;
+          }
         }
-      }
 
-      if (animFolder) {
-        app.echoToOE("✅ anim_preview exists");
-      } else {
-        app.echoToOE("❌ anim_preview not found");
+        if (!previewGroup) {
+          app.echoToOE("❌ anim_preview not found");
+          return;
+        }
+
+        var count = previewGroup.layers.length;
+        app.echoToOE("✅ anim_preview has " + count + " frame(s)");
+      } catch (e) {
+        app.echoToOE("❌ Error: " + e.message);
       }
-    } catch (e) {
-      app.echoToOE("❌ " + e.message);
-    }
+    })();
   `;
 
-  parent.postMessage(script, "*");
-
-  window.addEventListener("message", function handleResponse(event) {
-    if (typeof event.data === "string") {
-      console.log("📩 Message from Photopea:", event.data);
-      window.removeEventListener("message", handleResponse);
-    }
-  });
+  window.parent.postMessage(script, "*");
 }
