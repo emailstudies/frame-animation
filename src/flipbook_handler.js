@@ -1,5 +1,22 @@
 // ✅ flipbook_handler.js (in your plugin)
 
+// 🎬 Trigger flipbook export when button is clicked
+document.getElementById("browserPreviewAllBtn").onclick = () => {
+  beforeMergingInExport(() => {
+    const handler = (event) => {
+      if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ anim_preview created - done") {
+        console.log("✅ Confirmed: anim_preview created.");
+        window.removeEventListener("message", handler);
+        exportPreviewFramesToFlipbook();  // Start sending frames one-by-one
+      }
+    };
+
+    window.addEventListener("message", handler);
+    exportGif();  // This kicks off the whole export flow
+  });
+};
+
+
 const flipbookFrames = [];
 
 // 📩 Listen for messages from Photopea
