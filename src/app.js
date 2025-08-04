@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 };
 
-  launchFlipbookFromAnimPreview();
+  launchFlipbookFromAnimPreview(browserPreviewSelectedBtn);
 
 
 
