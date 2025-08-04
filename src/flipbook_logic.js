@@ -1,53 +1,75 @@
-function previewInPhotopeaFlipbook() {
+function exportPreviewFramesToFlipbook() {
+  console.log("🚀 [flipbook] Starting coordinated frame export");
+
   const script = `
     (function () {
       try {
         var doc = app.activeDocument;
-        var group = null;
+        var previewGroup = null;
 
-        // Find anim_preview group
+        // 🔍 Find anim_preview
         for (var i = 0; i < doc.layers.length; i++) {
           var layer = doc.layers[i];
           if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
-            group = layer;
+            previewGroup = layer;
             break;
           }
         }
 
-        if (!group) {
-          app.echoToOE("[flipbook] ❌ anim_preview group not found.");
+        if (!previewGroup) {
+          app.echoToOE("[flipbook] ❌ anim_preview not found");
           return;
         }
 
-        var frames = group.layers;
-        var total = frames.length;
-        var current = 0;
-
-        // Hide all layers first
-        for (var i = 0; i < total; i++) frames[i].visible = false;
-        group.visible = true;
+        // 🫥 Hide everything else
+        for (var i = 0; i < doc.layers.length; i++) {
+          doc.layers[i].visible = (doc.layers[i] === previewGroup);
+        }
+        previewGroup.visible = true;
         app.refresh();
 
-        // Start preview loop
-        var intervalID = setInterval(() => {
-          for (var i = 0; i < total; i++) frames[i].visible = false;
-          frames[current].visible = true;
+        var frameCount = previewGroup.layers.length;
+        app.echoToOE("[flipbook] 📦 anim_preview contains " + frameCount + " frames.");
+
+        // 👉 Store in temp global for stepping
+        window._flipbook = {
+          group: previewGroup,
+          count: frameCount,
+          current: frameCount - 1,
+          doc: doc
+        };
+
+        // 👣 Begin export loop
+        (function exportNext() {
+          var ctx = window._flipbook;
+          if (ctx.current < 0) {
+            delete window._flipbook;
+            app.echoToOE("[flipbook] ✅ All frames exported.");
+            return;
+          }
+
+          // 🧼 Hide all
+          for (var j = 0; j < ctx.count; j++) {
+            ctx.group.layers[j].visible = false;
+          }
+
+          var layer = ctx.group.layers[ctx.current];
+          layer.visible = true;
           app.refresh();
 
-          current = (current + 1) % total;
-        }, 1000 / 12);  // 12 fps
-
-        app.echoToOE("[flipbook] ▶️ Live preview started at 12 FPS.");
-        // Stop after a loop or leave it running
-        // setTimeout(() => clearInterval(intervalID), total * (1000 / 12));
+          app.echoToOE("[flipbook] 🔁 Ready to export frame " + (ctx.count - ctx.current - 1) + ": " + layer.name);
+        })();
       } catch (e) {
-        app.echoToOE("[flipbook] ❌ ERROR in live preview: " + e.message);
+        app.echoToOE("[flipbook] ❌ ERROR: " + e.message);
       }
     })();
   `;
 
-  parent.postMessage(script, "*");
+  setTimeout(() => {
+    parent.postMessage(script, "*");
+  }, 50);
 }
+
 
 
 
