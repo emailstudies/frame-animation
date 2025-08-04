@@ -1,7 +1,6 @@
-// ✅ flipbook_handler.js (plugin side)
 const flipbookFrames = [];
 
-// 📩 Listen for frame count, status, errors
+// 📩 Handle messages from Photopea
 window.addEventListener("message", (event) => {
   if (typeof event.data === "string" && event.data.startsWith("[flipbook]")) {
     const msg = event.data.replace("[flipbook] ", "").trim();
@@ -12,24 +11,26 @@ window.addEventListener("message", (event) => {
       console.log("📸", `[flipbook] ${msg}`);
     } else if (msg.startsWith("❌")) {
       console.warn("⚠️ Flipbook Error:", msg);
+    } else if (msg === "✅ anim_preview created - done") {
+      console.log("✅ Confirmed: anim_preview created.");
+      exportPreviewFramesToFlipbook(); // Trigger export after confirmation
     } else {
       console.log("📩 Flipbook Plugin Message:", msg);
     }
   }
 });
 
-// 📥 Handle incoming frame data
+// 📥 Receive and respond to frames
 window.addEventListener("message", (event) => {
   if (event.data instanceof ArrayBuffer) {
     console.log("🧪 Got ArrayBuffer of length", event.data.byteLength);
     flipbookFrames.push(event.data);
     console.log("📥 Received frame #" + flipbookFrames.length);
 
-    // ✅ Tell Photopea we're ready for the next frame
+    // ✅ Tell Photopea to continue
     parent.postMessage("[flipbook] ✅ frame received", "*");
   }
 
-  // 🚀 Launch viewer when done
   if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ Exported all frames to OE.") {
     console.log("📸 Flipbook: Received " + flipbookFrames.length + " frames.");
 
@@ -46,6 +47,6 @@ window.addEventListener("message", (event) => {
     win.document.write(html);
     win.document.close();
 
-    flipbookFrames.length = 0;
+    flipbookFrames.length = 0; // Reset for next run
   }
 });
