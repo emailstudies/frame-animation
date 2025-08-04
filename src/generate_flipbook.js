@@ -1,4 +1,10 @@
 function generateFlipbookHTML(frames) {
+  console.log("🧪 Base64 snippet diff check:");
+  frames.forEach((ab, i) => {
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+    console.log("Frame", i, "starts with:", base64.slice(0, 80));
+  });
+
   const base64Snippets = frames.map((ab, i) => {
     const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
     return `frames[${i}] = "data:image/png;base64,${base64}";`;
@@ -28,9 +34,10 @@ function generateFlipbookHTML(frames) {
     const frames = [];
     ${base64Snippets}
 
-    console.log("🧪 Base64 snippet diff check:");
-    frames.forEach((f, i) => {
-      console.log("Frame", i, "starts with:", f.slice(0, 80));
+    const images = frames.map(src => {
+      const img = new Image();
+      img.src = src;
+      return img;
     });
 
     const canvas = document.getElementById("previewCanvas");
@@ -38,40 +45,35 @@ function generateFlipbookHTML(frames) {
     const fps = 12;
     let index = 0;
 
-    const images = [];
-    let loaded = 0;
+    function preloadImages(images, callback) {
+      let loaded = 0;
+      const total = images.length;
 
-    for (let i = 0; i < frames.length; i++) {
-      const img = new Image();
-      img.onload = () => {
-        console.log("✅ Frame", i, "loaded");
-        loaded++;
-        if (loaded === frames.length) {
-          console.log("🚀 All frames loaded. Starting loop.");
-          startLoop();
-        }
-      };
-      img.onerror = () => {
-        console.error("❌ Failed to load frame", i);
-      };
-      images.push(img);
-      img.src = frames[i]; // Set AFTER onload
+      images.forEach((img, i) => {
+        img.onload = () => {
+          console.log("✅ Frame", i, "loaded");
+          loaded++;
+          if (loaded === total) callback();
+        };
+        img.onerror = () => {
+          console.error("❌ Failed to load image", img.src);
+        };
+      });
     }
 
     function startLoop() {
-      if (images.length === 0) return;
-
+      console.log("🚀 All frames loaded. Starting loop.");
       canvas.width = images[0].width;
       canvas.height = images[0].height;
-      console.log("🎞️ Starting animation loop");
-
       setInterval(() => {
+        console.log("🖼️ Showing frame", index);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(images[index], 0, 0);
-        console.log("🖼️ Showing frame", index);
         index = (index + 1) % images.length;
       }, 1000 / fps);
     }
+
+    preloadImages(images, startLoop);
   </script>
 </body>
 </html>`;
