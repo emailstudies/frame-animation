@@ -1,14 +1,13 @@
-// ✅ flipbook_logic.js (Photopea side)
 function exportPreviewFramesToFlipbook() {
   console.log("🚀 [flipbook] Starting coordinated frame export");
 
-  const initScript = `
+  const script = `
     (function () {
       try {
         var doc = app.activeDocument;
         var previewGroup = null;
 
-        // 🔍 Find anim_preview group
+        // 🔍 Find anim_preview
         for (var i = 0; i < doc.layers.length; i++) {
           var layer = doc.layers[i];
           if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
@@ -32,75 +31,60 @@ function exportPreviewFramesToFlipbook() {
         var frameCount = previewGroup.layers.length;
         app.echoToOE("[flipbook] 📦 anim_preview contains " + frameCount + " frames.");
 
-        // 🧠 Store export context
+        // 👉 Store in temp global for stepping
         window._flipbook = {
-          doc: doc,
           group: previewGroup,
           count: frameCount,
-          current: frameCount - 1
+          current: 0,
+          doc: doc
         };
 
-        // 👣 Begin with the first frame
-        (function exportNext() {
+        // 👣 Define export step function
+        window.stepAndExportNextFrame = function () {
           var ctx = window._flipbook;
-          if (ctx.current < 0) {
+
+          if (!ctx || ctx.current >= ctx.count) {
             delete window._flipbook;
             app.echoToOE("[flipbook] ✅ Exported all frames to OE.");
             return;
           }
 
+          // 🧼 Hide all
           for (var j = 0; j < ctx.count; j++) {
             ctx.group.layers[j].visible = false;
           }
 
-          var layer = ctx.group.layers[ctx.current];
+          var layer = ctx.group.layers[ctx.count - 1 - ctx.current]; // Reverse order
           layer.visible = true;
           app.refresh();
 
-          app.echoToOE("[flipbook] 🔁 Ready to export frame " + (ctx.count - ctx.current - 1) + ": " + layer.name);
+          app.echoToOE("[flipbook] 🔁 Ready to export frame " + ctx.current + ": " + layer.name);
           ctx.doc.saveToOE("png");
-        })();
+
+          ctx.current++;
+        };
+
+        // ▶️ Start with first frame
+        window.stepAndExportNextFrame();
+
       } catch (e) {
         app.echoToOE("[flipbook] ❌ ERROR: " + e.message);
       }
     })();
   `;
 
-  parent.postMessage(initScript, "*");
+  setTimeout(() => {
+    parent.postMessage(script, "*");
+  }, 50);
 }
 
-// 📩 Listen for "frame received" and export the next
-window.addEventListener("message", (event) => {
+// 👂 Listen for plugin confirmation and step
+window.addEventListener("message", function (event) {
   if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ frame received") {
-    const nextScript = `
-      (function () {
-        try {
-          var ctx = window._flipbook;
-          if (!ctx || ctx.current < 0) {
-            app.echoToOE("[flipbook] ✅ Exported all frames to OE.");
-            delete window._flipbook;
-            return;
-          }
-
-          for (var j = 0; j < ctx.count; j++) {
-            ctx.group.layers[j].visible = false;
-          }
-
-          var layer = ctx.group.layers[ctx.current];
-          layer.visible = true;
-          app.refresh();
-
-          app.echoToOE("[flipbook] 🔁 Ready to export frame " + (ctx.count - ctx.current - 1) + ": " + layer.name);
-          ctx.doc.saveToOE("png");
-          ctx.current--;
-        } catch (e) {
-          app.echoToOE("[flipbook] ❌ ERROR during next export: " + e.message);
-        }
-      })();
-    `;
-    parent.postMessage(nextScript, "*");
+    if (typeof stepAndExportNextFrame === "function") {
+      stepAndExportNextFrame();
+    } else {
+      console.warn("⚠️ stepAndExportNextFrame not defined");
+    }
   }
 });
-
-// Make callable
-window.exportPreviewFramesToFlipbook = exportPreviewFramesToFlipbook;
