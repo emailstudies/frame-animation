@@ -1,16 +1,31 @@
 
 document.addEventListener("DOMContentLoaded", function () {
 
-document.getElementById("browserPreviewAllBtn").onclick = () => {
-  const script = getStepwiseDemoExportScript();
-  app.runScript(script); // ✅ this sends the script into Photopea
-};
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("browserPreviewAllBtn");
+  if (!btn) {
+    console.error("❌ Button 'browserPreviewAllBtn' not found");
+    return;
+  }
 
-  window.addEventListener("message", (event) => {
+  if (typeof getStepwiseDemoExportScript !== "function") {
+    console.error("❌ getStepwiseDemoExportScript() is not defined");
+    return;
+  }
+
+  btn.onclick = () => {
+    const script = getStepwiseDemoExportScript();
+    app.runScript(script);
+  };
+});
+
+// Listen to Photopea messages
+window.addEventListener("message", (event) => {
   if (typeof event.data === "string" && event.data.startsWith("[demo]")) {
-    console.log("📨 From Photopea:", event.data);
+    console.log("📨 Photopea:", event.data);
   }
 });
+
 
   /* ------------------------------------------------------------------------------------------------*/
 
