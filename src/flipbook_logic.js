@@ -1,6 +1,6 @@
 // ✅ Single-file flipbook preview using anim_preview (Photopea + plugin UI)
 document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("previewSelectedBtn");
+  const btn = document.getElementById("browserPreviewAllBtn");
   if (!btn) {
     console.error("❌ previewSelectedBtn not found");
     return;
