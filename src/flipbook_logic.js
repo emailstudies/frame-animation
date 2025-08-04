@@ -77,49 +77,72 @@ document.addEventListener("DOMContentLoaded", () => {
           URL.createObjectURL(new Blob([buf], { type: "image/png" }))
         );
 
-        const html = `
-          <html>
-            <head><title>Flipbook Preview</title></head>
-            <body style="margin:0; display:flex; justify-content:center; align-items:center; height:100vh; background:#000;">
-              <canvas id="flipCanvas"></canvas>
-              <script>
-                const urls = ${JSON.stringify(urls)};
-                const canvas = document.getElementById('flipCanvas');
-                const ctx = canvas.getContext('2d');
-                const images = [];
-                let frame = 0;
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Flipbook Preview</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    canvas {
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="flipCanvas"></canvas>
+  <script>
+    const urls = ${JSON.stringify(urls)};
+    const canvas = document.getElementById('flipCanvas');
+    const ctx = canvas.getContext('2d');
+    const images = [];
+    let frame = 0;
 
-                function loadImages(index = 0) {
-                  if (index >= urls.length) return playFlipbook();
-                  const img = new Image();
-                  img.onload = () => {
-                    images.push(img);
-                    if (images.length === 1) {
-                      canvas.width = img.width;
-                      canvas.height = img.height;
-                    }
-                    loadImages(index + 1);
-                  };
-                  img.src = urls[index];
-                }
+    function loadImages(index = 0) {
+      if (index >= urls.length) return playFlipbook();
+      const img = new Image();
+      img.onload = () => {
+        images.push(img);
+        if (images.length === 1) {
+          canvas.width = img.width;
+          canvas.height = img.height;
+        }
+        loadImages(index + 1);
+      };
+      img.src = urls[index];
+    }
 
-                function playFlipbook() {
-                  setInterval(() => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(images[frame], 0, 0);
-                    frame = (frame + 1) % images.length;
-                  }, 500);
-                }
+    function playFlipbook() {
+      setInterval(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(images[frame], 0, 0);
+        frame = (frame + 1) % images.length;
+      }, 500);
+    }
 
-                loadImages();
-              </script>
-            </body>
-          </html>
+    loadImages();
+  </script>
+</body>
+</html>
         `;
 
-        const blob = new Blob([html], { type: "text/html" });
+        const blob = new Blob([htmlContent], { type: "text/html" });
         const flipURL = URL.createObjectURL(blob);
-        window.open(flipURL, "_blank");
+
+        const win = window.open();
+        if (win) {
+          win.document.write(htmlContent);
+          win.document.close();
+        } else {
+          alert("⚠️ Popup blocked! Please allow popups and try again.");
+        }
 
         receivedFrames = []; // Reset for next run
       }
