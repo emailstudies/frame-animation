@@ -1,5 +1,13 @@
 
 document.addEventListener("DOMContentLoaded", function () {
+
+document.getElementById("browserPreviewAllBtn").onclick = () => {
+  const script = getStepwiseDemoExportScript();
+  app.runScript(script); // ✅ this sends the script into Photopea
+};
+
+
+  
   document.getElementById("createAnimBtn").onclick = handleCreateFolder;
   document.getElementById("updateLayerNumbersBtn").onclick = handleUpdateLayerNumbers;
  /* document.getElementById("onionSkinBtn").onclick = toggleOnionSkinMode; */
