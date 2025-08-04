@@ -28,13 +28,77 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 };
 
- document.getElementById("previewAllBtn").onclick = function () {
+ document.getElementById("browserPreviewAllBtn").onclick = function () {
   beforeMergingInExport(() => {
     setTimeout(() => {
       exportGif(); // Call export only AFTER reset is done
     }, 150); // Short delay to allow Photopea to complete
   });
 };
+
+  const flipbookFrames = [];
+
+window.addEventListener("message", (event) => {
+  if (event.data instanceof ArrayBuffer) {
+    flipbookFrames.push(event.data);
+    console.log("📥 Received frame #" + flipbookFrames.length);
+
+    // Ask Photopea to continue
+    const stepScript = `
+      (function () {
+        var ctx = window._flipbook;
+        if (!ctx) return;
+
+        ctx.current--;
+        (function exportNext() {
+          if (ctx.current < 0) {
+            delete window._flipbook;
+            app.echoToOE("[flipbook] ✅ All frames exported.");
+            return;
+          }
+
+          for (var j = 0; j < ctx.count; j++) {
+            ctx.group.layers[j].visible = false;
+          }
+
+          var layer = ctx.group.layers[ctx.current];
+          layer.visible = true;
+          app.refresh();
+
+          app.echoToOE("[flipbook] 🔁 Ready to export frame " + (ctx.count - ctx.current - 1) + ": " + layer.name);
+        })();
+      })();
+    `;
+    parent.postMessage(stepScript, "*");
+  }
+
+  if (typeof event.data === "string") {
+    const msg = event.data.trim();
+
+    if (msg.startsWith("[flipbook] 🔁 Ready to export frame")) {
+      console.log("📸", msg);
+      // Ask Photopea to export
+      const exportScript = `app.activeDocument.saveToOE("png");`;
+      parent.postMessage(exportScript, "*");
+    }
+
+    else if (msg === "[flipbook] ✅ All frames exported.") {
+      console.log("🖼️ All flipbook frames received:", flipbookFrames.length);
+      const html = generateFlipbookHTML(flipbookFrames);
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const win = window.open();
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    }
+
+    else if (msg.startsWith("[flipbook] 📦") || msg.startsWith("[flipbook] ❌")) {
+      console.log(msg);
+    }
+  }
+});
+
 
  
   
@@ -47,6 +111,8 @@ document.addEventListener("DOMContentLoaded", function () {
 }; */
 
   /* adding the flipbook paer - FLIPBOOK----------------------------------------------------------------
+
+  
 
   document.getElementById("browserPreviewAllBtn").onclick = () => {
   beforeMergingInExport(() => {
