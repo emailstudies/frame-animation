@@ -58,3 +58,4 @@ window.addEventListener("message", (event) => {
     flipbookFrames.length = 0;
   }
 });
+*/
