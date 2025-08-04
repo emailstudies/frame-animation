@@ -1,21 +1,16 @@
-document.addEventListener("DOMContentLoaded", function () {
-  const btn = document.getElementById("browserPreviewSelectedBtn");
-  if (!btn) {
-    console.error("❌ Button not found: #browserPreviewSelectedBtn");
-    return;
-  }
+console.log("flipbook_logic.js loaded");
 
-  let previewWindow = null;
-  const collectedFrames = [];
+document.addEventListener("click", function (e) {
+  if (e.target && e.target.id === "browserPreviewSelectedBtn") {
+    console.log("Button clicked: browserPreviewSelectedBtn");
 
-  btn.onclick = function () {
-    previewWindow = window.open("", "_blank");
+    let previewWindow = window.open("", "_blank");
     if (!previewWindow) {
       alert("⚠️ Popup blocked! Please allow popups and try again.");
       return;
     }
 
-    collectedFrames.length = 0;
+    const collectedFrames = [];
 
     const script = `
       (function () {
@@ -31,7 +26,6 @@ document.addEventListener("DOMContentLoaded", function () {
             app.echoToOE("Layer " + i + ": " + doc.layers[i].name + " (" + doc.layers[i].typename + ")");
           }
 
-          // Find anim_preview group
           var animGroup = null;
           for (var i = 0; i < doc.layers.length; i++) {
             if (doc.layers[i].typename === "LayerSet" && doc.layers[i].name === "anim_preview") {
@@ -51,11 +45,9 @@ document.addEventListener("DOMContentLoaded", function () {
           var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
 
           for (var i = 0; i < animGroup.layers.length; i++) {
-            // Hide all layers first
             for (var j = 0; j < animGroup.layers.length; j++) {
               animGroup.layers[j].visible = false;
             }
-            // Show only current layer
             animGroup.layers[i].visible = true;
 
             var layer = animGroup.layers[i];
@@ -75,7 +67,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
           }
 
-          // Restore all layers visibility
           for (var j = 0; j < animGroup.layers.length; j++) {
             animGroup.layers[j].visible = true;
           }
@@ -91,29 +82,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
     parent.postMessage(script, "*");
     console.log("📤 Sent export script to Photopea");
-  };
 
-  window.addEventListener("message", function (event) {
-    if (event.data instanceof ArrayBuffer) {
-      collectedFrames.push(event.data);
-      console.log("📥 Received frame " + collectedFrames.length);
-    } else if (typeof event.data === "string") {
-      console.log("📩 Message from Photopea:", event.data);
+    window.addEventListener("message", function handler(event) {
+      if (event.data instanceof ArrayBuffer) {
+        collectedFrames.push(event.data);
+        console.log("📥 Received frame " + collectedFrames.length);
+      } else if (typeof event.data === "string") {
+        console.log("📩 Message from Photopea:", event.data);
 
-      if (event.data === "done") {
-        if (!previewWindow || collectedFrames.length === 0) {
-          alert("❌ No frames received.");
-          return;
-        }
+        if (event.data === "done") {
+          if (!previewWindow || collectedFrames.length === 0) {
+            alert("❌ No frames received.");
+            window.removeEventListener("message", handler);
+            return;
+          }
 
-        const frameJS = collectedFrames
-          .map((buf, i) => {
-            const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-            return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
-          })
-          .join("\n");
+          const frameJS = collectedFrames
+            .map((buf, i) => {
+              const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+              return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
+            })
+            .join("\n");
 
-        const html = \`
+          const html = \`
 <!DOCTYPE html>
 <html>
 <head>
@@ -175,19 +166,22 @@ document.addEventListener("DOMContentLoaded", function () {
 </body>
 </html>\`;
 
-        previewWindow.document.open();
-        previewWindow.document.write(html);
-        previewWindow.document.close();
-
-        collectedFrames.length = 0;
-      } else if (event.data.startsWith("❌")) {
-        if (previewWindow) {
-          previewWindow.document.body.innerHTML = \`<h2 style="color: red;">\${event.data}</h2>\`;
+          previewWindow.document.open();
+          previewWindow.document.write(html);
           previewWindow.document.close();
-        } else {
-          alert(event.data);
+
+          collectedFrames.length = 0;
+          window.removeEventListener("message", handler);
+        } else if (event.data.startsWith("❌")) {
+          if (previewWindow) {
+            previewWindow.document.body.innerHTML = \`<h2 style="color: red;">\${event.data}</h2>\`;
+            previewWindow.document.close();
+          } else {
+            alert(event.data);
+          }
+          window.removeEventListener("message", handler);
         }
       }
-    }
-  });
+    });
+  }
 });
