@@ -36,26 +36,19 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 };
 
+
 document.getElementById("browserPreviewAllBtn").onclick = () => {
-  beforeMergingInExport(() => {
-    const handler = (event) => {
-      if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ anim_preview created - done") {
-        console.log("✅ Confirmed: anim_preview created.");
-        window.removeEventListener("message", handler);
-
-        // ✅ Inject flipbook logic into Photopea
-        if (window.flipbookScript) {
-          parent.postMessage(window.flipbookScript, "*");
-        } else {
-          console.warn("⚠️ flipbookScript not found.");
-        }
-      }
-    };
-
-    window.addEventListener("message", handler);
-    exportGif(); // or exportGifFromSelected()
-  });
+  const script = `
+    try {
+      app.runMenuItem("saveForWeb");
+      app.echoToOE("[plugin] ✅ Save for Web dialog opened");
+    } catch (e) {
+      app.echoToOE("[plugin] ❌ Failed to open Save for Web: " + e.message);
+    }
+  `;
+  parent.postMessage(script, "*");
 };
+
 
 
   
