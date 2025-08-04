@@ -1,3 +1,4 @@
+// demo_app.js
 window.getStepwiseDemoExportScript = function () {
   return `
     (function () {
@@ -40,13 +41,12 @@ window.getStepwiseDemoExportScript = function () {
           return;
         }
 
-        // Duplicate document for export
         doc.duplicate().then(dup => {
           app.openDocument(dup.id);
           const dupDoc = app.activeDocument;
           const dupDemo = dupDoc.layers.find(l => l.name === state.demoFolderName && l.type === 'group');
 
-          // Remove all layers except the current frame
+          // Remove all layers except current
           for (let i = dupDemo.layers.length - 1; i >= 0; i--) {
             if (i !== state.index) {
               dupDemo.layers[i].remove();
