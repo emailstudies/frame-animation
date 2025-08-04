@@ -1,4 +1,4 @@
-window.addEventListener("message", (event) => {
+/*window.addEventListener("message", (event) => {
   if (event.data !== "EXPORT_SELECTED_ANIM_FRAMES") return;
 
   const script = `
@@ -47,4 +47,4 @@ window.addEventListener("message", (event) => {
 
   parent.postMessage(script, "*");
   console.log("📤 Export script sent to Photopea");
-});
+});*/
