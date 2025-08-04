@@ -1,6 +1,7 @@
 
 document.addEventListener("DOMContentLoaded", function () {
 
+// app.js
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("browserPreviewAllBtn");
   if (!btn) {
@@ -15,16 +16,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btn.onclick = () => {
     const script = getStepwiseDemoExportScript();
-    app.runScript(script);
+    // Send the script string directly to Photopea (parent window)
+    window.parent.postMessage(script, "*");
   };
 });
 
-// Listen to Photopea messages
+// Listen for Photopea messages (strings) and log them
 window.addEventListener("message", (event) => {
   if (typeof event.data === "string" && event.data.startsWith("[demo]")) {
-    console.log("📨 Photopea:", event.data);
+    console.log("📨 Photopea message:", event.data);
   }
 });
+
 
 
   /* ------------------------------------------------------------------------------------------------*/
