@@ -1,16 +1,5 @@
-function generateFlipbookHTML(frames) {
-  console.log("🧪 Base64 snippet diff check:");
-  frames.forEach((ab, i) => {
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-    console.log("Frame", i, "starts with:", base64.slice(0, 80));
-  });
-
-  const base64Snippets = frames.map((ab, i) => {
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-    return `frames[${i}] = "data:image/png;base64,${base64}";`;
-  }).join("\n");
-
-  return `
+function generateFlipbookInNewTab(byteArrays) {
+  const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -31,50 +20,52 @@ function generateFlipbookHTML(frames) {
 <body>
   <canvas id="previewCanvas"></canvas>
   <script>
-    const frames = [];
-    ${base64Snippets}
+    function generateFlipbookHTML(byteArrays) {
+      const canvas = document.getElementById("previewCanvas");
+      const ctx = canvas.getContext("2d");
+      const fps = 12;
+      let frames = [], index = 0;
 
-    const images = frames.map(src => {
-      const img = new Image();
-      img.src = src;
-      return img;
-    });
+      const loadImage = (bytes) => {
+        return new Promise((resolve) => {
+          const blob = new Blob([new Uint8Array(bytes)], { type: "image/png" });
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(img);
+          };
+          img.src = url;
+        });
+      };
 
-    const canvas = document.getElementById("previewCanvas");
-    const ctx = canvas.getContext("2d");
-    const fps = 12;
-    let index = 0;
+      (async () => {
+        frames = await Promise.all(byteArrays.map(loadImage));
+        if (!frames.length) return;
 
-    function preloadImages(images, callback) {
-      let loaded = 0;
-      const total = images.length;
+        canvas.width = frames[0].width;
+        canvas.height = frames[0].height;
 
-      images.forEach((img, i) => {
-        img.onload = () => {
-          console.log("✅ Frame", i, "loaded");
-          loaded++;
-          if (loaded === total) callback();
-        };
-        img.onerror = () => {
-          console.error("❌ Failed to load image", img.src);
-        };
-      });
+        setInterval(() => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(frames[index], 0, 0);
+          index = (index + 1) % frames.length;
+        }, 1000 / fps);
+      })();
     }
 
-    function startLoop() {
-      console.log("🚀 All frames loaded. Starting loop.");
-      canvas.width = images[0].width;
-      canvas.height = images[0].height;
-      setInterval(() => {
-        console.log("🖼️ Showing frame", index);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(images[index], 0, 0);
-        index = (index + 1) % images.length;
-      }, 1000 / fps);
-    }
-
-    preloadImages(images, startLoop);
-  </script>
+    const byteArrays = __FRAME_DATA__.map(arr => new Uint8Array(arr));
+    generateFlipbookHTML(byteArrays);
+  <\/script>
 </body>
-</html>`;
+</html>
+`;
+
+  const frameData = JSON.stringify(byteArrays.map(buf => Array.from(new Uint8Array(buf))));
+  const finalHtml = htmlContent.replace("__FRAME_DATA__", frameData);
+
+  const newTab = window.open();
+  newTab.document.open();
+  newTab.document.write(finalHtml);
+  newTab.document.close();
 }
