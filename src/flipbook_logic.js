@@ -27,8 +27,13 @@ window.runSelectedFlipbookPreview = function () {
         }
 
         var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
+        // Remove the default background layer if it exists
+        if (tempDoc.artLayers.length > 0) {
+          tempDoc.artLayers[0].remove();
+        }
 
         for (var i = 0; i < animGroup.layers.length; i++) {
+          // Hide all layers first
           for (var j = 0; j < animGroup.layers.length; j++) {
             animGroup.layers[j].visible = false;
           }
@@ -38,22 +43,28 @@ window.runSelectedFlipbookPreview = function () {
 
           app.activeDocument = doc;
           doc.activeLayer = frame;
-
           app.refresh();
 
+          // Delete all content from tempDoc
+          app.activeDocument = tempDoc;
+          for (var l = tempDoc.artLayers.length - 1; l >= 0; l--) {
+            tempDoc.artLayers[l].remove();
+          }
+
+          // Duplicate current frame to tempDoc
+          app.activeDocument = doc;
           frame.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
 
           app.activeDocument = tempDoc;
-
           if (tempDoc.artLayers.length > 0) {
             tempDoc.saveToOE("png");
             app.echoToOE("\u2705 Exported frame " + i + ": " + frame.name);
-            tempDoc.activeLayer.remove();
           } else {
             app.echoToOE("\u26A0\uFE0F Frame " + i + " is empty.");
           }
         }
 
+        // Restore all visibility
         for (var j = 0; j < animGroup.layers.length; j++) {
           animGroup.layers[j].visible = true;
         }
@@ -61,6 +72,7 @@ window.runSelectedFlipbookPreview = function () {
         app.activeDocument = tempDoc;
         tempDoc.close(SaveOptions.DONOTSAVECHANGES);
         app.echoToOE("done");
+
       } catch (e) {
         app.echoToOE("\u274C ERROR: " + e.message);
       }
