@@ -36,6 +36,9 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 };
 
+  launchFlipbookFromAnimPreview();
+
+
 
 document.getElementById("browserPreviewAllBtn").onclick = () => {
   const script = `
