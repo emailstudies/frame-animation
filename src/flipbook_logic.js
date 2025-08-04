@@ -1,54 +1,50 @@
-const collectedFrames = [];
-let flipbookIndex = 0;
-let flipbookTotal = 0;
+// ✅ flipbook_logic.js — Combined logic (Photopea + plugin side)
 
-// 🚀 Start coordinated flipbook export
+let totalFrames = 0;
+let currentIndex = 0;
+const collectedFrames = [];
+
 window.runCombinedFlipbookExport = function () {
-  console.log("🚀 Starting combined flipbook export");
+  currentIndex = 0;
+  collectedFrames.length = 0;
 
   const initScript = `
     (function () {
       try {
         var doc = app.activeDocument;
-        var previewGroup = null;
+        var group = null;
         for (var i = 0; i < doc.layers.length; i++) {
-          var layer = doc.layers[i];
-          if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
-            previewGroup = layer;
+          if (doc.layers[i].typename === "LayerSet" && doc.layers[i].name === "anim_preview") {
+            group = doc.layers[i];
             break;
           }
         }
-        if (!previewGroup) {
+        if (!group) {
           app.echoToOE("[flipbook] ❌ anim_preview not found");
           return;
         }
-
-        // Hide everything except anim_preview
         for (var i = 0; i < doc.layers.length; i++) {
-          doc.layers[i].visible = (doc.layers[i] === previewGroup);
+          doc.layers[i].visible = (doc.layers[i] === group);
         }
-        previewGroup.visible = true;
         app.refresh();
-
+        app.echoToOE("[flipbook] 📦 " + group.layers.length + " frames");
         app.echoToOE("[flipbook] ✅ anim_preview created - done");
-        app.echoToOE("[flipbook] 📦 " + previewGroup.layers.length + " frames");
       } catch (e) {
-        app.echoToOE("[flipbook] ❌ JS ERROR: " + e.message);
+        app.echoToOE("[flipbook] ❌ Init error: " + e.message);
       }
     })();
   `;
+
   parent.postMessage(initScript, "*");
-  flipbookIndex = 0;
-  collectedFrames.length = 0;
 };
 
-// 🔁 Export next frame
-function stepAndExportNextFrame() {
-  const script = `
+function showFrameScript(index) {
+  return `
     (function () {
       try {
         var doc = app.activeDocument;
         var group = null;
+
         for (var i = 0; i < doc.layers.length; i++) {
           var layer = doc.layers[i];
           if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
@@ -56,75 +52,78 @@ function stepAndExportNextFrame() {
             break;
           }
         }
-        if (!group) {
-          app.echoToOE("[flipbook] ❌ anim_preview group missing during step");
-          return;
-        }
 
-        if (${flipbookIndex} >= group.layers.length) {
+        if (!group || ${index} >= group.layers.length) {
           app.echoToOE("[flipbook] ✅ done");
           return;
         }
 
-        // Hide all
         for (var j = 0; j < group.layers.length; j++) {
           group.layers[j].visible = false;
         }
 
-        // Show only current frame
-        var layer = group.layers[${flipbookIndex}];
+        var layer = group.layers[${index}];
         layer.visible = true;
+        doc.activeLayer = layer;
         app.refresh();
 
-        app.echoToOE("[flipbook] 🔁 Sending frame ${flipbookIndex}: " + layer.name);
-        doc.saveToOE("png");
+        app.echoToOE("[flipbook] 👁️ frame ready " + ${index});
       } catch (e) {
         app.echoToOE("[flipbook] ❌ JS ERROR: " + e.message);
       }
     })();
   `;
-  setTimeout(() => parent.postMessage(script, "*"), 150);
 }
 
-// 📩 Handle incoming messages
+const saveScript = `
+  (function () {
+    try {
+      app.activeDocument.saveToOE("png");
+    } catch (e) {
+      app.echoToOE("[flipbook] ❌ Save error: " + e.message);
+    }
+  })();
+`;
+
 window.addEventListener("message", (event) => {
   if (event.data instanceof ArrayBuffer) {
-    console.log("🧪 Got ArrayBuffer of length", event.data.byteLength);
     collectedFrames.push(event.data);
     console.log("📥 Received frame #" + collectedFrames.length);
 
-    flipbookIndex++;
-    if (flipbookIndex < flipbookTotal) {
-      stepAndExportNextFrame();
+    if (collectedFrames.length === totalFrames) {
+      console.log("✅ All frames received");
+      openFlipbook(collectedFrames);
     } else {
-      console.log("📸 Flipbook: Received all frames. Opening preview.");
-      const html = generateFlipbookHTML(collectedFrames);
-      const blob = new Blob([html], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
+      requestNextFrame();
     }
-  }
-
-  if (typeof event.data === "string") {
+  } else if (typeof event.data === "string") {
     const msg = event.data.trim();
-    if (msg.startsWith("[flipbook]")) {
-      const clean = msg.replace("[flipbook] ", "").trim();
-      console.log("📩 Flipbook Plugin Message:", clean);
+    console.log("📩 Flipbook Plugin Message:", msg);
 
-      if (clean.startsWith("📦")) {
-        const match = clean.match(/(\d+)/);
-        flipbookTotal = match ? parseInt(match[1]) : 0;
-        console.log("🧮 Total frames:", flipbookTotal);
-      }
+    if (msg.startsWith("[flipbook] 📦")) {
+      totalFrames = parseInt(msg.match(/\d+/)[0], 10);
+    }
 
-      if (clean === "✅ anim_preview created - done") {
-        flipbookIndex = 0;
-        setTimeout(() => stepAndExportNextFrame(), 250);
-      }
+    if (msg === "[flipbook] ✅ anim_preview created - done") {
+      requestNextFrame();
+    }
 
-      if (clean === "✅ done") {
-        console.log("🎉 Export complete. Final frame count:", collectedFrames.length);
-      }
+    if (msg.startsWith("[flipbook] 👁️ frame ready")) {
+      setTimeout(() => {
+        parent.postMessage(saveScript, "*");
+      }, 200);
     }
   }
 });
+
+function requestNextFrame() {
+  parent.postMessage(showFrameScript(currentIndex), "*");
+  currentIndex++;
+}
+
+function openFlipbook(frames) {
+  const html = generateFlipbookHTML(frames);
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+}
