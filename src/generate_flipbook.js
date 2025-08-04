@@ -1,5 +1,3 @@
-function generateFlipbookInNewTab(byteArrays) {
-  const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -20,15 +18,22 @@ function generateFlipbookInNewTab(byteArrays) {
 <body>
   <canvas id="previewCanvas"></canvas>
   <script>
-    function generateFlipbookHTML(byteArrays) {
-      const canvas = document.getElementById("previewCanvas");
-      const ctx = canvas.getContext("2d");
-      const fps = 12;
-      let frames = [], index = 0;
+    const canvas = document.getElementById("previewCanvas");
+    const ctx = canvas.getContext("2d");
+    let frames = [], index = 0;
+    const fps = 12;
 
-      const loadImage = (bytes) => {
+    window.addEventListener("message", async (event) => {
+      if (!Array.isArray(event.data)) {
+        console.warn("⚠️ Received non-array:", event.data);
+        return;
+      }
+
+      console.log("📨 Received", event.data.length, "frames");
+
+      const loadImage = (ab) => {
         return new Promise((resolve) => {
-          const blob = new Blob([new Uint8Array(bytes)], { type: "image/png" });
+          const blob = new Blob([ab], { type: "image/png" });
           const url = URL.createObjectURL(blob);
           const img = new Image();
           img.onload = () => {
@@ -39,33 +44,21 @@ function generateFlipbookInNewTab(byteArrays) {
         });
       };
 
-      (async () => {
-        frames = await Promise.all(byteArrays.map(loadImage));
-        if (!frames.length) return;
+      frames = await Promise.all(event.data.map(loadImage));
 
-        canvas.width = frames[0].width;
-        canvas.height = frames[0].height;
+      canvas.width = frames[0].width;
+      canvas.height = frames[0].height;
 
-        setInterval(() => {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(frames[index], 0, 0);
-          index = (index + 1) % frames.length;
-        }, 1000 / fps);
-      })();
-    }
+      setInterval(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(frames[index], 0, 0);
+        index = (index + 1) % frames.length;
+      }, 1000 / fps);
+    });
 
-    const byteArrays = __FRAME_DATA__.map(arr => new Uint8Array(arr));
-    generateFlipbookHTML(byteArrays);
-  <\/script>
+    console.log("⏳ Waiting for frames in preview tab...");
+  </script>
 </body>
 </html>
-`;
-
-  const frameData = JSON.stringify(byteArrays.map(buf => Array.from(new Uint8Array(buf))));
-  const finalHtml = htmlContent.replace("__FRAME_DATA__", frameData);
-
-  const newTab = window.open();
-  newTab.document.open();
-  newTab.document.write(finalHtml);
-  newTab.document.close();
-}
