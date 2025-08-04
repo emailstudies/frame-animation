@@ -28,11 +28,26 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 };
 
- document.getElementById("browserPreviewAllBtn").onclick = function () {
+ document.getElementById("previewAllBtn").onclick = function () {
   beforeMergingInExport(() => {
     setTimeout(() => {
       exportGif(); // Call export only AFTER reset is done
     }, 150); // Short delay to allow Photopea to complete
+  });
+};
+
+  document.getElementById("browserPreviewAllBtn").onclick = () => {
+  beforeMergingInExport(() => {
+    const handler = (event) => {
+      if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ anim_preview created - done") {
+        console.log("✅ Confirmed: anim_preview created.");
+        window.removeEventListener("message", handler);
+        exportPreviewFramesToFlipbook();  // Step 1: Prep and send init message
+      }
+    };
+
+    window.addEventListener("message", handler);
+    exportGif();
   });
 };
 
