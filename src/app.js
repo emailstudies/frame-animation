@@ -1,32 +1,28 @@
 
 document.addEventListener("DOMContentLoaded", function () {
 
-// app.js
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("browserPreviewAllBtn");
   if (!btn) {
-    console.error("❌ Button 'browserPreviewAllBtn' not found");
+    console.error("Button 'browserPreviewAllBtn' not found");
     return;
   }
-
   if (typeof getStepwiseDemoExportScript !== "function") {
-    console.error("❌ getStepwiseDemoExportScript() is not defined");
+    console.error("getStepwiseDemoExportScript() not defined");
     return;
   }
 
   btn.onclick = () => {
+    console.log("Sending script to Photopea...");
     const script = getStepwiseDemoExportScript();
-    // Send the script string directly to Photopea (parent window)
     window.parent.postMessage(script, "*");
   };
 });
 
-// Listen for Photopea messages (strings) and log them
 window.addEventListener("message", (event) => {
-  if (typeof event.data === "string" && event.data.startsWith("[demo]")) {
-    console.log("📨 Photopea message:", event.data);
-  }
+  console.log("Message from Photopea:", event.data);
 });
+
 
 
 
