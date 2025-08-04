@@ -9,7 +9,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const collectedFrames = [];
 
   btn.onclick = function () {
-    // Open tab immediately to avoid popup blockers
     previewWindow = window.open("", "_blank");
     if (!previewWindow) {
       alert("⚠️ Popup blocked! Please allow popups and try again.");
@@ -18,21 +17,41 @@ document.addEventListener("DOMContentLoaded", function () {
 
     collectedFrames.length = 0;
 
-    // Your Photopea script here — replace with your export logic:
     const script = `
       (function () {
         try {
           var doc = app.activeDocument;
-          if (!doc || !doc.layers.length) {
-            app.echoToOE("❌ No valid layers.");
+          if (!doc) {
+            app.echoToOE("❌ No active document.");
+            return;
+          }
+
+          // Find the anim_preview group
+          var animGroup = null;
+          for (var i = 0; i < doc.layers.length; i++) {
+            if (doc.layers[i].typename === "LayerSet" && doc.layers[i].name === "anim_preview") {
+              animGroup = doc.layers[i];
+              break;
+            }
+          }
+
+          if (!animGroup) {
+            app.echoToOE("❌ anim_preview group not found.");
             return;
           }
 
           var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
 
-          for (var i = doc.layers.length - 1; i >= 0; i--) {
-            var layer = doc.layers[i];
-            if (layer.kind !== undefined && !layer.locked && layer.visible) {
+          for (var i = 0; i < animGroup.layers.length; i++) {
+            // Hide all layers
+            for (var j = 0; j < animGroup.layers.length; j++) {
+              animGroup.layers[j].visible = false;
+            }
+            // Show only current layer
+            animGroup.layers[i].visible = true;
+
+            var layer = animGroup.layers[i];
+            if (layer.kind !== undefined && !layer.locked) {
               app.activeDocument = doc;
               doc.activeLayer = layer;
               layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
@@ -42,6 +61,11 @@ document.addEventListener("DOMContentLoaded", function () {
               tempDoc.saveToOE("png");
               tempDoc.undo();
             }
+          }
+
+          // Restore all layers visibility (optional)
+          for (var j = 0; j < animGroup.layers.length; j++) {
+            animGroup.layers[j].visible = true;
           }
 
           app.activeDocument = tempDoc;
@@ -67,16 +91,14 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        // Convert frames to base64 strings
         const frameJS = collectedFrames
           .map((buf, i) => {
             const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-            return `frames[${i}] = "data:image/png;base64,${base64}";`;
+            return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
           })
           .join("\n");
 
-        // HTML content for flipbook preview tab
-        const html = `
+        const html = \`
 <!DOCTYPE html>
 <html>
 <head>
@@ -101,7 +123,7 @@ document.addEventListener("DOMContentLoaded", function () {
   <canvas id="previewCanvas"></canvas>
   <script>
     const frames = [];
-    ${frameJS}
+    \${frameJS}
 
     const images = frames.map(src => {
       const img = new Image();
@@ -136,7 +158,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   </script>
 </body>
-</html>`;
+</html>\`;
 
         previewWindow.document.open();
         previewWindow.document.write(html);
@@ -145,7 +167,7 @@ document.addEventListener("DOMContentLoaded", function () {
         collectedFrames.length = 0; // Reset frames buffer
       } else if (event.data.startsWith("❌")) {
         if (previewWindow) {
-          previewWindow.document.body.innerHTML = `<h2 style="color: red;">${event.data}</h2>`;
+          previewWindow.document.body.innerHTML = \`<h2 style="color: red;">\${event.data}</h2>\`;
           previewWindow.document.close();
         } else {
           alert(event.data);
