@@ -38,38 +38,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 document.getElementById("browserPreviewAllBtn").onclick = () => {
-  const commands = [
-    "saveForWeb", "saveAsPNG", "saveAsJPG", "saveAsGIF",
-    "magicCut", "exportLayers", "imageSize", "canvasSize",
-    "newLayer", "duplicateLayer", "deleteLayer", "fill", "levels"
-  ];
-
   const script = `
     (function () {
-      const results = [];
-      ${commands.map(cmd => `
-        try {
-          app.runMenuItem("${cmd}");
-          results.push("✅ ${cmd}");
-        } catch (e) {
-          results.push("❌ ${cmd} - " + e.message);
-        }
-      `).join('')}
-      app.echoToOE("[menuTest-log]\\n" + results.join("\\n"));
+      try {
+        app.runMenuItem("saveForWeb");
+        app.echoToOE("[plugin] ✅ Save For Web opened.");
+      } catch (e) {
+        app.echoToOE("[plugin] ❌ Failed to open Save For Web: " + e.message);
+      }
     })();
   `;
-
   parent.postMessage(script, "*");
 };
 
-window.addEventListener("message", (event) => {
-  if (typeof event.data === "string" && event.data.startsWith("[menuTest-log]")) {
-    const lines = event.data.split("\n").slice(1);
-    console.group("🧪 Menu Item Test Results");
-    lines.forEach(line => console.log(line));
-    console.groupEnd();
-  }
-});
 
 
   
