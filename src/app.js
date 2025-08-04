@@ -37,7 +37,24 @@ document.addEventListener("DOMContentLoaded", function () {
 };
 
   
-  
+document.getElementById("browserPreviewAllBtn").onclick = () => {
+  beforeMergingInExport(() => {
+    const handler = (event) => {
+      if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ anim_preview created - done") {
+        console.log("✅ Confirmed: anim_preview created.");
+        window.removeEventListener("message", handler);
+        if (window.exportPreviewFramesToFlipbook) {
+          window.exportPreviewFramesToFlipbook();  // from flipbook_logic.js
+        } else {
+          console.warn("⚠️ exportPreviewFramesToFlipbook not found.");
+        }
+      }
+    };
+    window.addEventListener("message", handler);
+    exportGif(); // or exportGifFromSelected()
+  });
+};
+
     
 
   /* document.getElementById("previewAllBtn").onclick = exportGif; */
