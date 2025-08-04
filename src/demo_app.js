@@ -1,84 +1,114 @@
-// Trigger setup and export on button click
-document.getElementById("browserPreviewAllBtn").onclick = () => {
-  const script = `
-    (function () {
-      var demoFolder = app.activeDocument.layers.find(l => l.name === "demo" && l.type === "layerSection");
-      if (!demoFolder) {
-        app.echoToOE("[plugin] ❌ Folder 'demo' not found");
-        return;
-      }
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("browserPreviewAllBtn");
 
-      var demoLayers = demoFolder.layers.filter(l => l.type === "layer" && !l.hidden);
-      if (demoLayers.length === 0) {
-        app.echoToOE("[plugin] ❌ No visible layers in 'demo'");
-        return;
-      }
-
-      app.activeDocument.layers.forEach(l => l.visible = false);
-      demoFolder.visible = true;
-      demoLayers.forEach(l => l.visible = false);
-
-      window._pluginExportIndex = 0;
-      window._pluginDemoLayers = demoLayers;
-
-      window._pluginExportNextLayer = function () {
-        var i = window._pluginExportIndex;
-        var layers = window._pluginDemoLayers;
-        if (i >= layers.length) {
-          app.echoToOE("[plugin] ✅ All layers sent");
-          delete window._pluginExportNextLayer;
-          delete window._pluginExportIndex;
-          delete window._pluginDemoLayers;
-          return;
-        }
-
-        layers.forEach(l => l.visible = false);
-        layers[i].visible = true;
-
-        app.activeDocument.saveToOE("png").then(function (png) {
-          app.sendToOE(png);
-          app.echoToOE("[plugin] sent layer " + (i + 1));
-        });
-
-        window._pluginExportIndex += 1;
-      };
-
-      app.echoToOE("[plugin] ✅ Ready to export " + demoLayers.length + " layers. Send [plugin] next to begin.");
-    })();
-  `;
-
-  window.parent.postMessage("runScript " + script, "*");
-};
-
-// 🔁 Handle plugin communication with Photopea
-const receivedDemoFrames = [];
-
-window.addEventListener("message", (event) => {
-  const data = event.data;
-
-  if (data instanceof ArrayBuffer) {
-    receivedDemoFrames.push(data);
-    console.log("🖼️ Got PNG buffer:", data.byteLength);
+  if (!btn) {
+    console.error("❌ Button not found");
     return;
   }
 
-  if (typeof data === "string" && data.startsWith("[plugin]")) {
-    console.log("📩", data);
+  const collectedFrames = [];
 
-    if (data.includes("Ready")) {
-      window.parent.postMessage("window._pluginExportNextLayer()", "*");
+  btn.onclick = () => {
+    const script = `
+      (function () {
+        try {
+          var doc = app.activeDocument;
+          var demoFolder = doc.layers.find(l => l.name === "demo" && l.type === "layerSection");
+          if (!demoFolder) {
+            app.echoToOE("[plugin] ❌ Folder 'demo' not found");
+            return;
+          }
+
+          var layers = demoFolder.layers.filter(l => l.type === "layer" && !l.hidden);
+          if (layers.length === 0) {
+            app.echoToOE("[plugin] ❌ No layers in demo folder");
+            return;
+          }
+
+          // Create temp doc
+          var temp = app.documents.add(doc.width, doc.height, doc.resolution, "_demo_export", NewDocumentMode.RGB);
+
+          for (var i = 0; i < layers.length; i++) {
+            app.activeDocument = temp;
+            while (temp.layers.length > 0) temp.layers[0].remove();
+
+            app.activeDocument = doc;
+            layers[i].duplicate(temp, ElementPlacement.PLACEATBEGINNING);
+
+            app.activeDocument = temp;
+            temp.saveToOE("png");
+          }
+
+          app.activeDocument = temp;
+          temp.close(SaveOptions.DONOTSAVECHANGES);
+
+          app.echoToOE("done");
+        } catch (e) {
+          app.echoToOE("❌ Error: " + e.message);
+        }
+      })();
+    `;
+
+    parent.postMessage(script, "*");
+    console.log("📤 Script sent to Photopea");
+  };
+
+  window.addEventListener("message", (event) => {
+    const data = event.data;
+
+    if (data instanceof ArrayBuffer) {
+      collectedFrames.push(data);
+      return;
     }
 
-    if (data.includes("sent layer")) {
-      setTimeout(() => {
-        window.parent.postMessage("window._pluginExportNextLayer()", "*");
-      }, 150);
-    }
+    if (typeof data === "string") {
+      console.log("📩", data);
 
-    if (data.includes("All layers sent")) {
-      console.log("🎉 Done sending layers from demo.");
-      console.log("✅ Total received:", receivedDemoFrames.length);
-      // Optional: preview, flipbook, or download logic goes here
-    }
+      if (data === "done") {
+        console.log("✅ All frames received:", collectedFrames.length);
+
+        // Optional: Open flipbook
+        const flipbookHTML = `<!DOCTYPE html>
+<html><body style="margin:0;background:#111;"><canvas id="c"></canvas><script>
+const ctx = document.getElementById('c').getContext('2d');
+const frames = [];
+${collectedFrames.map((ab, i) => {
+  const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+  return \`frames[\${i}] = "data:image/png;base64,\${b64}";\`;
+}).join("\n")}
+
+let imgs = frames.map(src => {
+  let img = new Image();
+  img.src = src;
+  return img;
+});
+
+let i = 0;
+let loaded = 0;
+imgs.forEach(img => img.onload = () => {
+  if (++loaded === imgs.length) {
+    c.width = imgs[0].width;
+    c.height = imgs[0].height;
+    setInterval(() => {
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.drawImage(imgs[i], 0, 0);
+      i = (i + 1) % imgs.length;
+    }, 100);
   }
+});
+</script></body></html>`;
+
+        const blob = new Blob([flipbookHTML], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const win = window.open(url, "_blank");
+
+        // Clear frames
+        collectedFrames.length = 0;
+      }
+
+      if (data.startsWith("❌")) {
+        alert(data);
+      }
+    }
+  });
 });
