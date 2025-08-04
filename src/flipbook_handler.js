@@ -16,17 +16,12 @@ window.addEventListener("message", (event) => {
         return;
       }
 
-      // Open new tab with flipbook viewer
-      const newTab = window.open("", "_blank");
-      const scriptTag = `<script>${generateFlipbookHTML.toString()}; generateFlipbookHTML(${JSON.stringify(collectedFrames.map(buf => Array.from(new Uint8Array(buf)))).replace(/</g, '\\u003c')});<\/script>`;
-
-      newTab.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head><title>Flipbook Preview</title></head>
-        <body style="margin:0; background:#111;"><canvas id="previewCanvas"></canvas>${scriptTag}</body>
-        </html>
-      `);
+      // ✅ Call the shared function from generate_flipbook.js
+      if (typeof generateFlipbookInNewTab === "function") {
+        generateFlipbookInNewTab(collectedFrames);
+      } else {
+        alert("❌ generateFlipbookInNewTab not found");
+      }
     }
   }
 });
