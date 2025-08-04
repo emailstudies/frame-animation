@@ -1,3 +1,4 @@
+/*
 // ✅ Stores all received frame buffers
 const flipbookFrames = [];
 
