@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("webPreviewSelectedBtn");
+  const btn = document.getElementById("browserPreviewSelectedBtn");
   const collectedFrames = [];
   let previewTab = null;
 
