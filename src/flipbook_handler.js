@@ -1,25 +1,7 @@
-// ✅ flipbook_handler.js (in your plugin)
-
-// 🎬 Trigger flipbook export when button is clicked
-document.getElementById("browserPreviewAllBtn").onclick = () => {
-  beforeMergingInExport(() => {
-    const handler = (event) => {
-      if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ anim_preview created - done") {
-        console.log("✅ Confirmed: anim_preview created.");
-        window.removeEventListener("message", handler);
-        exportPreviewFramesToFlipbook();  // Start sending frames one-by-one
-      }
-    };
-
-    window.addEventListener("message", handler);
-    exportGif();  // This kicks off the whole export flow
-  });
-};
-
-
+// ✅ flipbook_handler.js (plugin side)
 const flipbookFrames = [];
 
-// 📩 Listen for messages from Photopea
+// 📩 Listen for frame count, status, errors
 window.addEventListener("message", (event) => {
   if (typeof event.data === "string" && event.data.startsWith("[flipbook]")) {
     const msg = event.data.replace("[flipbook] ", "").trim();
@@ -39,14 +21,15 @@ window.addEventListener("message", (event) => {
 // 📥 Handle incoming frame data
 window.addEventListener("message", (event) => {
   if (event.data instanceof ArrayBuffer) {
+    console.log("🧪 Got ArrayBuffer of length", event.data.byteLength);
     flipbookFrames.push(event.data);
     console.log("📥 Received frame #" + flipbookFrames.length);
 
-    // ✅ Signal Photopea to continue
+    // ✅ Tell Photopea we're ready for the next frame
     parent.postMessage("[flipbook] ✅ frame received", "*");
   }
 
-  // 🚀 Launch viewer when all frames are done
+  // 🚀 Launch viewer when done
   if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ Exported all frames to OE.") {
     console.log("📸 Flipbook: Received " + flipbookFrames.length + " frames.");
 
