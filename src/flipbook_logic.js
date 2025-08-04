@@ -1,16 +1,24 @@
-console.log("flipbook_logic.js loaded");
+console.log("✅ flipbook_logic.js loaded");
 
-document.addEventListener("click", function (e) {
-  if (e.target && e.target.id === "browserPreviewSelectedBtn") {
-    console.log("Button clicked: browserPreviewSelectedBtn");
+window.addEventListener("load", function () {
+  const btn = parent.document.getElementById("browserPreviewSelectedBtn");
+  console.log("🔍 Looking for #browserPreviewSelectedBtn in parent:", !!btn);
 
+  if (!btn) {
+    console.error("❌ Button not found in parent document");
+    return;
+  }
+
+  btn.onclick = function () {
+    console.log("✅ browserPreviewSelectedBtn clicked");
+
+    const collectedFrames = [];
     let previewWindow = window.open("", "_blank");
+
     if (!previewWindow) {
       alert("⚠️ Popup blocked! Please allow popups and try again.");
       return;
     }
-
-    const collectedFrames = [];
 
     const script = `
       (function () {
@@ -21,16 +29,11 @@ document.addEventListener("click", function (e) {
             return;
           }
 
-          app.echoToOE("ℹ️ Document layers:");
-          for (var i = 0; i < doc.layers.length; i++) {
-            app.echoToOE("Layer " + i + ": " + doc.layers[i].name + " (" + doc.layers[i].typename + ")");
-          }
-
           var animGroup = null;
           for (var i = 0; i < doc.layers.length; i++) {
-            if (doc.layers[i].typename === "LayerSet" && doc.layers[i].name === "anim_preview") {
-              animGroup = doc.layers[i];
-              app.echoToOE("✅ Found anim_preview group");
+            var layer = doc.layers[i];
+            if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
+              animGroup = layer;
               break;
             }
           }
@@ -39,8 +42,6 @@ document.addEventListener("click", function (e) {
             app.echoToOE("❌ anim_preview group not found.");
             return;
           }
-
-          app.echoToOE("ℹ️ anim_preview has " + animGroup.layers.length + " layers.");
 
           var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
 
@@ -51,8 +52,6 @@ document.addEventListener("click", function (e) {
             animGroup.layers[i].visible = true;
 
             var layer = animGroup.layers[i];
-            app.echoToOE("ℹ️ Exporting layer " + i + ": " + layer.name + ", visible: " + layer.visible);
-
             if (layer.kind !== undefined && !layer.locked) {
               app.activeDocument = doc;
               doc.activeLayer = layer;
@@ -62,13 +61,11 @@ document.addEventListener("click", function (e) {
               tempDoc.flatten();
               tempDoc.saveToOE("png");
               tempDoc.undo();
-            } else {
-              app.echoToOE("⚠️ Skipped layer " + i + " due to kind/locked state");
             }
           }
 
-          for (var j = 0; j < animGroup.layers.length; j++) {
-            animGroup.layers[j].visible = true;
+          for (var k = 0; k < animGroup.layers.length; k++) {
+            animGroup.layers[k].visible = true;
           }
 
           app.activeDocument = tempDoc;
@@ -81,19 +78,17 @@ document.addEventListener("click", function (e) {
     `;
 
     parent.postMessage(script, "*");
-    console.log("📤 Sent export script to Photopea");
 
     window.addEventListener("message", function handler(event) {
       if (event.data instanceof ArrayBuffer) {
         collectedFrames.push(event.data);
-        console.log("📥 Received frame " + collectedFrames.length);
+        console.log("📥 Frame received (" + collectedFrames.length + ")");
       } else if (typeof event.data === "string") {
         console.log("📩 Message from Photopea:", event.data);
 
         if (event.data === "done") {
-          if (!previewWindow || collectedFrames.length === 0) {
+          if (collectedFrames.length === 0) {
             alert("❌ No frames received.");
-            window.removeEventListener("message", handler);
             return;
           }
 
@@ -102,7 +97,7 @@ document.addEventListener("click", function (e) {
               const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
               return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
             })
-            .join("\n");
+            .join("\\n");
 
           const html = \`
 <!DOCTYPE html>
@@ -149,7 +144,7 @@ document.addEventListener("click", function (e) {
         if (loaded === images.length) start();
       };
       img.onerror = () => {
-        console.error("Failed to load image");
+        console.error("Image failed to load");
       };
     });
 
@@ -183,5 +178,5 @@ document.addEventListener("click", function (e) {
         }
       }
     });
-  }
+  };
 });
