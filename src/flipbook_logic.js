@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
   const btn = document.getElementById("browserPreviewSelectedBtn");
   if (!btn) {
-    console.error("❌ Button not found: #previewSelectedBtn");
+    console.error("❌ Button not found: #browserPreviewSelectedBtn");
     return;
   }
 
