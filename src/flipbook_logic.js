@@ -98,12 +98,21 @@ window.exportPreviewFramesToFlipbook = function () {
       }
     })();
   `;
+
   parent.postMessage(script, "*");
+
+  // ✅ Immediately trigger first frame export
+  setTimeout(() => {
+    window.stepAndExportNextFrame();
+  }, 100);
 };
 
 // 📨 Listen for plugin message to continue export
 window.addEventListener("message", (event) => {
-  if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ frame received") {
+  if (
+    typeof event.data === "string" &&
+    event.data.trim() === "[flipbook] ✅ frame received"
+  ) {
     console.log("📬 [flipbook] Frame ACK received — stepping next");
     window.stepAndExportNextFrame();
   }
