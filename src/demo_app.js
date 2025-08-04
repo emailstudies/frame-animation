@@ -1,6 +1,5 @@
-// Flipbook Preview Script (Fixed: Clears temp doc per frame properly)
 document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("previewSelectedBtn");
+  const btn = document.getElementById("browserPreviewSelectedBtn");
 
   if (!btn) {
     console.error("❌ Button not found");
@@ -25,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
           for (var i = original.layers.length - 1; i >= 0; i--) {
             var layer = original.layers[i];
             if (layer.kind !== undefined && !layer.locked) {
-              // Switch to temp doc and clear all layers
+              // Clear temp doc
               app.activeDocument = tempDoc;
               while (tempDoc.layers.length > 0) {
                 tempDoc.layers[0].remove();
@@ -66,7 +65,13 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        // Convert ArrayBuffers to base64 and generate flipbook preview
+        // Build HTML after all frames received
+        const htmlParts = collectedFrames.map((ab, i) => {
+          const binary = Array.from(new Uint8Array(ab)).map(b => String.fromCharCode(b)).join("");
+          const base64 = btoa(binary);
+          return `frames[${i}] = "data:image/png;base64,${base64}";`;
+        });
+
         const flipbookHTML = `<!DOCTYPE html>
 <html>
   <head>
@@ -80,12 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <canvas id="previewCanvas"></canvas>
     <script>
       const frames = [];
-      ${collectedFrames
-        .map((ab, i) => {
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-          return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
-        })
-        .join("\n")}
+      ${htmlParts.join("\n")}
 
       const images = frames.map(src => {
         const img = new Image();
@@ -125,10 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const blob = new Blob([flipbookHTML], { type: "text/html" });
         const url = URL.createObjectURL(blob);
-        const win = window.open();
-        win.document.open();
-        win.document.write(flipbookHTML);
-        win.document.close();
+        const win = window.open(url, "_blank");
 
         collectedFrames.length = 0;
       } else if (event.data.startsWith("❌")) {
