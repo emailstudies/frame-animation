@@ -1,18 +1,16 @@
-// ✅ flipbook_logic.js – Combined sender + receiver for flipbook
-
 const collectedFrames = [];
+let flipbookIndex = 0;
+let flipbookTotal = 0;
 
-// 🚀 Start export process from anim_preview
+// 🚀 Start coordinated flipbook export
 window.runCombinedFlipbookExport = function () {
   console.log("🚀 Starting combined flipbook export");
 
-  const script = `
+  const initScript = `
     (function () {
       try {
         var doc = app.activeDocument;
         var previewGroup = null;
-
-        // 🔍 Locate anim_preview
         for (var i = 0; i < doc.layers.length; i++) {
           var layer = doc.layers[i];
           if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
@@ -20,40 +18,37 @@ window.runCombinedFlipbookExport = function () {
             break;
           }
         }
-
         if (!previewGroup) {
           app.echoToOE("[flipbook] ❌ anim_preview not found");
           return;
         }
 
-        // 👁️ Hide everything except anim_preview
+        // Hide everything except anim_preview
         for (var i = 0; i < doc.layers.length; i++) {
           doc.layers[i].visible = (doc.layers[i] === previewGroup);
         }
         previewGroup.visible = true;
         app.refresh();
 
-        app.echoToOE("[flipbook] 📦 " + previewGroup.layers.length + " frames");
         app.echoToOE("[flipbook] ✅ anim_preview created - done");
-
-        // Start frame index
-        window._flipbookIndex = 0;
+        app.echoToOE("[flipbook] 📦 " + previewGroup.layers.length + " frames");
       } catch (e) {
         app.echoToOE("[flipbook] ❌ JS ERROR: " + e.message);
       }
     })();
   `;
-  parent.postMessage(script, "*");
+  parent.postMessage(initScript, "*");
+  flipbookIndex = 0;
+  collectedFrames.length = 0;
 };
 
-// 🔁 Send next frame
-window.stepAndExportNextFrame = function () {
+// 🔁 Export next frame
+function stepAndExportNextFrame() {
   const script = `
     (function () {
       try {
         var doc = app.activeDocument;
         var group = null;
-
         for (var i = 0; i < doc.layers.length; i++) {
           var layer = doc.layers[i];
           if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
@@ -61,16 +56,13 @@ window.stepAndExportNextFrame = function () {
             break;
           }
         }
-
         if (!group) {
           app.echoToOE("[flipbook] ❌ anim_preview group missing during step");
           return;
         }
 
-        if (typeof window._flipbookIndex === "undefined") window._flipbookIndex = 0;
-
-        if (window._flipbookIndex >= group.layers.length) {
-          app.echoToOE("[flipbook] done");
+        if (${flipbookIndex} >= group.layers.length) {
+          app.echoToOE("[flipbook] ✅ done");
           return;
         }
 
@@ -79,32 +71,38 @@ window.stepAndExportNextFrame = function () {
           group.layers[j].visible = false;
         }
 
-        var layer = group.layers[window._flipbookIndex];
+        // Show only current frame
+        var layer = group.layers[${flipbookIndex}];
         layer.visible = true;
         app.refresh();
 
-        app.echoToOE("[flipbook] 🔁 Sending frame " + window._flipbookIndex + ": " + layer.name);
+        app.echoToOE("[flipbook] 🔁 Sending frame ${flipbookIndex}: " + layer.name);
         doc.saveToOE("png");
-
-        window._flipbookIndex++;
       } catch (e) {
         app.echoToOE("[flipbook] ❌ JS ERROR: " + e.message);
       }
     })();
   `;
-  setTimeout(() => {
-    parent.postMessage(script, "*");
-  }, 150); // 🕒 Delay before sending next
-};
+  setTimeout(() => parent.postMessage(script, "*"), 150);
+}
 
-// 📩 Handle messages from Photopea
+// 📩 Handle incoming messages
 window.addEventListener("message", (event) => {
   if (event.data instanceof ArrayBuffer) {
     console.log("🧪 Got ArrayBuffer of length", event.data.byteLength);
     collectedFrames.push(event.data);
     console.log("📥 Received frame #" + collectedFrames.length);
-    setTimeout(() => window.stepAndExportNextFrame(), 150);
-    return;
+
+    flipbookIndex++;
+    if (flipbookIndex < flipbookTotal) {
+      stepAndExportNextFrame();
+    } else {
+      console.log("📸 Flipbook: Received all frames. Opening preview.");
+      const html = generateFlipbookHTML(collectedFrames);
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    }
   }
 
   if (typeof event.data === "string") {
@@ -113,23 +111,19 @@ window.addEventListener("message", (event) => {
       const clean = msg.replace("[flipbook] ", "").trim();
       console.log("📩 Flipbook Plugin Message:", clean);
 
-      if (clean === "✅ anim_preview created - done") {
-        setTimeout(() => window.stepAndExportNextFrame(), 150);
+      if (clean.startsWith("📦")) {
+        const match = clean.match(/(\d+)/);
+        flipbookTotal = match ? parseInt(match[1]) : 0;
+        console.log("🧮 Total frames:", flipbookTotal);
       }
 
-      if (clean === "done") {
-        console.log("📸 Flipbook: Received " + collectedFrames.length + " frames.");
-        if (collectedFrames.length === 0) {
-          alert("❌ No flipbook frames received.");
-          return;
-        }
+      if (clean === "✅ anim_preview created - done") {
+        flipbookIndex = 0;
+        setTimeout(() => stepAndExportNextFrame(), 250);
+      }
 
-        const html = generateFlipbookHTML(collectedFrames);
-        const blob = new Blob([html], { type: "text/html" });
-        const url = URL.createObjectURL(blob);
-        window.open(url, "_blank");
-
-        collectedFrames.length = 0;
+      if (clean === "✅ done") {
+        console.log("🎉 Export complete. Final frame count:", collectedFrames.length);
       }
     }
   }
