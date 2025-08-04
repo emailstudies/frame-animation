@@ -2,6 +2,18 @@ function exportPreviewFramesToFlipbook() {
   console.log("🚀 [flipbook] Starting coordinated frame export");
 
   const script = `
+    // 💡 Setup only once
+    if (!window._flipbookListenerRegistered) {
+      window.addEventListener("message", function (event) {
+        if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ frame received") {
+          if (window._flipbook && window._flipbook.ready) {
+            exportNextFlipbookFrame();
+          }
+        }
+      });
+      window._flipbookListenerRegistered = true;
+    }
+
     (function () {
       try {
         var doc = app.activeDocument;
@@ -21,7 +33,7 @@ function exportPreviewFramesToFlipbook() {
           return;
         }
 
-        // 🫥 Hide all other root layers
+        // 🫥 Hide everything else
         for (var i = 0; i < doc.layers.length; i++) {
           doc.layers[i].visible = (doc.layers[i] === previewGroup);
         }
@@ -31,15 +43,15 @@ function exportPreviewFramesToFlipbook() {
         var frameCount = previewGroup.layers.length;
         app.echoToOE("[flipbook] 📦 anim_preview contains " + frameCount + " frames.");
 
-        // 🧠 Setup global export context
+        // 🧠 Store global
         window._flipbook = {
           doc: doc,
           group: previewGroup,
           total: frameCount,
-          index: frameCount - 1
+          index: frameCount - 1,
+          ready: true
         };
 
-        // ✅ Start loop
         exportNextFlipbookFrame();
 
       } catch (e) {
@@ -55,7 +67,7 @@ function exportPreviewFramesToFlipbook() {
         return;
       }
 
-      // 🔁 Hide all layers
+      // 👁️ Hide all
       for (var j = 0; j < ctx.total; j++) {
         ctx.group.layers[j].visible = false;
       }
@@ -65,19 +77,13 @@ function exportPreviewFramesToFlipbook() {
       app.refresh();
 
       app.echoToOE("[flipbook] 🔁 Ready to export frame " + (ctx.total - ctx.index - 1) + ": " + layer.name);
-    }
 
-    // 📩 Listen for plugin "continue" message
-    window.addEventListener("message", function (event) {
-      if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ frame received") {
-        if (window._flipbook) {
-          var ctx = window._flipbook;
-          ctx.doc.saveToOE("png");
-          ctx.index--;
-          exportNextFlipbookFrame();
-        }
-      }
-    });
+      // Wait a tick before sending the frame
+      setTimeout(() => {
+        ctx.doc.saveToOE("png");
+        ctx.index--;
+      }, 20);
+    }
   `;
 
   setTimeout(() => {
