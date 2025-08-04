@@ -42,7 +42,7 @@ window.stepAndExportNextFrame = function () {
         // 👁️ Show the current frame
         var layer = group.layers[window._flipbookIndex];
         layer.visible = true;
-        app.refresh();
+        app.refresh(false);  // 👈 FIXED: Prevents prompt
 
         app.echoToOE("[flipbook] 🔁 Ready to export frame " + window._flipbookIndex + ": " + layer.name);
         doc.saveToOE("png");
@@ -86,7 +86,7 @@ window.exportPreviewFramesToFlipbook = function () {
           doc.layers[i].visible = (doc.layers[i] === previewGroup);
         }
         previewGroup.visible = true;
-        app.refresh();
+        app.refresh(false);  // 👈 FIXED: Avoid prompt here too
 
         app.echoToOE("[flipbook] 📦 anim_preview contains " + previewGroup.layers.length + " frames.");
 
@@ -98,21 +98,12 @@ window.exportPreviewFramesToFlipbook = function () {
       }
     })();
   `;
-
   parent.postMessage(script, "*");
-
-  // ✅ Immediately trigger first frame export
-  setTimeout(() => {
-    window.stepAndExportNextFrame();
-  }, 100);
 };
 
 // 📨 Listen for plugin message to continue export
 window.addEventListener("message", (event) => {
-  if (
-    typeof event.data === "string" &&
-    event.data.trim() === "[flipbook] ✅ frame received"
-  ) {
+  if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ frame received") {
     console.log("📬 [flipbook] Frame ACK received — stepping next");
     window.stepAndExportNextFrame();
   }
