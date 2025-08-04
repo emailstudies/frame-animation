@@ -26,11 +26,17 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
           }
 
-          // Find the anim_preview group
+          app.echoToOE("ℹ️ Document layers:");
+          for (var i = 0; i < doc.layers.length; i++) {
+            app.echoToOE("Layer " + i + ": " + doc.layers[i].name + " (" + doc.layers[i].typename + ")");
+          }
+
+          // Find anim_preview group
           var animGroup = null;
           for (var i = 0; i < doc.layers.length; i++) {
             if (doc.layers[i].typename === "LayerSet" && doc.layers[i].name === "anim_preview") {
               animGroup = doc.layers[i];
+              app.echoToOE("✅ Found anim_preview group");
               break;
             }
           }
@@ -40,10 +46,12 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
           }
 
+          app.echoToOE("ℹ️ anim_preview has " + animGroup.layers.length + " layers.");
+
           var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
 
           for (var i = 0; i < animGroup.layers.length; i++) {
-            // Hide all layers
+            // Hide all layers first
             for (var j = 0; j < animGroup.layers.length; j++) {
               animGroup.layers[j].visible = false;
             }
@@ -51,6 +59,8 @@ document.addEventListener("DOMContentLoaded", function () {
             animGroup.layers[i].visible = true;
 
             var layer = animGroup.layers[i];
+            app.echoToOE("ℹ️ Exporting layer " + i + ": " + layer.name + ", visible: " + layer.visible);
+
             if (layer.kind !== undefined && !layer.locked) {
               app.activeDocument = doc;
               doc.activeLayer = layer;
@@ -60,10 +70,12 @@ document.addEventListener("DOMContentLoaded", function () {
               tempDoc.flatten();
               tempDoc.saveToOE("png");
               tempDoc.undo();
+            } else {
+              app.echoToOE("⚠️ Skipped layer " + i + " due to kind/locked state");
             }
           }
 
-          // Restore all layers visibility (optional)
+          // Restore all layers visibility
           for (var j = 0; j < animGroup.layers.length; j++) {
             animGroup.layers[j].visible = true;
           }
@@ -72,7 +84,7 @@ document.addEventListener("DOMContentLoaded", function () {
           tempDoc.close(SaveOptions.DONOTSAVECHANGES);
           app.echoToOE("done");
         } catch (e) {
-          app.echoToOE("❌ " + e.message);
+          app.echoToOE("❌ ERROR: " + e.message);
         }
       })();
     `;
@@ -84,7 +96,10 @@ document.addEventListener("DOMContentLoaded", function () {
   window.addEventListener("message", function (event) {
     if (event.data instanceof ArrayBuffer) {
       collectedFrames.push(event.data);
+      console.log("📥 Received frame " + collectedFrames.length);
     } else if (typeof event.data === "string") {
+      console.log("📩 Message from Photopea:", event.data);
+
       if (event.data === "done") {
         if (!previewWindow || collectedFrames.length === 0) {
           alert("❌ No frames received.");
@@ -164,7 +179,7 @@ document.addEventListener("DOMContentLoaded", function () {
         previewWindow.document.write(html);
         previewWindow.document.close();
 
-        collectedFrames.length = 0; // Reset frames buffer
+        collectedFrames.length = 0;
       } else if (event.data.startsWith("❌")) {
         if (previewWindow) {
           previewWindow.document.body.innerHTML = \`<h2 style="color: red;">\${event.data}</h2>\`;
