@@ -1,37 +1,39 @@
-window.flipbookScript = `
-(function run() {
-  try {
-    var doc = app.activeDocument;
-    var previewGroup = doc.layerSets.find(function(g) { return g.name === "anim_preview"; });
-    if (!previewGroup) {
-      app.echoToOE("❌ anim_preview group not found");
-      return;
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("webPreviewSelectedBtn");
+  const collectedFrames = [];
+  let previewTab = null;
+
+  btn.onclick = () => {
+    collectedFrames.length = 0;
+    previewTab = window.open("preview.html", "_blank");
+
+    setTimeout(() => {
+      parent.postMessage("EXPORT_SELECTED_ANIM_FRAMES", "*");
+      console.log("▶️ Started frame export");
+    }, 300);
+  };
+
+  window.addEventListener("message", (event) => {
+    if (event.data instanceof ArrayBuffer) {
+      collectedFrames.push(event.data);
+      console.log("🧩 Frame received:", collectedFrames.length);
+    } else if (typeof event.data === "string") {
+      console.log("📩 Message from Photopea:", event.data);
+
+      if (event.data.startsWith("✅")) {
+        if (!collectedFrames.length) {
+          alert("❌ No frames received");
+          return;
+        }
+
+        // Wait for the tab to be ready
+        setTimeout(() => {
+          previewTab?.postMessage(collectedFrames, "*");
+          console.log("📨 Sent frames to preview tab");
+        }, 500);
+      } else if (event.data.startsWith("❌")) {
+        alert(event.data);
+      }
     }
-
-    var layers = previewGroup.layers;
-    if (!layers || layers.length === 0) {
-      app.echoToOE("❌ anim_preview has no layers");
-      return;
-    }
-
-    for (var i = 0; i < layers.length; i++) {
-      layers[i].visible = false;
-    }
-
-    for (var i = 0; i < layers.length; i++) {
-      var frame = layers[i];
-      frame.visible = true;
-
-      var png = app.activeDocument.saveToOE("png");
-      app.sendToOE(png);
-      app.echoToOE("[flipbook] 🖼️ Frame " + (i + 1) + "/" + layers.length + " sent");
-
-      frame.visible = false;
-    }
-
-    app.echoToOE("[flipbook] ✅ All frames sent");
-  } catch (e) {
-    app.echoToOE("❌ Error during flipbook export: " + e.message);
-  }
-})();
-`;
+  });
+});
