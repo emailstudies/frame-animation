@@ -38,17 +38,55 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 document.getElementById("browserPreviewAllBtn").onclick = () => {
+  const commands = [
+    "saveForWeb", "saveAsPNG", "saveAsJPG", "saveAsGIF",
+    "magicCut", "exportLayers", "imageSize", "canvasSize",
+    "newLayer", "duplicateLayer", "deleteLayer", "fill", "levels"
+  ];
+
   const script = `
-    try {
-      app.runMenuItem("saveAsGIF");
-      app.echoToOE("[plugin] ✅ Save for Web dialog opened");
-    } catch (e) {
-      app.echoToOE("[plugin] ❌ Failed to open Save for Web: " + e.message);
-    }
+    (function () {
+      const results = [];
+      ${commands.map(cmd => `
+        try {
+          app.runMenuItem("${cmd}");
+          results.push("✅ ${cmd}");
+        } catch (e) {
+          results.push("❌ ${cmd} - " + e.message);
+        }
+      `).join('')}
+      app.echoToOE("[menuTest]\\n" + results.join("\\n"));
+    })();
   `;
+
   parent.postMessage(script, "*");
 };
 
+window.addEventListener("message", (event) => {
+  if (typeof event.data === "string" && event.data.startsWith("[menuTest]")) {
+    const lines = event.data.split("\n").slice(1); // Skip header
+    const container = document.getElementById("menuTestResults");
+
+    const table = document.createElement("table");
+    table.style.borderCollapse = "collapse";
+    table.style.width = "100%";
+
+    for (const line of lines) {
+      const row = document.createElement("tr");
+      const status = line.startsWith("✅") ? "✅" : "❌";
+      const cmd = line.replace(/^✅ |^❌ /, "");
+
+      row.innerHTML = `
+        <td style="border: 1px solid #ccc; padding: 4px;">${status}</td>
+        <td style="border: 1px solid #ccc; padding: 4px;">${cmd}</td>
+      `;
+      table.appendChild(row);
+    }
+
+    container.innerHTML = ""; // Clear previous
+    container.appendChild(table);
+  }
+});
 
 
   
