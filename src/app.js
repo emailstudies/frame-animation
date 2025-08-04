@@ -43,10 +43,10 @@ document.getElementById("browserPreviewAllBtn").onclick = () => {
       if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ anim_preview created - done") {
         console.log("✅ Confirmed: anim_preview created.");
         window.removeEventListener("message", handler);
-        if (window.exportPreviewFramesToFlipbook) {
-          window.exportPreviewFramesToFlipbook();  // from flipbook_logic.js
+        if (window.runCombinedFlipbookExport) {
+          window.runCombinedFlipbookExport();
         } else {
-          console.warn("⚠️ exportPreviewFramesToFlipbook not found.");
+          console.warn("⚠️ runCombinedFlipbookExport not found.");
         }
       }
     };
@@ -54,6 +54,7 @@ document.getElementById("browserPreviewAllBtn").onclick = () => {
     exportGif(); // or exportGifFromSelected()
   });
 };
+
 
     
 
