@@ -26,11 +26,7 @@ window.runSelectedFlipbookPreview = function () {
           return;
         }
 
-        var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
-        // Remove the default background layer if it exists
-        if (tempDoc.artLayers.length > 0) {
-          tempDoc.artLayers[0].remove();
-        }
+        var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.TRANSPARENT);
 
         for (var i = 0; i < animGroup.layers.length; i++) {
           // Hide all layers first
