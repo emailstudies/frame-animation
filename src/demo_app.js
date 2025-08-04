@@ -1,113 +1,135 @@
+// Flipbook Preview Script (Updated: Clears temp doc per frame)
 document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("browserPreviewAllBtn");
+  const btn = document.getElementById("browserPreviewSelectedBtn");
 
   if (!btn) {
     console.error("❌ Button not found");
     return;
   }
 
-  const collectedFrames = [];
-
   btn.onclick = () => {
     const script = `
       (function () {
         try {
-          var doc = app.activeDocument;
-          var demoFolder = doc.layers.find(l => l.name === "demo" && l.type === "layerSection");
-          if (!demoFolder) {
-            app.echoToOE("[plugin] ❌ Folder 'demo' not found");
+          var original = app.activeDocument;
+          if (!original || original.layers.length === 0) {
+            app.echoToOE("❌ No valid layers found.");
             return;
           }
 
-          var layers = demoFolder.layers.filter(l => l.type === "layer" && !l.hidden);
-          if (layers.length === 0) {
-            app.echoToOE("[plugin] ❌ No layers in demo folder");
-            return;
+          // Create temporary export doc
+          var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
+
+          for (var i = original.layers.length - 1; i >= 0; i--) {
+            var layer = original.layers[i];
+            if (layer.kind !== undefined && !layer.locked) {
+              app.activeDocument = tempDoc;
+              for (var j = tempDoc.layers.length - 1; j >= 0; j--) {
+                tempDoc.layers[j].remove();
+              }
+
+              app.activeDocument = original;
+              original.activeLayer = layer;
+              layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
+
+              app.activeDocument = tempDoc;
+              tempDoc.saveToOE("png");
+            }
           }
 
-          // Create temp doc
-          var temp = app.documents.add(doc.width, doc.height, doc.resolution, "_demo_export", NewDocumentMode.RGB);
-
-          for (var i = 0; i < layers.length; i++) {
-            app.activeDocument = temp;
-            while (temp.layers.length > 0) temp.layers[0].remove();
-
-            app.activeDocument = doc;
-            layers[i].duplicate(temp, ElementPlacement.PLACEATBEGINNING);
-
-            app.activeDocument = temp;
-            temp.saveToOE("png");
-          }
-
-          app.activeDocument = temp;
-          temp.close(SaveOptions.DONOTSAVECHANGES);
-
+          app.activeDocument = tempDoc;
+          tempDoc.close(SaveOptions.DONOTSAVECHANGES);
           app.echoToOE("done");
         } catch (e) {
-          app.echoToOE("❌ Error: " + e.message);
+          app.echoToOE("❌ ERROR: " + e.message);
         }
       })();
     `;
 
     parent.postMessage(script, "*");
-    console.log("📤 Script sent to Photopea");
+    console.log("📤 Sent export script to Photopea");
   };
 
+  const collectedFrames = [];
+
   window.addEventListener("message", (event) => {
-    const data = event.data;
+    if (event.data instanceof ArrayBuffer) {
+      collectedFrames.push(event.data);
+    } else if (typeof event.data === "string") {
+      console.log("📩 Message from Photopea:", event.data);
 
-    if (data instanceof ArrayBuffer) {
-      collectedFrames.push(data);
-      return;
-    }
+      if (event.data === "done") {
+        if (collectedFrames.length === 0) {
+          alert("❌ No frames received.");
+          return;
+        }
 
-    if (typeof data === "string") {
-      console.log("📩", data);
-
-      if (data === "done") {
-        console.log("✅ All frames received:", collectedFrames.length);
-
-        // Optional: Open flipbook
         const flipbookHTML = `<!DOCTYPE html>
-<html><body style="margin:0;background:#111;"><canvas id="c"></canvas><script>
-const ctx = document.getElementById('c').getContext('2d');
-const frames = [];
-${collectedFrames.map((ab, i) => {
-  const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-  return \`frames[\${i}] = "data:image/png;base64,\${b64}";\`;
-}).join("\n")}
+<html>
+  <head>
+    <title>Flipbook Preview</title>
+    <style>
+      html, body { margin: 0; background: #111; overflow: hidden; height: 100%; display: flex; justify-content: center; align-items: center; }
+      canvas { image-rendering: pixelated; }
+    </style>
+  </head>
+  <body>
+    <canvas id="previewCanvas"></canvas>
+    <script>
+      const frames = [];
+      ${collectedFrames
+        .map((ab, i) => {
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+          return `frames[${i}] = "data:image/png;base64,${base64}";`;
+        })
+        .join("\n")}
 
-let imgs = frames.map(src => {
-  let img = new Image();
-  img.src = src;
-  return img;
-});
+      const images = frames.map(src => {
+        const img = new Image();
+        img.src = src;
+        return img;
+      });
 
-let i = 0;
-let loaded = 0;
-imgs.forEach(img => img.onload = () => {
-  if (++loaded === imgs.length) {
-    c.width = imgs[0].width;
-    c.height = imgs[0].height;
-    setInterval(() => {
-      ctx.clearRect(0, 0, c.width, c.height);
-      ctx.drawImage(imgs[i], 0, 0);
-      i = (i + 1) % imgs.length;
-    }, 100);
-  }
-});
-</script></body></html>`;
+      const canvas = document.getElementById("previewCanvas");
+      const ctx = canvas.getContext("2d");
+      const fps = 12;
+      let index = 0;
+
+      const preload = () => {
+        let loaded = 0;
+        images.forEach(img => {
+          img.onload = () => {
+            loaded++;
+            if (loaded === images.length) startLoop();
+          };
+        });
+      };
+
+      const startLoop = () => {
+        canvas.width = images[0].width;
+        canvas.height = images[0].height;
+        setInterval(() => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(images[index], 0, 0);
+          index = (index + 1) % images.length;
+        }, 1000 / fps);
+      };
+
+      preload();
+    </script>
+  </body>
+</html>`;
 
         const blob = new Blob([flipbookHTML], { type: "text/html" });
         const url = URL.createObjectURL(blob);
-        const win = window.open(url, "_blank");
+        const win = window.open();
+        win.document.open();
+        win.document.write(flipbookHTML);
+        win.document.close();
 
-        // Clear frames
         collectedFrames.length = 0;
-      }
-
-      if (data.startsWith("❌")) {
-        alert(data);
+      } else if (event.data.startsWith("❌")) {
+        alert(event.data);
       }
     }
   });
