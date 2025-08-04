@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", function () {
 document.getElementById("browserPreviewAllBtn").onclick = () => {
   const script = `
     try {
-      app.runMenuItem("saveForWeb");
+      app.runMenuItem("saveAsGIF");
       app.echoToOE("[plugin] ✅ Save for Web dialog opened");
     } catch (e) {
       app.echoToOE("[plugin] ❌ Failed to open Save for Web: " + e.message);
