@@ -1,11 +1,13 @@
-// Flipbook Preview Script (Updated: Clears temp doc per frame)
+// Flipbook Preview Script (Fixed: Clears temp doc per frame properly)
 document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("browserPreviewSelectedBtn");
+  const btn = document.getElementById("previewSelectedBtn");
 
   if (!btn) {
     console.error("❌ Button not found");
     return;
   }
+
+  const collectedFrames = [];
 
   btn.onclick = () => {
     const script = `
@@ -23,15 +25,17 @@ document.addEventListener("DOMContentLoaded", () => {
           for (var i = original.layers.length - 1; i >= 0; i--) {
             var layer = original.layers[i];
             if (layer.kind !== undefined && !layer.locked) {
+              // Switch to temp doc and clear all layers
               app.activeDocument = tempDoc;
-              for (var j = tempDoc.layers.length - 1; j >= 0; j--) {
-                tempDoc.layers[j].remove();
+              while (tempDoc.layers.length > 0) {
+                tempDoc.layers[0].remove();
               }
 
+              // Duplicate current layer
               app.activeDocument = original;
-              original.activeLayer = layer;
               layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
 
+              // Export current frame
               app.activeDocument = tempDoc;
               tempDoc.saveToOE("png");
             }
@@ -50,8 +54,6 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("📤 Sent export script to Photopea");
   };
 
-  const collectedFrames = [];
-
   window.addEventListener("message", (event) => {
     if (event.data instanceof ArrayBuffer) {
       collectedFrames.push(event.data);
@@ -64,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        // Convert ArrayBuffers to base64 and generate flipbook preview
         const flipbookHTML = `<!DOCTYPE html>
 <html>
   <head>
@@ -80,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ${collectedFrames
         .map((ab, i) => {
           const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-          return `frames[${i}] = "data:image/png;base64,${base64}";`;
+          return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
         })
         .join("\n")}
 
