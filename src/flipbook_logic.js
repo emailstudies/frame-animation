@@ -1,125 +1,80 @@
-function launchFlipbookFromAnimPreview(buttonId = "browserPreviewSelectedBtn") {
-  document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.getElementById(buttonId);
-    if (!btn) return console.error(`❌ Button #${buttonId} not found`);
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("browserPreviewSelectedBtn");
 
-    const collectedFrames = [];
+  if (!btn) {
+    console.error("❌ Button not found");
+    return;
+  }
 
-    btn.onclick = () => {
-      const script = `
-        (function () {
-          try {
-            var doc = app.activeDocument;
-            var group = doc.layerSets.getByName("anim_preview");
-
-            if (!group || group.layers.length === 0) {
-              app.echoToOE("❌ 'anim_preview' group missing or empty.");
-              return;
-            }
-
-            var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.RGB);
-
-            for (var i = group.layers.length - 1; i >= 0; i--) {
-              var layer = group.layers[i];
-              if (layer.kind !== undefined && !layer.locked) {
-                app.activeDocument = tempDoc;
-                while (tempDoc.layers.length > 0) tempDoc.layers[0].remove();
-
-                app.activeDocument = doc;
-                group.layers[i].duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
-
-                app.activeDocument = tempDoc;
-                var png = tempDoc.saveToOE("png");
-                app.sendToOE(png);
-              }
-            }
-
-            tempDoc.close(SaveOptions.DONOTSAVECHANGES);
-            app.echoToOE("done");
-          } catch (e) {
-            app.echoToOE("❌ ERROR: " + e.message);
-          }
-        })();
-      `;
-
-      parent.postMessage(script, "*");
-      console.log("📤 Script sent to Photopea");
-    };
-
-    window.addEventListener("message", (event) => {
-      if (event.data instanceof ArrayBuffer) {
-        collectedFrames.push(event.data);
-      } else if (typeof event.data === "string") {
-        if (event.data === "done") {
-          if (!collectedFrames.length) {
-            alert("❌ No frames received.");
+  btn.onclick = () => {
+    const script = `
+      (function () {
+        try {
+          var doc = app.activeDocument;
+          if (!doc) {
+            app.echoToOE("❌ No active document.");
             return;
           }
 
-          const flipbookHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Flipbook Preview</title>
-  <style>
-    html, body { margin: 0; background: #111; overflow: hidden; height: 100%; display: flex; justify-content: center; align-items: center; }
-    canvas { image-rendering: pixelated; }
-  </style>
-</head>
-<body>
-  <canvas id="previewCanvas"></canvas>
-  <script>
-    const frames = [];
-    ${collectedFrames.map((ab, i) => {
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-      return \`frames[\${i}] = "data:image/png;base64,\${base64}";\`;
-    }).join("\n")}
+          // Find the 'anim_preview' group
+          var previewGroup = null;
+          for (var i = 0; i < doc.layers.length; i++) {
+            if (doc.layers[i].name === "anim_preview" && doc.layers[i].typename === "LayerSet") {
+              previewGroup = doc.layers[i];
+              break;
+            }
+          }
 
-    const images = frames.map(src => {
-      const img = new Image();
-      img.src = src;
-      return img;
-    });
+          if (!previewGroup) {
+            app.echoToOE("❌ 'anim_preview' group not found.");
+            return;
+          }
 
-    const canvas = document.getElementById("previewCanvas");
-    const ctx = canvas.getContext("2d");
-    const fps = 12;
-    let index = 0;
+          // Find the one visible layer in anim_preview
+          var visibleLayers = [];
+          for (var j = 0; j < previewGroup.layers.length; j++) {
+            if (previewGroup.layers[j].visible) {
+              visibleLayers.push(previewGroup.layers[j]);
+            }
+          }
 
-    const preload = () => {
-      let loaded = 0;
-      images.forEach(img => {
-        img.onload = () => {
-          if (++loaded === images.length) startLoop();
-        };
-      });
-    };
+          if (visibleLayers.length !== 1) {
+            app.echoToOE("❌ Expected exactly 1 visible layer in 'anim_preview', found: " + visibleLayers.length);
+            return;
+          }
 
-    const startLoop = () => {
-      canvas.width = images[0].width;
-      canvas.height = images[0].height;
-      setInterval(() => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(images[index], 0, 0);
-        index = (index + 1) % images.length;
-      }, 1000 / fps);
-    };
+          var targetLayer = visibleLayers[0];
 
-    preload();
-  <\/script>
-</body>
-</html>`;
+          // Create a new temp document and export
+          var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "export_layer", NewDocumentMode.RGB);
+          app.activeDocument = doc;
+          targetLayer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
 
-          const blob = new Blob([flipbookHTML], { type: "text/html" });
-          const url = URL.createObjectURL(blob);
-          const win = window.open(url, "_blank");
-          collectedFrames.length = 0;
-        } else if (event.data.startsWith("❌")) {
-          alert(event.data);
+          app.activeDocument = tempDoc;
+          tempDoc.saveToOE("png");
+          app.echoToOE("✅ PNG of visible layer sent.");
+          tempDoc.close(SaveOptions.DONOTSAVECHANGES);
+        } catch (e) {
+          app.echoToOE("❌ ERROR: " + e.message);
         }
-      }
-    });
+      })();
+    `;
+
+    parent.postMessage(script, "*");
+    console.log("📤 Sent script to Photopea for visible anim_preview layer export.");
+  };
+
+  window.addEventListener("message", (event) => {
+    if (event.data instanceof ArrayBuffer) {
+      console.log("📥 Received PNG from Photopea");
+
+      const blob = new Blob([event.data], { type: "image/png" });
+      const url = URL.createObjectURL(blob);
+      console.log("🌐 Opening preview tab:", url);
+      window.open(url, "_blank");
+    } else if (typeof event.data === "string") {
+      console.log("📩 Message from Photopea:", event.data);
+      alert(event.data);
+    }
   });
-}
+});
