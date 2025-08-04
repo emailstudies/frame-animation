@@ -3,77 +3,130 @@
 window.runSelectedFlipbookPreview = function () {
   console.log("\uD83D\uDE80 runSelectedFlipbookPreview triggered");
 
-  const script = `
-    (function () {
-      try {
-        var doc = app.activeDocument;
-        if (!doc) {
-          app.echoToOE("\u274C No active document.");
+    const script = `
+      (function () {
+        try {
+          var original = app.activeDocument;
+          if (!original || original.layers.length === 0) {
+            app.echoToOE("❌ No valid layers found.");
+            return;
+          }
+
+          // Create temporary export doc
+          var tempDoc = app.documents.add(original.width, original.height, original.resolution, "_temp_export", NewDocumentMode.RGB);
+
+          for (var i = original.layers.length - 1; i >= 0; i--) {
+            var layer = original.layers[i];
+            if (layer.kind !== undefined && !layer.locked) {
+              app.activeDocument = tempDoc;
+              for (var j = tempDoc.layers.length - 1; j >= 0; j--) {
+                tempDoc.layers[j].remove();
+              }
+
+              app.activeDocument = original;
+              original.activeLayer = layer;
+              layer.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
+
+              app.activeDocument = tempDoc;
+              tempDoc.saveToOE("png");
+            }
+          }
+
+          app.activeDocument = tempDoc;
+          tempDoc.close(SaveOptions.DONOTSAVECHANGES);
+          app.echoToOE("done");
+        } catch (e) {
+          app.echoToOE("❌ ERROR: " + e.message);
+        }
+      })();
+    `;
+
+    parent.postMessage(script, "*");
+    console.log("📤 Sent export script to Photopea");
+  
+
+  const collectedFrames = [];
+
+  window.addEventListener("message", (event) => {
+    if (event.data instanceof ArrayBuffer) {
+      collectedFrames.push(event.data);
+    } else if (typeof event.data === "string") {
+      console.log("📩 Message from Photopea:", event.data);
+
+      if (event.data === "done") {
+        if (collectedFrames.length === 0) {
+          alert("❌ No frames received.");
           return;
         }
 
-        var animGroup = null;
-        for (var i = 0; i < doc.layers.length; i++) {
-          var layer = doc.layers[i];
-          if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
-            animGroup = layer;
-            break;
-          }
-        }
+        const flipbookHTML = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Flipbook Preview</title>
+    <style>
+      html, body { margin: 0; background: #111; overflow: hidden; height: 100%; display: flex; justify-content: center; align-items: center; }
+      canvas { image-rendering: pixelated; }
+    </style>
+  </head>
+  <body>
+    <canvas id="previewCanvas"></canvas>
+    <script>
+      const frames = [];
+      ${collectedFrames
+        .map((ab, i) => {
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+          return `frames[${i}] = "data:image/png;base64,${base64}";`;
+        })
+        .join("\n")}
 
-        if (!animGroup) {
-          app.echoToOE("\u274C anim_preview group not found.");
-          return;
-        }
+      const images = frames.map(src => {
+        const img = new Image();
+        img.src = src;
+        return img;
+      });
 
-        var tempDoc = app.documents.add(doc.width, doc.height, doc.resolution, "_temp_export", NewDocumentMode.TRANSPARENT);
+      const canvas = document.getElementById("previewCanvas");
+      const ctx = canvas.getContext("2d");
+      const fps = 12;
+      let index = 0;
 
-        for (var i = 0; i < animGroup.layers.length; i++) {
-          // Hide all layers first
-          for (var j = 0; j < animGroup.layers.length; j++) {
-            animGroup.layers[j].visible = false;
-          }
+      const preload = () => {
+        let loaded = 0;
+        images.forEach(img => {
+          img.onload = () => {
+            loaded++;
+            if (loaded === images.length) startLoop();
+          };
+        });
+      };
 
-          var frame = animGroup.layers[i];
-          frame.visible = true;
+      const startLoop = () => {
+        canvas.width = images[0].width;
+        canvas.height = images[0].height;
+        setInterval(() => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(images[index], 0, 0);
+          index = (index + 1) % images.length;
+        }, 1000 / fps);
+      };
 
-          app.activeDocument = doc;
-          doc.activeLayer = frame;
-          app.refresh();
+      preload();
+    </script>
+  </body>
+</html>`;
 
-          // Delete all content from tempDoc
-          app.activeDocument = tempDoc;
-          for (var l = tempDoc.artLayers.length - 1; l >= 0; l--) {
-            tempDoc.artLayers[l].remove();
-          }
+        const blob = new Blob([flipbookHTML], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const win = window.open();
+        win.document.open();
+        win.document.write(flipbookHTML);
+        win.document.close();
 
-          // Duplicate current frame to tempDoc
-          app.activeDocument = doc;
-          frame.duplicate(tempDoc, ElementPlacement.PLACEATBEGINNING);
-
-          app.activeDocument = tempDoc;
-          if (tempDoc.artLayers.length > 0) {
-            tempDoc.saveToOE("png");
-            app.echoToOE("\u2705 Exported frame " + i + ": " + frame.name);
-          } else {
-            app.echoToOE("\u26A0\uFE0F Frame " + i + " is empty.");
-          }
-        }
-
-        // Restore all visibility
-        for (var j = 0; j < animGroup.layers.length; j++) {
-          animGroup.layers[j].visible = true;
-        }
-
-        app.activeDocument = tempDoc;
-        tempDoc.close(SaveOptions.DONOTSAVECHANGES);
-        app.echoToOE("done");
-
-      } catch (e) {
-        app.echoToOE("\u274C ERROR: " + e.message);
+        collectedFrames.length = 0;
+      } else if (event.data.startsWith("❌")) {
+        alert(event.data);
       }
-    })();
-  `;
+    }
+  });
+});
 
-  parent.postMessage(script, "*");
-};
