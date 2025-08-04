@@ -6,6 +6,13 @@ document.getElementById("browserPreviewAllBtn").onclick = () => {
   app.runScript(script); // ✅ this sends the script into Photopea
 };
 
+  window.addEventListener("message", (event) => {
+  if (typeof event.data === "string" && event.data.startsWith("[demo]")) {
+    console.log("📨 From Photopea:", event.data);
+  }
+});
+
+  /* ------------------------------------------------------------------------------------------------*/
 
   
   document.getElementById("createAnimBtn").onclick = handleCreateFolder;
