@@ -1,110 +1,115 @@
-// ✅ flipbook_logic.js (Photopea-side logic for exporting anim_preview frame-by-frame)
+// ✅ Single-file flipbook preview using anim_preview (Photopea + plugin UI)
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("previewSelectedBtn");
+  if (!btn) {
+    console.error("❌ previewSelectedBtn not found");
+    return;
+  }
 
-// 🔁 Step through each frame from anim_preview and export to OE
-window.stepAndExportNextFrame = function () {
-  const script = `
-    (function () {
-      try {
-        var doc = app.activeDocument;
-        var group = null;
+  const collectedFrames = [];
+  let currentIndex = 0;
+  let totalFrames = 0;
 
-        // 🔍 Find the anim_preview group
-        for (var i = 0; i < doc.layers.length; i++) {
-          var layer = doc.layers[i];
-          if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
-            group = layer;
-            break;
+  btn.onclick = () => {
+    currentIndex = 0;
+    collectedFrames.length = 0;
+
+    const initScript = `
+      (function () {
+        try {
+          var doc = app.activeDocument;
+          var previewGroup = null;
+          for (var i = 0; i < doc.layers.length; i++) {
+            var layer = doc.layers[i];
+            if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
+              previewGroup = layer;
+              break;
+            }
           }
-        }
-
-        if (!group) {
-          app.echoToOE("[flipbook] ❌ anim_preview group missing during step");
-          return;
-        }
-
-        // 🧮 Init index if needed
-        if (typeof window._flipbookIndex === "undefined") {
-          window._flipbookIndex = 0;
-        }
-
-        // ✅ All frames sent
-        if (window._flipbookIndex >= group.layers.length) {
-          app.echoToOE("[flipbook] ✅ Exported all frames to OE.");
-          delete window._flipbookIndex;
-          return;
-        }
-
-        // 🫥 Hide all frames
-        for (var j = 0; j < group.layers.length; j++) {
-          group.layers[j].visible = false;
-        }
-
-        // 👁️ Show the current frame
-        var layer = group.layers[window._flipbookIndex];
-        layer.visible = true;
-        app.refresh(false);  // 👈 FIXED: Prevents prompt
-
-        app.echoToOE("[flipbook] 🔁 Ready to export frame " + window._flipbookIndex + ": " + layer.name);
-        doc.saveToOE("png");
-
-        // ➕ Move to next
-        window._flipbookIndex++;
-      } catch (e) {
-        app.echoToOE("[flipbook] ❌ JS ERROR: " + e.message);
-      }
-    })();
-  `;
-  parent.postMessage(script, "*");
-};
-
-// 🚀 Start export loop after anim_preview is ready
-window.exportPreviewFramesToFlipbook = function () {
-  console.log("🚀 [flipbook] Starting coordinated frame export");
-
-  const script = `
-    (function () {
-      try {
-        var doc = app.activeDocument;
-        var previewGroup = null;
-
-        // 🔍 Find anim_preview
-        for (var i = 0; i < doc.layers.length; i++) {
-          var layer = doc.layers[i];
-          if (layer.typename === "LayerSet" && layer.name === "anim_preview") {
-            previewGroup = layer;
-            break;
+          if (!previewGroup) {
+            app.echoToOE("❌ anim_preview group not found");
+            return;
           }
-        }
 
-        if (!previewGroup) {
-          app.echoToOE("[flipbook] ❌ anim_preview not found");
+          for (var i = 0; i < doc.layers.length; i++) {
+            doc.layers[i].visible = (doc.layers[i] === previewGroup);
+          }
+          previewGroup.visible = true;
+
+          window._flipbookCtx = {
+            group: previewGroup,
+            count: previewGroup.layers.length,
+            index: 0
+          };
+
+          app.echoToOE("[flipbook] INIT " + previewGroup.layers.length);
+        } catch (e) {
+          app.echoToOE("❌ JS ERROR: " + e.message);
+        }
+      })();
+    `;
+    parent.postMessage(initScript, "*");
+  };
+
+  window.addEventListener("message", (event) => {
+    if (event.data instanceof ArrayBuffer) {
+      collectedFrames.push(event.data);
+      currentIndex++;
+      requestNextFrame();
+    } else if (typeof event.data === "string") {
+      if (event.data.startsWith("[flipbook] INIT")) {
+        totalFrames = parseInt(event.data.split(" ").pop());
+        requestNextFrame();
+      } else if (event.data.trim() === "[flipbook] ✅ done") {
+        if (collectedFrames.length === 0) {
+          alert("❌ No flipbook frames received.");
           return;
         }
-
-        // 🫥 Hide all except anim_preview
-        for (var i = 0; i < doc.layers.length; i++) {
-          doc.layers[i].visible = (doc.layers[i] === previewGroup);
-        }
-        previewGroup.visible = true;
-        app.refresh(false);  // 👈 FIXED: Avoid prompt here too
-
-        app.echoToOE("[flipbook] 📦 anim_preview contains " + previewGroup.layers.length + " frames.");
-
-        // ✅ Start export
-        window._flipbookIndex = 0;
-        app.echoToOE("[flipbook] ✅ anim_preview created - done");
-      } catch (e) {
-        app.echoToOE("[flipbook] ❌ JS ERROR: " + e.message);
+        const html = generateFlipbookHTML(collectedFrames);
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const win = window.open();
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+      } else if (event.data.startsWith("❌")) {
+        alert(event.data);
       }
-    })();
-  `;
-  parent.postMessage(script, "*");
-};
+    }
+  });
 
-// 📨 Listen for plugin message to continue export
-window.addEventListener("message", (event) => {
-  if (typeof event.data === "string" && event.data.trim() === "[flipbook] ✅ frame received") {
-    console.log("📬 [flipbook] Frame ACK received — stepping next");
-    window.stepAndExportNextFrame();
+  function requestNextFrame() {
+    if (currentIndex >= totalFrames) {
+      parent.postMessage(`[flipbook] ✅ done`, "*");
+      return;
+    }
+
+    const stepScript = `
+      (function () {
+        try {
+          var ctx = window._flipbookCtx;
+          var doc = app.activeDocument;
+
+          if (!ctx || !ctx.group || ctx.index >= ctx.count) {
+            app.echoToOE("[flipbook] ✅ done");
+            return;
+          }
+
+          for (var i = 0; i < ctx.group.layers.length; i++) {
+            ctx.group.layers[i].visible = false;
+          }
+
+          var layer = ctx.group.layers[ctx.index];
+          layer.visible = true;
+          app.refresh(false);
+          doc.saveToOE("png");
+
+          ctx.index++;
+        } catch (e) {
+          app.echoToOE("❌ JS ERROR: " + e.message);
+        }
+      })();
+    `;
+    parent.postMessage(stepScript, "*");
   }
 });
