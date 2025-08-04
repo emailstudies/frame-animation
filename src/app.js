@@ -36,27 +36,9 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 };
 
-  document.getElementById("browserPreviewSelectedBtn").onclick = function () {
-  beforeMergingInExport(() => {
-    setTimeout(() => {
-      if (typeof window.runSelectedFlipbookPreview === "function") {
-        window.runSelectedFlipbookPreview(); // Call after cleanup
-      } else {
-        alert("❌ runSelectedFlipbookPreview not defined.");
-        console.error("❌ Missing: window.runSelectedFlipbookPreview");
-      }
-    }, 150); // Short delay to allow any merge/reset to complete
-  });
-};
 
 
- 
-
-
-
-
-
-
+ }); /*closing the DOM thing */ 
 
   
 /*document.getElementById("browserPreviewAllBtn").onclick = () => {
@@ -90,6 +72,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-}); /*closing the DOM thing */
+
 
 
