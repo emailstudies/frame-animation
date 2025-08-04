@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("updateLayerNumbersBtn").onclick = handleUpdateLayerNumbers;
  /* document.getElementById("onionSkinBtn").onclick = toggleOnionSkinMode; */
   document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin;
-  document.getElementById("browserPreviewAllBtn").onclick = previewInPhotopeaFlipbook;
+  /* document.getElementById("browserPreviewAllBtn").onclick = previewInPhotopeaFlipbook; ths was app.refresh to update canvas in PP itself */
 
 
   /* doing the reset first before the onion skin happens */
