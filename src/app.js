@@ -55,7 +55,7 @@ document.getElementById("browserPreviewAllBtn").onclick = () => {
           results.push("❌ ${cmd} - " + e.message);
         }
       `).join('')}
-      app.echoToOE("[menuTest]\\n" + results.join("\\n"));
+      app.echoToOE("[menuTest-log]\\n" + results.join("\\n"));
     })();
   `;
 
@@ -63,28 +63,11 @@ document.getElementById("browserPreviewAllBtn").onclick = () => {
 };
 
 window.addEventListener("message", (event) => {
-  if (typeof event.data === "string" && event.data.startsWith("[menuTest]")) {
-    const lines = event.data.split("\n").slice(1); // Skip header
-    const container = document.getElementById("menuTestResults");
-
-    const table = document.createElement("table");
-    table.style.borderCollapse = "collapse";
-    table.style.width = "100%";
-
-    for (const line of lines) {
-      const row = document.createElement("tr");
-      const status = line.startsWith("✅") ? "✅" : "❌";
-      const cmd = line.replace(/^✅ |^❌ /, "");
-
-      row.innerHTML = `
-        <td style="border: 1px solid #ccc; padding: 4px;">${status}</td>
-        <td style="border: 1px solid #ccc; padding: 4px;">${cmd}</td>
-      `;
-      table.appendChild(row);
-    }
-
-    container.innerHTML = ""; // Clear previous
-    container.appendChild(table);
+  if (typeof event.data === "string" && event.data.startsWith("[menuTest-log]")) {
+    const lines = event.data.split("\n").slice(1);
+    console.group("🧪 Menu Item Test Results");
+    lines.forEach(line => console.log(line));
+    console.groupEnd();
   }
 });
 
