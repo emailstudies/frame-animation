@@ -103,6 +103,64 @@ function buildFrameMap(animFolders, maxFrames) {
   // console.log("🗂 Frame map built: " + frameMap.length + " frames.");
   return frameMap;
 }
+/*------------------------------------------------------------------------------------------------*/
+
+function mergeFrameGroups(doc, frameMap, previewFolder, delay) {
+  for (var f = 0; f < frameMap.length; f++) {
+    var layers = frameMap[f];
+    var duplicates = [];
+
+    app.echoToOE("🎞 Frame " + f + ": merging " + layers.length + " layers.");
+
+    for (var i = 0; i < layers.length; i++) {
+      var original = layers[i];
+      app.echoToOE("🔹 Source: " + original.name);
+      doc.activeLayer = original;
+
+      try {
+        var dup = original.duplicate();
+        dup.name = "_a_" + original.name;
+        dup.move(doc.layers[0], ElementPlacement.PLACEBEFORE);
+        duplicates.push(dup);
+        app.echoToOE("✅ Duplicated: " + dup.name);
+      } catch (e) {
+        app.echoToOE("❌ Error duplicating: " + original.name + " - " + e.message);
+      }
+    }
+
+    if (duplicates.length >= 2) {
+      try {
+        doc.activeLayer = duplicates[0];
+        for (var i = 1; i < duplicates.length; i++) {
+          doc.activeLayer = duplicates[i];
+          doc.activeLayer.merge();
+        }
+        var mergedLayer = doc.activeLayer;
+        mergedLayer.name = "_a_Frame " + (f + 1) + "," + delay;
+        app.echoToOE("🔧 Merged layer: " + mergedLayer.name);
+        mergedLayer.move(previewFolder, ElementPlacement.INSIDE);
+        app.echoToOE("📦 Moved merged layer into anim_preview.");
+      } catch (e) {
+        app.echoToOE("❌ Error during merging or moving: " + e.message);
+      }
+    } else if (duplicates.length === 1) {
+      try {
+        var only = duplicates[0];
+        only.name = "_a_Frame " + (f + 1) + "," + delay;
+        only.move(previewFolder, ElementPlacement.INSIDE);
+        app.echoToOE("📦 Moved single layer into anim_preview: " + only.name);
+      } catch (e) {
+        app.echoToOE("❌ Error moving single layer: " + e.message);
+      }
+    } else {
+      app.echoToOE("⚠️ No valid layers found to merge for frame " + f);
+    }
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*--------------------------------------original
 
 // 🧱 Merge layers per frame index into anim_preview, with delay
 function mergeFrameGroups(doc, frameMap, previewFolder, delay) {
@@ -136,6 +194,8 @@ function mergeFrameGroups(doc, frameMap, previewFolder, delay) {
     }
   }
 }
+
+---------------------------------------------------------original */
 
 // 🧱 Set visibility of anim_* folders to false (except anim_preview)
 function fadeOutAnimFolders(doc) {
