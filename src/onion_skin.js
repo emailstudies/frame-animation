@@ -13,87 +13,69 @@ function toggleOnionSkinMode() {
         return;
       }
 
-      // 1. Check if any selected layer is a LayerSet (group)
-      for (var i = 0; i < doc.activeLayers.length; i++) {
-        if (doc.activeLayers[i].typename === "LayerSet") {
-          alert("Onion skin cannot run when LayerSets (groups) are selected. Please select only individual layers.");
+      var beforeSteps = ${beforeSteps};
+      var afterSteps = ${afterSteps};
+
+      var opacityMap = { 1: 50, 2: 40, 3: 30 };
+
+      // Check if any selected layer is a LayerSet - disallow
+      for (var selI = 0; selI < doc.activeLayers.length; selI++) {
+        if (doc.activeLayers[selI].typename === "LayerSet") {
+          alert("Please select only individual layers, not LayerSets.");
           return;
         }
       }
 
-      // 2. Collect unique parent groups of selected layers (only unlocked groups)
-      var parentGroups = {};
-      for (var i = 0; i < doc.activeLayers.length; i++) {
-        var parent = doc.activeLayers[i].parent;
-        if (parent.typename === "LayerSet" && !parent.locked) {
-          parentGroups[parent.id] = parent;
-        }
-      }
+      var selectedByParent = {};
 
-      // 3. Check for locked selected layers or locked siblings in each parent group
-      for (var key in parentGroups) {
-        var group = parentGroups[key];
-
-        // Check if any selected layer inside this group is locked
-        for (var j = 0; j < group.layers.length; j++) {
-          var layer = group.layers[j];
-          if (layer.selected && layer.locked) {
-            alert("Selected layers must not be locked.");
-            return;
-          }
-        }
-
-        // Check if any sibling layer inside this group is locked
-        for (var j = 0; j < group.layers.length; j++) {
-          var layer = group.layers[j];
-          if (layer.locked) {
-            alert("Sibling layers inside the selected layer's group must not be locked.");
-            return;
+      // Collect selected layer indexes by their parent LayerSet
+      for (var i = 0; i < doc.layers.length; i++) {
+        var group = doc.layers[i];
+        if (group.typename === "LayerSet" && !group.locked) {
+          for (var j = 0; j < group.layers.length; j++) {
+            var layer = group.layers[j];
+            if (!layer) continue;
+            if (layer.selected && layer.typename !== "LayerSet" && !layer.locked) {
+              if (!selectedByParent[group.name]) selectedByParent[group.name] = [];
+              selectedByParent[group.name].push(j);
+            }
           }
         }
       }
 
-      var beforeSteps = ${beforeSteps};
-      var afterSteps = ${afterSteps};
-      var opacityMap = { 1: 50, 2: 40, 3: 30 };
+      var parentNames = Object.keys(selectedByParent);
+      if (parentNames.length === 0) {
+        alert("No eligible layers selected inside unlocked groups.");
+        return;
+      }
 
-      // 4. Process each parent group independently with onion skin
-      for (var key in parentGroups) {
-        var group = parentGroups[key];
+      for (var g = 0; g < doc.layers.length; g++) {
+        var group = doc.layers[g];
+        if (group.typename !== "LayerSet" || group.locked) continue;
 
-        // Collect selected, unlocked layer indexes inside this group (non-LayerSet)
-        var selectedIndexes = [];
-        for (var j = 0; j < group.layers.length; j++) {
-          var layer = group.layers[j];
-          if (layer.selected && layer.typename !== "LayerSet" && !layer.locked) {
-            selectedIndexes.push(j);
-          }
-        }
-
-        // Hide the group if no unlocked selected layers (unlikely here)
-        if (selectedIndexes.length === 0) {
+        var isSelectedGroup = selectedByParent.hasOwnProperty(group.name);
+        if (!isSelectedGroup) {
+          // Group with no selected layers inside: hide whole group visibility
           group.visible = false;
           continue;
         } else {
           group.visible = true;
         }
 
-        // Onion skin logic inside this group
         var layers = group.layers;
+        var selectedIndexes = selectedByParent[group.name] || [];
+
         for (var i = 0; i < layers.length; i++) {
           var layer = layers[i];
-
-          // Skip LayerSets and locked layers inside the group
-          if (layer.typename === "LayerSet" || layer.locked) continue;
+          if (!layer || layer.typename === "LayerSet" || layer.locked) continue;
 
           var set = false;
 
           for (var s = 0; s < selectedIndexes.length; s++) {
             var selIdx = selectedIndexes[s];
-
             if (i === selIdx) {
               layer.visible = true;
-              layer.opacity = 100;
+              layer.opacity = 100; // Selected layer full opacity
               set = true;
               break;
             }
@@ -119,21 +101,7 @@ function toggleOnionSkinMode() {
         }
       }
 
-      // 5. For unlocked groups that are NOT parents of selected layers
-      //    turn OFF their visibility (the LayerSet visibility)
-      //    but do NOT change any layers inside those groups
-      for (var g = 0; g < doc.layers.length; g++) {
-        var group = doc.layers[g];
-
-        if (group.typename !== "LayerSet" || group.locked) continue;
-
-        // Skip groups that are parents of selected layers
-        if (parentGroups.hasOwnProperty(group.id)) continue;
-
-        group.visible = false;
-      }
-
-      alert("✅ Onion Skin applied with correct group visibility handling.");
+      alert("✅ Onion Skin applied.");
     })();
   `;
 
