@@ -12,6 +12,112 @@ function toggleOnionSkinMode() {
         return;
       }
 
+      function isLayerSetLocked(layerSet) {
+      return layerSet.allLocked || layerSet.pixelsLocked || layerSet.positionLocked || layerSet.transparentPixelsLocked;
+      }
+
+
+      var beforeSteps = ${beforeSteps};
+      var afterSteps = ${afterSteps};
+
+      var opacityMap = { 1: 50, 2: 40, 3: 30 };
+
+      var selectedByParent = {};
+
+      // Collect selected layer indexes by anim_* folder
+      for (var i = 0; i < doc.layers.length; i++) {
+        var group = doc.layers[i];
+        if (group.typename === "LayerSet" && !isLayerSetLocked(group)) {
+          for (var j = 0; j < group.layers.length; j++) {
+            var layer = group.layers[j];
+            if (layer.selected && layer.typename !== "LayerSet") {
+              if (!selectedByParent[group.name]) selectedByParent[group.name] = [];
+              selectedByParent[group.name].push(j);
+            }
+          }
+        }
+      }
+
+      var parentNames = Object.keys(selectedByParent);
+      if (parentNames.length === 0) {
+        alert("No eligible layers selected inside anim_* folders.");
+        return;
+      }
+
+      for (var g = 0; g < doc.layers.length; g++) {
+        var group = doc.layers[g];
+        if (group.typename !== "LayerSet" || isLayerSetLocked(group)) continue;
+
+        var isSelectedGroup = selectedByParent.hasOwnProperty(group.name);
+        if (!isSelectedGroup && !group.locked) {
+          group.visible = false;
+          continue;
+        }
+
+        var layers = group.layers;
+        var selectedIndexes = selectedByParent[group.name] || [];
+
+        for (var i = 0; i < layers.length; i++) {
+          var layer = layers[i];
+          if (layer.typename === "LayerSet" || layer.locked) continue;
+
+          var set = false;
+
+          for (var s = 0; s < selectedIndexes.length; s++) {
+            var selIdx = selectedIndexes[s];
+            if (i === selIdx) {
+              layer.visible = true;
+              layer.opacity = 100; // Selected
+              set = true;
+              break;
+            }
+
+            var distance = i - selIdx; // Now reversed logic
+
+            if (distance > 0 && distance <= beforeSteps) {
+              layer.visible = true;
+              layer.opacity = opacityMap[distance] || 0;
+              set = true;
+              break;
+            } else if (distance < 0 && Math.abs(distance) <= afterSteps) {
+              layer.visible = true;
+              layer.opacity = opacityMap[Math.abs(distance)] || 0;
+              set = true;
+              break;
+            }
+          }
+
+          if (!set) {
+            layer.visible = false;
+          }
+        }
+      }
+
+      alert("✅ Onion Skin applied.");
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
+}
+
+
+
+
+/* this is for anim folders
+function toggleOnionSkinMode() {
+  const beforeSteps = parseInt(document.getElementById("beforeSteps").value, 10);
+  const afterSteps = parseInt(document.getElementById("afterSteps").value, 10);
+
+  console.log("🧅 Onion Skin: Before =", beforeSteps, "After =", afterSteps);
+
+  const script = `
+    (function () {
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No active document.");
+        return;
+      }
+
       var beforeSteps = ${beforeSteps};
       var afterSteps = ${afterSteps};
 
@@ -94,7 +200,7 @@ function toggleOnionSkinMode() {
 
   window.parent.postMessage(script, "*");
 }
-
+*/
 
 
 
