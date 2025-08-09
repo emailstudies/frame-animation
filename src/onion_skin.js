@@ -12,10 +12,6 @@ function toggleOnionSkinMode() {
         return;
       }
 
-      function isLayerSetLocked(layerSet) {
-      return layerSet.allLocked || layerSet.pixelsLocked || layerSet.positionLocked || layerSet.transparentPixelsLocked;
-      }
-
       var beforeSteps = ${beforeSteps};
       var afterSteps = ${afterSteps};
 
@@ -23,10 +19,10 @@ function toggleOnionSkinMode() {
 
       var selectedByParent = {};
 
-      // Collect selected layer indexes by root folders
+      // Collect selected layer indexes by anim_* folder
       for (var i = 0; i < doc.layers.length; i++) {
         var group = doc.layers[i];
-        if (group.typename === "LayerSet" && !isLayerSetLocked(group)) {
+        if (group.typename === "LayerSet" && group.name.indexOf("anim_") === 0) {
           for (var j = 0; j < group.layers.length; j++) {
             var layer = group.layers[j];
             if (layer.selected && layer.typename !== "LayerSet") {
@@ -45,7 +41,7 @@ function toggleOnionSkinMode() {
 
       for (var g = 0; g < doc.layers.length; g++) {
         var group = doc.layers[g];
-        if (group.typename !== "LayerSet" || isLayerSetLocked(group)) continue;
+        if (group.typename !== "LayerSet" || group.name.indexOf("anim_") !== 0) continue;
 
         var isSelectedGroup = selectedByParent.hasOwnProperty(group.name);
         if (!isSelectedGroup && !group.locked) {
@@ -97,6 +93,7 @@ function toggleOnionSkinMode() {
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 
