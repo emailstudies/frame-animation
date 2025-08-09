@@ -33,7 +33,8 @@ function resetOnionSkin() {
                 layer.visible = true;
                 layer.opacity = 100;
               } else {
-                layer.opacity = 0;
+                layer.visible = false;
+                layer.opacity = 100;
               }
             } catch (e) {
               alert("⚠️ Failed to update layer: " + layer.name);
