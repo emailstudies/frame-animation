@@ -7,31 +7,39 @@ function toggleOnionSkinMode() {
 
   const script = `
     (function () {
-      var doc = app.activeDocument;
-      if (!doc) {
-        alert("No active document.");
-        return;
-      }
-
-      var beforeSteps = ${beforeSteps};
-      var afterSteps = ${afterSteps};
-
-      var opacityMap = { 1: 50, 2: 40, 3: 30 };
-
-      // Check if any selected layer is a LayerSet - disallow
-      for (var selI = 0; selI < doc.activeLayers.length; selI++) {
-        if (doc.activeLayers[selI].typename === "LayerSet") {
-          alert("Please select only individual layers, not LayerSets.");
+      try {
+        var doc = app.activeDocument;
+        if (!doc) {
+          alert("No active document.");
           return;
         }
-      }
+        if (!doc.activeLayers || doc.activeLayers.length === 0) {
+          alert("No layers selected.");
+          return;
+        }
 
-      var selectedByParent = {};
+        var beforeSteps = ${beforeSteps};
+        var afterSteps = ${afterSteps};
 
-      // Collect selected layer indexes by their parent LayerSet
-      for (var i = 0; i < doc.layers.length; i++) {
-        var group = doc.layers[i];
-        if (group.typename === "LayerSet" && !group.locked) {
+        var opacityMap = { 1: 50, 2: 40, 3: 30 };
+
+        // Disallow LayerSet selection
+        for (var selI = 0; selI < doc.activeLayers.length; selI++) {
+          if (doc.activeLayers[selI].typename === "LayerSet") {
+            alert("Please select only individual layers, not LayerSets.");
+            return;
+          }
+        }
+
+        var selectedByParent = {};
+
+        // Collect selected layer indexes by their parent LayerSet
+        for (var i = 0; i < doc.layers.length; i++) {
+          var group = doc.layers[i];
+          if (!group || group.typename !== "LayerSet" || group.locked) continue;
+
+          if (!group.layers) continue;
+
           for (var j = 0; j < group.layers.length; j++) {
             var layer = group.layers[j];
             if (!layer) continue;
@@ -41,72 +49,76 @@ function toggleOnionSkinMode() {
             }
           }
         }
-      }
 
-      var parentNames = Object.keys(selectedByParent);
-      if (parentNames.length === 0) {
-        alert("No eligible layers selected inside unlocked groups.");
-        return;
-      }
-
-      for (var g = 0; g < doc.layers.length; g++) {
-        var group = doc.layers[g];
-        if (group.typename !== "LayerSet" || group.locked) continue;
-
-        var isSelectedGroup = selectedByParent.hasOwnProperty(group.name);
-        if (!isSelectedGroup) {
-          // Group with no selected layers inside: hide whole group visibility
-          group.visible = false;
-          continue;
-        } else {
-          group.visible = true;
+        var parentNames = Object.keys(selectedByParent);
+        if (parentNames.length === 0) {
+          alert("No eligible layers selected inside unlocked groups.");
+          return;
         }
 
-        var layers = group.layers;
-        var selectedIndexes = selectedByParent[group.name] || [];
+        for (var g = 0; g < doc.layers.length; g++) {
+          var group = doc.layers[g];
+          if (!group || group.typename !== "LayerSet" || group.locked) continue;
 
-        for (var i = 0; i < layers.length; i++) {
-          var layer = layers[i];
-          if (!layer || layer.typename === "LayerSet" || layer.locked) continue;
-
-          var set = false;
-
-          for (var s = 0; s < selectedIndexes.length; s++) {
-            var selIdx = selectedIndexes[s];
-            if (i === selIdx) {
-              layer.visible = true;
-              layer.opacity = 100; // Selected layer full opacity
-              set = true;
-              break;
-            }
-
-            var distance = i - selIdx;
-
-            if (distance > 0 && distance <= beforeSteps) {
-              layer.visible = true;
-              layer.opacity = opacityMap[distance] || 0;
-              set = true;
-              break;
-            } else if (distance < 0 && Math.abs(distance) <= afterSteps) {
-              layer.visible = true;
-              layer.opacity = opacityMap[Math.abs(distance)] || 0;
-              set = true;
-              break;
-            }
+          var isSelectedGroup = selectedByParent.hasOwnProperty(group.name);
+          if (!isSelectedGroup) {
+            group.visible = false;
+            continue;
+          } else {
+            group.visible = true;
           }
 
-          if (!set) {
-            layer.visible = false;
+          var layers = group.layers;
+          if (!layers) continue;
+
+          var selectedIndexes = selectedByParent[group.name] || [];
+
+          for (var i = 0; i < layers.length; i++) {
+            var layer = layers[i];
+            if (!layer || layer.typename === "LayerSet" || layer.locked) continue;
+
+            var set = false;
+
+            for (var s = 0; s < selectedIndexes.length; s++) {
+              var selIdx = selectedIndexes[s];
+              if (i === selIdx) {
+                layer.visible = true;
+                layer.opacity = 100;
+                set = true;
+                break;
+              }
+
+              var distance = i - selIdx;
+
+              if (distance > 0 && distance <= beforeSteps) {
+                layer.visible = true;
+                layer.opacity = opacityMap[distance] || 0;
+                set = true;
+                break;
+              } else if (distance < 0 && Math.abs(distance) <= afterSteps) {
+                layer.visible = true;
+                layer.opacity = opacityMap[Math.abs(distance)] || 0;
+                set = true;
+                break;
+              }
+            }
+
+            if (!set) {
+              layer.visible = false;
+            }
           }
         }
-      }
 
-      alert("✅ Onion Skin applied.");
+        alert("✅ Onion Skin applied.");
+      } catch (e) {
+        alert("Error during onion skin: " + e.message);
+      }
     })();
   `;
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 
