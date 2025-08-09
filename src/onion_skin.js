@@ -1,3 +1,101 @@
+/* enabling onion skin for all, not just anim_ folders */
+function toggleOnionSkinMode() {
+  const beforeSteps = parseInt(document.getElementById("beforeSteps").value, 10);
+  const afterSteps = parseInt(document.getElementById("afterSteps").value, 10);
+
+  console.log("🧅 Onion Skin: Before =", beforeSteps, "After =", afterSteps);
+
+  const script = `
+    (function () {
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No active document.");
+        return;
+      }
+
+      var beforeSteps = ${beforeSteps};
+      var afterSteps = ${afterSteps};
+
+      var opacityMap = { 1: 50, 2: 40, 3: 30 };
+
+      // Iterate over all root-level layers
+      for (var g = 0; g < doc.layers.length; g++) {
+        var group = doc.layers[g];
+
+        // Only unlocked LayerSets
+        if (group.typename !== "LayerSet" || group.locked) continue;
+
+        // Collect indexes of selected, non-LayerSet layers inside this group
+        var selectedIndexes = [];
+        for (var j = 0; j < group.layers.length; j++) {
+          var layer = group.layers[j];
+          if (layer.selected && layer.typename !== "LayerSet") {
+            selectedIndexes.push(j);
+          }
+        }
+
+        // If no selected layers, hide whole group
+        if (selectedIndexes.length === 0) {
+          group.visible = false;
+          continue;
+        } else {
+          group.visible = true;
+        }
+
+        // Process each layer inside this group
+        var layers = group.layers;
+        for (var i = 0; i < layers.length; i++) {
+          var layer = layers[i];
+
+          // Skip LayerSets and locked layers inside the group
+          if (layer.typename === "LayerSet" || layer.locked) continue;
+
+          var set = false;
+
+          for (var s = 0; s < selectedIndexes.length; s++) {
+            var selIdx = selectedIndexes[s];
+
+            if (i === selIdx) {
+              // Selected layer: fully visible
+              layer.visible = true;
+              layer.opacity = 100;
+              set = true;
+              break;
+            }
+
+            var distance = i - selIdx;
+
+            if (distance > 0 && distance <= beforeSteps) {
+              // Before selected layer: partial opacity
+              layer.visible = true;
+              layer.opacity = opacityMap[distance] || 0;
+              set = true;
+              break;
+            } else if (distance < 0 && Math.abs(distance) <= afterSteps) {
+              // After selected layer: partial opacity
+              layer.visible = true;
+              layer.opacity = opacityMap[Math.abs(distance)] || 0;
+              set = true;
+              break;
+            }
+          }
+
+          // Hide layers not in onion skin range
+          if (!set) {
+            layer.visible = false;
+          }
+        }
+      }
+
+      alert("✅ Onion Skin applied to all unlocked root LayerSets.");
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
+}
+
+
+/*
 function toggleOnionSkinMode() {
   const beforeSteps = parseInt(document.getElementById("beforeSteps").value, 10);
   const afterSteps = parseInt(document.getElementById("afterSteps").value, 10);
@@ -94,7 +192,7 @@ function toggleOnionSkinMode() {
   window.parent.postMessage(script, "*");
 }
 
-
+*/
 
 
 /* This was the original onion skin with only 1 before and after getting affected */
