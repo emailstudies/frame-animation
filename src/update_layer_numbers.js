@@ -8,7 +8,7 @@ function handleUpdateLayerNumbers() {
     var foundLayerSet = false;
     var foundAnimPreview = false;
 
-    // Strip cue + frame prefix
+    // Strip cue + frame prefix like "● 5/5 " or "○ 1/3 "
     function stripPrefix(name) {
       var match = name.match(/^[●○]\\s+\\d+\\/\\d+\\s+(.*)$/);
       return match ? match[1] : name;
@@ -34,14 +34,22 @@ function handleUpdateLayerNumbers() {
       }
     }
 
-    // Helper: Remove _a_ prefix if present
+    // Remove _a_ prefix if present
     function stripAPrefix(name) {
       return name.replace(/^_a_\\s*/, "");
     }
 
-    // Helper: Remove delay suffix ", 123" if present
+    // Remove delay suffix like ", 123"
     function stripDelaySuffix(name) {
       return name.replace(/,\\s*\\d+$/, "");
+    }
+
+    // Fully clean layer name by stripping all known prefixes & suffixes
+    function cleanName(name) {
+      name = stripPrefix(name);
+      name = stripAPrefix(name);
+      name = stripDelaySuffix(name);
+      return name.trim();
     }
 
     for (var i = 0; i < doc.layers.length; i++) {
@@ -66,7 +74,6 @@ function handleUpdateLayerNumbers() {
             var frameNum = k + 1;
             var layer = frameLayers[max - 1 - k];
 
-            // Cue (● if visible content, ○ if empty bounds)
             var cue = "●";
             try {
               var b = layer.bounds;
@@ -77,12 +84,8 @@ function handleUpdateLayerNumbers() {
               cue = "○";
             }
 
-            // Clean name: remove _a_ prefix and delay suffix before processing
-            var nameNoAPrefix = stripAPrefix(layer.name);
-            var nameNoDelay = stripDelaySuffix(nameNoAPrefix);
-
-            // Move copy chunk if any
-            var result = moveCopyChunk(nameNoDelay);
+            var baseName = cleanName(layer.name);
+            var result = moveCopyChunk(baseName);
 
             var newName = "_a_ " + cue + " " + frameNum + "/" + max + " ";
             if (result.hasCopy) {
@@ -98,7 +101,7 @@ function handleUpdateLayerNumbers() {
             } catch (e) {}
           }
         }
-        else if (folder.name !== "anim_preview") {
+        else {
           foundLayerSet = true;
 
           var frameLayers = [];
@@ -116,7 +119,6 @@ function handleUpdateLayerNumbers() {
             var frameNum = k + 1;
             var layer = frameLayers[max - 1 - k];
 
-            // Cue (● if visible content, ○ if empty bounds)
             var cue = "●";
             try {
               var b = layer.bounds;
@@ -127,9 +129,9 @@ function handleUpdateLayerNumbers() {
               cue = "○";
             }
 
-            // Clean name and rearrange copy chunk
-            var originalName = stripPrefix(layer.name);
-            var result = moveCopyChunk(originalName);
+            // Clean name fully here as well
+            var baseName = cleanName(layer.name);
+            var result = moveCopyChunk(baseName);
 
             var newName = cue + " " + frameNum + "/" + max + " ";
             if (result.hasCopy) {
@@ -155,6 +157,7 @@ function handleUpdateLayerNumbers() {
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 /* -------------------------------------------- this was the generic do update for all 
