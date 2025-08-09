@@ -13,28 +13,64 @@ function toggleOnionSkinMode() {
         return;
       }
 
+      // 1. Check if any selected layer is a LayerSet (group)
+      for (var i = 0; i < doc.activeLayers.length; i++) {
+        if (doc.activeLayers[i].typename === "LayerSet") {
+          alert("Onion skin cannot run when LayerSets (groups) are selected. Please select only individual layers.");
+          return;
+        }
+      }
+
+      // 2. Collect unique parent groups of selected layers (only unlocked groups)
+      var parentGroups = {};
+      for (var i = 0; i < doc.activeLayers.length; i++) {
+        var parent = doc.activeLayers[i].parent;
+        if (parent.typename === "LayerSet" && !parent.locked) {
+          parentGroups[parent.id] = parent;
+        }
+      }
+
+      // 3. Check for locked selected layers or locked siblings in each parent group
+      for (var key in parentGroups) {
+        var group = parentGroups[key];
+
+        // Check if any selected layer inside this group is locked
+        for (var j = 0; j < group.layers.length; j++) {
+          var layer = group.layers[j];
+          if (layer.selected && layer.locked) {
+            alert("Selected layers must not be locked.");
+            return;
+          }
+        }
+
+        // Check if any sibling layer inside this group is locked
+        for (var j = 0; j < group.layers.length; j++) {
+          var layer = group.layers[j];
+          if (layer.locked) {
+            alert("Sibling layers inside the selected layer's group must not be locked.");
+            return;
+          }
+        }
+      }
+
       var beforeSteps = ${beforeSteps};
       var afterSteps = ${afterSteps};
-
       var opacityMap = { 1: 50, 2: 40, 3: 30 };
 
-      // Iterate over all root-level layers
-      for (var g = 0; g < doc.layers.length; g++) {
-        var group = doc.layers[g];
+      // 4. Process each parent group independently with onion skin
+      for (var key in parentGroups) {
+        var group = parentGroups[key];
 
-        // Only unlocked LayerSets
-        if (group.typename !== "LayerSet" || group.locked) continue;
-
-        // Collect indexes of selected, non-LayerSet layers inside this group
+        // Collect selected, unlocked layer indexes inside this group (non-LayerSet)
         var selectedIndexes = [];
         for (var j = 0; j < group.layers.length; j++) {
           var layer = group.layers[j];
-          if (layer.selected && layer.typename !== "LayerSet") {
+          if (layer.selected && layer.typename !== "LayerSet" && !layer.locked) {
             selectedIndexes.push(j);
           }
         }
 
-        // If no selected layers, hide whole group
+        // Hide the group if no unlocked selected layers (unlikely here)
         if (selectedIndexes.length === 0) {
           group.visible = false;
           continue;
@@ -42,7 +78,7 @@ function toggleOnionSkinMode() {
           group.visible = true;
         }
 
-        // Process each layer inside this group
+        // Onion skin logic inside this group
         var layers = group.layers;
         for (var i = 0; i < layers.length; i++) {
           var layer = layers[i];
@@ -56,7 +92,6 @@ function toggleOnionSkinMode() {
             var selIdx = selectedIndexes[s];
 
             if (i === selIdx) {
-              // Selected layer: fully visible
               layer.visible = true;
               layer.opacity = 100;
               set = true;
@@ -66,13 +101,11 @@ function toggleOnionSkinMode() {
             var distance = i - selIdx;
 
             if (distance > 0 && distance <= beforeSteps) {
-              // Before selected layer: partial opacity
               layer.visible = true;
               layer.opacity = opacityMap[distance] || 0;
               set = true;
               break;
             } else if (distance < 0 && Math.abs(distance) <= afterSteps) {
-              // After selected layer: partial opacity
               layer.visible = true;
               layer.opacity = opacityMap[Math.abs(distance)] || 0;
               set = true;
@@ -80,19 +113,33 @@ function toggleOnionSkinMode() {
             }
           }
 
-          // Hide layers not in onion skin range
           if (!set) {
             layer.visible = false;
           }
         }
       }
 
-      alert("✅ Onion Skin applied to all unlocked root LayerSets.");
+      // 5. For unlocked groups that are NOT parents of selected layers
+      //    turn OFF their visibility (the LayerSet visibility)
+      //    but do NOT change any layers inside those groups
+      for (var g = 0; g < doc.layers.length; g++) {
+        var group = doc.layers[g];
+
+        if (group.typename !== "LayerSet" || group.locked) continue;
+
+        // Skip groups that are parents of selected layers
+        if (parentGroups.hasOwnProperty(group.id)) continue;
+
+        group.visible = false;
+      }
+
+      alert("✅ Onion Skin applied with correct group visibility handling.");
     })();
   `;
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 /*
