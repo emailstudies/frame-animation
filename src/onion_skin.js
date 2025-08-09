@@ -61,6 +61,7 @@ function toggleOnionSkinMode() {
           for (var s = 0; s < selectedIndexes.length; s++) {
             var selIdx = selectedIndexes[s];
             if (i === selIdx) {
+              layer.visible = true;
               layer.opacity = 100; // Selected
               set = true;
               break;
@@ -73,6 +74,7 @@ function toggleOnionSkinMode() {
               set = true;
               break;
             } else if (distance < 0 && Math.abs(distance) <= afterSteps) {
+              layer.visible = true;
               layer.opacity = opacityMap[Math.abs(distance)] || 0;
               set = true;
               break;
