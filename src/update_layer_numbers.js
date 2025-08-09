@@ -8,10 +8,31 @@ function handleUpdateLayerNumbers() {
     var foundLayerSet = false;
     var foundAnimPreview = false;
 
-    // Strip cue + frame prefix like "● 5/5 " or "○ 1/3 "
-    function stripPrefix(name) {
-      var match = name.match(/^[●○]\\s+\\d+\\/\\d+\\s+(.*)$/);
-      return match ? match[1] : name;
+    // Remove _a_ prefix if present
+    function stripAPrefix(name) {
+      return name.replace(/^_a_\\s*/, "");
+    }
+
+    // Remove delay suffix like ", 123"
+    function stripDelaySuffix(name) {
+      return name.replace(/,\\s*\\d+$/, "");
+    }
+
+    // Remove all cue/frame prefixes (multiple) at start, e.g. "● 5/5 "
+    function stripAllPrefixes(name) {
+      var pattern = /^[●○]\\s+\\d+\\/\\d+\\s+/;
+      while (pattern.test(name)) {
+        name = name.replace(pattern, "");
+      }
+      return name;
+    }
+
+    // Fully clean layer name by stripping all known prefixes & suffixes
+    function cleanName(name) {
+      name = stripAPrefix(name);
+      name = stripAllPrefixes(name);
+      name = stripDelaySuffix(name);
+      return name.trim();
     }
 
     // Move "copy*" chunk (if present) to middle
@@ -32,24 +53,6 @@ function handleUpdateLayerNumbers() {
           baseName: name
         };
       }
-    }
-
-    // Remove _a_ prefix if present
-    function stripAPrefix(name) {
-      return name.replace(/^_a_\\s*/, "");
-    }
-
-    // Remove delay suffix like ", 123"
-    function stripDelaySuffix(name) {
-      return name.replace(/,\\s*\\d+$/, "");
-    }
-
-    // Fully clean layer name by stripping all known prefixes & suffixes
-    function cleanName(name) {
-      name = stripPrefix(name);
-      name = stripAPrefix(name);
-      name = stripDelaySuffix(name);
-      return name.trim();
     }
 
     for (var i = 0; i < doc.layers.length; i++) {
@@ -100,8 +103,7 @@ function handleUpdateLayerNumbers() {
               layer.name = newName;
             } catch (e) {}
           }
-        }
-        else {
+        } else {
           foundLayerSet = true;
 
           var frameLayers = [];
@@ -129,7 +131,6 @@ function handleUpdateLayerNumbers() {
               cue = "○";
             }
 
-            // Clean name fully here as well
             var baseName = cleanName(layer.name);
             var result = moveCopyChunk(baseName);
 
@@ -157,6 +158,7 @@ function handleUpdateLayerNumbers() {
 
   window.parent.postMessage(script, "*");
 }
+
 
 
 
