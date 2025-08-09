@@ -70,6 +70,7 @@ function toggleOnionSkinMode() {
             var distance = i - selIdx; // Now reversed logic
 
             if (distance > 0 && distance <= beforeSteps) {
+              layer.visible = true;
               layer.opacity = opacityMap[distance] || 0;
               set = true;
               break;
