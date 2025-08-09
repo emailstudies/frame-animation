@@ -1,6 +1,64 @@
 function resetOnionSkin() {
   const script = `
     (function () {
+      
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No active document.");
+        return;
+      }
+
+      function isLayerSetLocked(layerSet) {
+      return layerSet.allLocked || layerSet.pixelsLocked || layerSet.positionLocked || layerSet.transparentPixelsLocked;
+      }
+
+      for (var i = 0; i < doc.layers.length; i++) {
+        var group = doc.layers[i];
+
+        // Only process unlocked LayerSets (folders)
+        if (group.typename === "LayerSet" && !isLayerSetLocked(group) && group.name !== "anim_preview") {
+          try {
+            group.visible = true;
+          } catch (e) {
+            alert("⚠️ Could not unhide folder: " + group.name);
+          }
+
+          var layers = group.layers;
+          var frameCount = layers.length;
+
+          for (var j = 0; j < frameCount; j++) {
+            var layer = layers[j];
+            if (layer.typename !== "Layer") continue;
+
+            try {
+              if (j === frameCount - 1) {
+                layer.visible = true;
+                layer.opacity = 100;
+              } else {
+                layer.visible = false;
+                layer.opacity = 100;
+              }
+            } catch (e) {
+              alert("⚠️ Failed to update layer: " + layer.name);
+            }
+          }
+        }
+      }
+
+      alert("✅ Onion skin reset: Folders shown, first (bottom-most) frame restored.");
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
+}
+
+
+
+
+/* for only anim_ folders 
+function resetOnionSkin() {
+  const script = `
+    (function () {
       var doc = app.activeDocument;
       if (!doc) {
         alert("No active document.");
@@ -50,6 +108,7 @@ function resetOnionSkin() {
   window.parent.postMessage(script, "*");
 }
 
+*/
 
 
 /* ----------------------------
