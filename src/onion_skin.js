@@ -80,7 +80,7 @@ function toggleOnionSkinMode() {
           }
 
           if (!set) {
-            layer.opacity = 0;
+            layer.visible = false;
           }
         }
       }
