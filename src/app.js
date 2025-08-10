@@ -8,6 +8,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin;
 
+  //ading the reset for the playback, even though it is same - better UX
+  document.getElementById("resetBtn").onclick = resetOnionSkin;
+
   document.getElementById("onionSkinBtn").onclick = function () {
     resetOnionSkin(); // reset first
     setTimeout(() => {
