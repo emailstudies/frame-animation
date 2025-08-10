@@ -1,24 +1,84 @@
+document.addEventListener("DOMContentLoaded", function () {
 
+  // anim_ folder creation (for headstart and workflow
+  document.getElementById("createAnimBtn").onclick = handleCreateFolder;
+
+  // update layer numbers for all root level folders
+  document.getElementById("updateLayerNumbersBtn").onclick = handleUpdateLayerNumbers;
+
+  document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin;
+
+  document.getElementById("onionSkinBtn").onclick = function () {
+    resetOnionSkin(); // reset first
+    setTimeout(() => {
+      const before = parseInt(document.getElementById("beforeSteps").value, 10);
+      const after = parseInt(document.getElementById("afterSteps").value, 10);
+      toggleOnionSkinMode(before, after); // apply after reset
+    }, 10);
+  };
+
+  // Manual delay input
+  document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
+
+  // Playback buttons
+  document.getElementById("renameBtn").onclick = () => Playback.startPlayback();
+  document.getElementById("stopBtn").onclick = () => Playback.stopPlayback();
+
+  // Auto-restart playback on reverse or pingpong checkbox change
+  ["reverseChk", "pingpongChk"].forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.addEventListener("change", () => {
+        Playback.stopPlayback();
+        Playback.startPlayback();
+      });
+    }
+  });
+
+  // Preview selected
+  document.getElementById("previewSelectedBtn").onclick = function () {
+    beforeMergingInExport(() => {
+      setTimeout(() => {
+        exportGifFromSelected();
+      }, 150);
+    });
+  };
+
+  // Preview all
+  document.getElementById("previewAllBtn").onclick = function () {
+    beforeMergingInExport(() => {
+      setTimeout(() => {
+        exportGif();
+      }, 150);
+    });
+  };
+
+});
+
+
+
+
+/* ---------------------------------------------------------------------------------------- 
 document.addEventListener("DOMContentLoaded", function () {
 
 
 
-  /* ------------------------------------------------------------------------------------------------*/
+  /* ------------------------------------------------------------------------------------------------
 
   
   document.getElementById("createAnimBtn").onclick = handleCreateFolder;
   document.getElementById("updateLayerNumbersBtn").onclick = handleUpdateLayerNumbers;
  /* document.getElementById("onionSkinBtn").onclick = toggleOnionSkinMode; */
 
-  /* this was the previous onion skin logic which make all 1005 but turened on visibility of only Layer 1 in folder as true */
+  /* this was the previous onion skin logic which make all 1005 but turened on visibility of only Layer 1 in folder as true 
   document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin; 
 
   /* I prefer this for the reset since it will make everything opacity as 100 and visible so easier to navigate 
   document.getElementById("resetOnionSkinBtn").onclick = beforeMergingInExport; */
-  /* document.getElementById("browserPreviewAllBtn").onclick = previewInPhotopeaFlipbook; ths was app.refresh to update canvas in PP itself */
+  /* document.getElementById("browserPreviewAllBtn").onclick = previewInPhotopeaFlipbook; ths was app.refresh to update canvas in PP itself 
 
 
-  /* doing the reset first before the onion skin happens */
+  /* doing the reset first before the onion skin happens 
   document.getElementById("onionSkinBtn").onclick = function () {
  resetOnionSkin(); // reset first
   setTimeout(() => {
@@ -28,8 +88,26 @@ document.addEventListener("DOMContentLoaded", function () {
   }, 10); // delay to allow Photopea reset script to finish
 };
 
-   /* document.getElementById("previewSelectedBtn").onclick = exportGifFromSelected; */
+   /* document.getElementById("previewSelectedBtn").onclick = exportGifFromSelected; 
   document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
+
+  // Hook up buttons to module
+document.getElementById("renameBtn").onclick = () => Playback.startPlayback();
+document.getElementById("stopBtn").onclick = () => Playback.stopPlayback();
+
+// Update fps select disable state if manual delay input changes
+document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
+
+// Auto-restart playback on reverse or pingpong checkbox change
+["reverseChk", "pingpongChk"].forEach(id => {
+  const checkbox = document.getElementById(id);
+  if (checkbox) {
+    checkbox.addEventListener("change", () => {
+      Playback.stopPlayback();
+      Playback.startPlayback();
+    });
+  }
+});
 
   document.getElementById("previewSelectedBtn").onclick = function () {
   beforeMergingInExport(() => {
