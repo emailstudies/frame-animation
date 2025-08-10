@@ -9,7 +9,13 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin;
 
   //ading the reset for the playback, even though it is same - better UX
-  document.getElementById("resetBtn").onclick = resetOnionSkin;
+  // document.getElementById("resetBtn").onclick = resetOnionSkin;
+  // adding this because the playback needs to stop on reset
+  document.getElementById("resetBtn").onclick = function () {
+    Playback.stopPlayback(); // stop first so animation halts immediately
+    resetOnionSkin();        // then do the reset
+  };
+
 
   document.getElementById("onionSkinBtn").onclick = function () {
     resetOnionSkin(); // reset first
