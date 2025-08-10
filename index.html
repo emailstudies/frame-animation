@@ -1,33 +1,10 @@
-<!-- this is the old index.html with the merge frame and export gif. this is tied to try.js 
-
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Animation Merger</title>
-  <style>
-    body { font-family: sans-serif; padding: 10px; }
-    button { margin-top: 10px; padding: 6px 12px; }
-  </style>
-</head>
-<body>
-  <h3>Animation Merger</h3>
-  <p>Merges matching sublayers from all folders into new animation frames.</p>
-  <button onclick="mergeFrames()">🌀 Merge Frames</button>
-  <button onclick="exportGif()">🎞️ Export GIF</button>
-
-  <script src="try.js"></script>
-</body>
-</html>
--->
-
 <!-- this is the new index.html - in phases-->
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Photopea Frame Animation Plugin</title>
+  <!-- <title>Photopea Frame Animation Plugin</title> -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -52,9 +29,7 @@
   </div>
 
   <!-- Phase 3: Onion Skin -->
-
-
-    <div class="section">
+  <div class="section">
   <h3>3. Onion Skin</h3>
 
   <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
@@ -82,27 +57,14 @@
   </div>
   <div style="margin-top: 10px;">
     <button id="onionSkinBtn">Apply Onion Skin</button>
-    <button id="resetOnionSkinBtn">reset Onion Skin</button>
+    <button id="resetOnionSkinBtn">Reset Onion Skin</button>
   </div>
 </div>
 
 
- <!--
-  <!-- Phase 4: Export GIF (placeholder) 
-  <div class="section">
-  <h3>3. Export</h3>
-  <div style="display: flex; gap: 20 px;">
-  
-       
-    <button id="previewAllBtn">Preview All</button>
-    <button id="previewSelectedBtn">Testing</button>
-  </div>
-</div>
--->
-
-  <!-- Phase 4: Export GIF -->
+<!-- Playback -->
 <div class="section">
-  <h3>4. Export</h3>
+  <h3>4. Playback</h3>
 
   <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
     <label for="fpsSelect">FPS:</label>
@@ -119,46 +81,32 @@
     <input type="number" id="manualDelay" step="0.1" min="0" placeholder="e.g. 0.5" style="width: 60px;" />
   </div>
 
+   <label for="startFrameInput">Start Frame:</label>
+  <input id="startFrameInput" type="number" placeholder="Start Frame" min="1" />
+
+  <label for="stopFrameInput">Stop Frame:</label>
+  <input id="stopFrameInput" type="number" placeholder="Stop Frame" min="1" />
+
+  <br />
+
+  <label><input type="checkbox" id="reverseChk" /> Reverse</label>
+  <label><input type="checkbox" id="pingpongChk" /> Ping-Pong</label>
+
+  <button id="renameBtn">Play</button>
+  <button id="stopBtn">Pause</button>
+  <button id="resetBtn">Reset</button>
+
+  
+
   <div style="display: flex; gap: 10px;">
     <button id="previewAllBtn">Export All</button>
     <button id="previewSelectedBtn">Export Selected</button>
   </div>
 </div>
 
-  <!--
-  <!-- Phase 4: Export GIF 
-<div class="section">
-  <h3>3. Export</h3>
-
-  <div style="margin-bottom: 10px;">
-    <label for="fpsSelect">FPS:</label>
-    <select id="fpsSelect">
-      <option value="30">30</option>
-      <option value="24">24</option>
-      <option value="12" selected>12</option>
-      <option value="10">10</option>
-    </select>
-    <span style="margin-left: 8px;">(FPS)</span>
-  </div>
-
-  <div style="display: flex; gap: 20px;">
-    <button id="previewAllBtn">Preview All</button>
-     <button id="previewSelectedBtn">Testing</button>
-  <!--  <button onclick="exportGif()">🎞️ Export GIF</button> 
-  </div>
-</div> -->
 
 
-  <!-- Phase 5: Web Preview -->
-  
-<div class="section">
-  <h3>5. Web Preview</h3>
-  <div style="display: flex; gap: 20 px;">
-    <button id="browserPreviewAllBtn">View All</button>
-    <button id="browserPreviewSelectedBtn">View Selected</button>
-  </div>
-</div>
-  
+
   <!-- Plugin Scripts -->
   
   
@@ -167,17 +115,12 @@
   <script src="src/helpers.js"></script>
   <script src="src/onion_skin.js"></script>
   <script src="src/onion_skin_reset.js"></script>
+  <script src="src/playback.js"></script>
   <script src="src/before_merge_in_export.js"></script>
   <script src="src/anim_preview_create.js"></script>  
   <script src="src/anim_preview_selected.js"></script>
-  <script src="src/generate_flipbook.js"></script>
-  <script src="src/flipbook_logic.js"></script>
-  <script src="src/demo_app.js"></script>
+  
   <script src="src/app.js"></script>
-  
-  
-  <script src="src/flipbook_handler.js"></script>
-  <!-- <script src="src/send_selected_layers.js"></script> -->
   
   
 
