@@ -15,11 +15,18 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 10);
   };
 
-  document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin;
 
+  
+ // document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin;
+
+  document.getElementById("resetOnionSkinBtn").onclick = function () {
+    resetOnionSkin();        // then do the reset
+    alert("✅ Onion skin reset: Folders shown, first (bottom-most) frame restored.");
+  }; 
+  
     document.getElementById("renameBtn").onclick = function () {
     resetOnionSkin();        // then do the reset
-    Playback.startPlayback()
+    Playback.startPlayback();
   }; 
 
   //ading the reset for the playback, even though it is same - better UX
