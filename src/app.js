@@ -24,11 +24,13 @@ document.addEventListener("DOMContentLoaded", function () {
     alert("✅ Onion skin reset: Folders shown, first (bottom-most) frame restored.");
   }; 
   
-    document.getElementById("renameBtn").onclick = function () {
+   /*
+   document.getElementById("renameBtn").onclick = function () {
     resetOnionSkin();        // then do the reset
     Playback.startPlayback();
   }; 
-
+*/
+  
   //ading the reset for the playback, even though it is same - better UX
   // document.getElementById("resetBtn").onclick = resetOnionSkin;
   // adding this because the playback needs to stop on reset
@@ -44,7 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
 
   // Playback buttons
- //  document.getElementById("renameBtn").onclick = () => Playback.startPlayback();
+  document.getElementById("renameBtn").onclick = () => Playback.startPlayback();
   document.getElementById("stopBtn").onclick = () => Playback.stopPlayback();
 
   // Auto-restart playback on reverse or pingpong checkbox change
