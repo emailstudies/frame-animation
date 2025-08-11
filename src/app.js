@@ -59,6 +59,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // Preview selected
+  /*
   document.getElementById("previewSelectedBtn").onclick = function () {
     beforeMergingInExport(() => {
       setTimeout(() => {
@@ -66,13 +67,14 @@ document.addEventListener("DOMContentLoaded", function () {
       }, 150);
     });
   };
+  */
 
   // Preview all
   document.getElementById("previewAllBtn").onclick = function () {
     beforeMergingInExport(() => {
       setTimeout(() => {
         exportGif();
-      }, 150);
+      }, 100);
     });
   };
 
