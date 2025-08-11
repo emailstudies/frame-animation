@@ -1,7 +1,7 @@
 {
-  "name": "Animation Frame Merger",
-  "description": "Merge folders frame-by-frame like Photopea's GIF export.",
+  "name": "Photopea Frame Animation",
+  "description": "Classical frame by frame animation plugin for Photopea.",
   "author": "Emailstudies",
   "url": "https://frame-animation-plum.vercel.app/index.html",
-  "icon": "https://i.postimg.cc/26rmNbcj/layer-1.png"
+  "icon": "https://https://emailstudies.github.io/frame-animation/Photopea%20Frame%20Animation%20Plugin.png"
 }
