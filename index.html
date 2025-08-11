@@ -1,155 +1,113 @@
-<!-- proper layout -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <link rel="stylesheet" href="style.css" />
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #fff;
-      margin: 20px;
-    }
-    .control-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    .section {
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      padding: 12px;
-      background: #fafafa;
-    }
-    .section h3 {
-      margin-top: 0;
-      font-size: 1.1em;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 4px;
-    }
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 8px;
-    }
-    label {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    button {
-      padding: 6px 10px;
-      cursor: pointer;
-    }
-    input[type="number"], input[type="text"], select {
-      padding: 4px;
-    }
-    .slider-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .slider-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .slider-labels {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      font-size: 10px;
-    }
-  </style>
+  <meta charset="UTF-8"> 
+  <title>Photopea Frame Animation</title>
 </head>
-<body>
+<body style="margin:0; font-size:14px; line-height:1.3; font-family:sans-serif; ">
+<style> 
+button{
+  margin-top: 6px;
+  margin-right: 2px;
+  padding: 2px 4px;
+  }
+  h3{
+    font-size: 1em;
+    margin-bottom:4px;
+  }
+  h5{
+    margin-top: 2px;
+    margin-bottom: 2px;
+    font-weight: normal;
+  }
+  hr{
+     border: 2px solid #2e2e2e;
+  }
+</style>
 
-<div class="control-panel">
+<div class="control-panel" style="padding:8px;">
 
-  <!-- 1. Add Animation -->
-  <div class="section">
-    <h3>1. Add Animation</h3>
-    <div class="controls">
-      <span>anim_</span>
-      <input type="text" id="animFolderInput" placeholder="walkCycle" />
-      <button id="createAnimBtn">Create Animation Folder</button>
-    </div>
+  <!-- Create -->
+  <h3 style="margin:4px 0;">1. Create Animation Folder</h3>
+  <span>anim_</span>
+  <input type="text"  id="animFolderInput" placeholder="optional" style="width:80px;" style="margin-bottom:4px;" />
+  <br>
+  <button id="createAnimBtn" style="margin-bottom:4px;">Create Folder</button>
+  <hr style="margin:6px 0;">
+
+  <!-- Frame Info -->
+  <h3 style="margin:4px 0;">2. Frame Info</h3>
+  <h5>Update Layer number and if layer is empty or filled.</h5>
+  <button id="updateLayersNumberBtn" style="margin-bottom:4px;">Update</button>
+  <hr style="margin:6px 0;">
+
+
+  <!------------------------->
+  <!-- Onion Skin -->
+  <h3 style="margin:4px 0;">3. Onion Skin</h3>
+<div style="width: 150px; position: relative;">
+
+  <!-- Before -->
+  <div style="display: flex; align-items: center; gap: 2px; margin-bottom: 2px;">
+    <label for="beforeSteps" style="min-width: 40px; user-select:none;">Before</label>
+    <input type="range" id="beforeSteps" min="0" max="3" value="1" style="width: 110px; accent-color:#686868;" />
+  </div>
+  <div style="position: relative; height: 14px; margin-bottom: 2px; font-size: 8px; user-select:none;">
+    <span style="position: absolute; left: 41px;">0</span>
+    <span style="position: absolute; left: 150px; transform: translateX(-100%);">3</span>
   </div>
 
-  <!-- 2. Update Layer Numbers -->
-  <div class="section">
-    <h3>2. Update Layer Numbers</h3>
-    <div class="controls">
-      <button id="updateLayerNumbersBtn">Update Layer Numbers</button>
-    </div>
+  <!-- After -->
+  <div style="display: flex; align-items: center; gap: 2px; margin-bottom: 2px;">
+    <label for="afterSteps" style="min-width: 40px; user-select:none;">After</label>
+    <input type="range" id="afterSteps" min="0" max="3" value="1" style="width: 110px; accent-color:#686868;" />
+  </div>
+  <div style="position: relative; height: 14px; font-size: 8px; user-select:none;">
+    <span style="position: absolute; left: 41px;">0</span>
+    <span style="position: absolute; left: 150px; transform: translateX(-100%);">3</span>
   </div>
 
-  <!-- 3. Onion Skin -->
-  <div class="section">
-    <h3>3. Onion Skin</h3>
-    <div class="slider-group">
-      <label for="beforeSteps">Before</label>
-      <div class="slider-container">
-        <input type="range" id="beforeSteps" min="0" max="3" value="1" style="accent-color: #686868;" />
-        <div class="slider-labels">
-          <span>0</span>
-          <span>3</span>
-        </div>
-      </div>
-      <div class="slider-container">
-        <input type="range" id="afterSteps" min="0" max="3" value="1" style="accent-color: #686868; direction: rtl;" />
-        <div class="slider-labels">
-          <span>3</span>
-          <span>0</span>
-        </div>
-      </div>
-      <label for="afterSteps">After</label>
-    </div>
-    <div class="controls">
-      <button id="onionSkinBtn">Apply Onion Skin</button>
-      <button id="resetOnionSkinBtn">Reset Onion Skin</button>
-    </div>
-  </div>
+</div>
 
-  <!-- 4. Playback -->
-  <div class="section">
-    <h3>4. Playback</h3>
-    <div class="controls">
-      <label for="fpsSelect">FPS:</label>
-      <select id="fpsSelect">
-        <option value="30">30</option>
-        <option value="24">24</option>
-        <option value="12" selected>12</option>
-        <option value="10">10</option>
-      </select>
-      <span>or</span>
-      <label for="manualDelay">Hold per frame (sec):</label>
-      <input type="number" id="manualDelay" step="0.1" min="0" placeholder="e.g. 0.5" style="width: 60px;" />
-    </div>
-    <div class="controls">
-      <label for="startFrameInput">Start Frame:</label>
-      <input id="startFrameInput" type="number" placeholder="Start Frame" min="1" />
-      <label for="stopFrameInput">Stop Frame:</label>
-      <input id="stopFrameInput" type="number" placeholder="Stop Frame" min="1" />
-    </div>
-    <div class="controls">
-      <label><input type="checkbox" id="reverseChk" /> Reverse</label>
-      <label><input type="checkbox" id="pingpongChk" /> Ping-Pong</label>
-    </div>
-    <div class="controls">
-      <button id="renameBtn">Play</button>
-      <button id="stopBtn">Pause</button>
-      <button id="resetBtn">Reset</button>
-    </div>
-    <div class="controls">
-      <button id="previewAllBtn">Export All</button>
-      <button id="previewSelectedBtn">Export Selected</button>
-    </div>
-  </div>
+  <button id="onionSkinBtn" style="margin-top:4px;">Apply Onion Skin</button>
+  <button id="reseOnionSkinBtn" style="margin-top:4px;">Reset Onion Skin</button>
+  <hr style="margin:6px 0;">
+
+  <!-- Playback -->
+  <h3 style="margin:4px 0;">4. Playback</h3>
+  FPS: 
+  <select id="fpsSelect">
+    <option>12</option>
+    <option>24</option>
+    <option>30</option>
+    <option>60</option>
+  </select> or
+  <br>
+  Hold per frame (sec): <input type="number" id="manualDelay" step="0.1" min="0" placeholder="e.g. 0.5" style="width: 60px; margin-bottom:4px; margin-top:2px;" />
+  <br>
+  <br>
+  Start Frame <input type="number" id="startFrameInput" style="width:100px;" placeholder="Start Frame" min="1" style="margin-bottom: 8px;" />
+  <br>
+  
+  End Frame <input type="number" id="stopFrameInput" style="width:100px;" placeholder="End Frame" min="1" style="margin-bottom: 4px;"/>
+  <br>
+  <br>
+  <label><input type="checkbox" id="reverseChk" /> Reverse</label>
+  <label><input type="checkbox" id="pingpongChk" /> Ping-Pong</label>
+  <br>
+  <br>
+  <button id="renameBtn" style="margin-top:4px;">Play</button>
+  <button id="stopBtn" style="margin-top:4px;">Pause</button>
+  <button id="resetBtn" style="margin-top:4px;">Reset</button>
+  <hr style="margin:10px 0;">
+
+  <!-- Export -->
+  <h3 style="margin:4px 0;">5. Export</h3>
+  <h5>Export at selected FPS or Delay from Playback settings. Folders must start with anim_</h5>
+  <h5>Rename exisitng folders with anim_ to export.</h5>
+  <h5>Updating Layer Info will set FPS/Hold as per the current value in Playback settings.</h5>
+  <button id="previewAllBtn">Export</button>
+  <hr style="margin:6px 0;">
 
 </div>
 
