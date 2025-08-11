@@ -225,6 +225,21 @@ function exportGif() {
         return;
       }
 
+        // 🔍 Check if any anim_ folders exist
+  var hasAnimFolder = false;
+  for (var i = 0; i < original.layers.length; i++) {
+    var layer = original.layers[i];
+    if (layer.typename === "LayerSet" && layer.name.toLowerCase().indexOf("anim_") === 0) {
+      hasAnimFolder = true;
+      break;
+    }
+  }
+
+  if (!hasAnimFolder) {
+    alert("❌ No 'anim_' folders found in this document.");
+    return;
+  }
+
       // 🪄 Step 1: Duplicate document
       var dupDoc = app.documents.add(original.width, original.height, original.resolution, "anim_preview", NewDocumentMode.RGB);
       app.activeDocument = dupDoc;
