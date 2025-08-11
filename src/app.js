@@ -6,7 +6,21 @@ document.addEventListener("DOMContentLoaded", function () {
   // update layer numbers for all root level folders
   document.getElementById("updateLayerNumbersBtn").onclick = handleUpdateLayerNumbers;
 
+  document.getElementById("onionSkinBtn").onclick = function () {
+    resetOnionSkin(); // reset first
+    setTimeout(() => {
+      const before = parseInt(document.getElementById("beforeSteps").value, 10);
+      const after = parseInt(document.getElementById("afterSteps").value, 10);
+      toggleOnionSkinMode(before, after); // apply after reset
+    }, 10);
+  };
+
   document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin;
+
+    document.getElementById("renameBtn").onclick = function () {
+    resetOnionSkin();        // then do the reset
+    Playback.startPlayback()
+  }; 
 
   //ading the reset for the playback, even though it is same - better UX
   // document.getElementById("resetBtn").onclick = resetOnionSkin;
@@ -17,20 +31,13 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
 
-  document.getElementById("onionSkinBtn").onclick = function () {
-    resetOnionSkin(); // reset first
-    setTimeout(() => {
-      const before = parseInt(document.getElementById("beforeSteps").value, 10);
-      const after = parseInt(document.getElementById("afterSteps").value, 10);
-      toggleOnionSkinMode(before, after); // apply after reset
-    }, 10);
-  };
+
 
   // Manual delay input
   document.getElementById("manualDelay").addEventListener("input", updateDelayInputState);
 
   // Playback buttons
-  document.getElementById("renameBtn").onclick = () => Playback.startPlayback();
+ //  document.getElementById("renameBtn").onclick = () => Playback.startPlayback();
   document.getElementById("stopBtn").onclick = () => Playback.stopPlayback();
 
   // Auto-restart playback on reverse or pingpong checkbox change
