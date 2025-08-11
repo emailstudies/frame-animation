@@ -1,4 +1,4 @@
-# frame-animation
+# Frame Animation plugin for Photopea
 
 
 Classical frame by frame animation plugin for Photopea.
