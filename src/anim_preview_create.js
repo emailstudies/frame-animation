@@ -293,12 +293,13 @@ function exportGif() {
         var layer = doc.layers[i];
         if (
           layer.typename === "LayerSet" &&
-          layer.name.startsWith("anim_") &&
+         
           layer.name !== "anim_preview"
         ) {
           try { layer.remove(); } catch (e) {}
         }
       }
+
 
       // 👁 Step 5: Show only the first frame in anim_preview
       for (var i = 0; i < doc.layers.length; i++) {
