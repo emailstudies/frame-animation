@@ -45,7 +45,7 @@ function resetOnionSkin() {
         }
       }
 
-      alert("✅ Onion skin reset: Folders shown, first (bottom-most) frame restored.");
+      
     })();
   `;
 
@@ -56,6 +56,7 @@ function resetOnionSkin() {
 
 
 /* for only anim_ folders 
+/* alert("✅ Onion skin reset: Folders shown, first (bottom-most) frame restored."); 
 function resetOnionSkin() {
   const script = `
     (function () {
