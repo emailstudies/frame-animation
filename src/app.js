@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.getElementById("resetOnionSkinBtn").onclick = function () {
     resetOnionSkin();        // then do the reset
-    alert("✅ Onion skin reset: Folders shown, first (bottom-most) frame restored.");
+    alert("✅ Onion skin reset: Folders visible. In each folder - All layers opactity = 100, only Layer 1 visibe. ");
   }; 
   
    /*
