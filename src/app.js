@@ -15,7 +15,18 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 10);
   };
 
-  document.getElementById("matchIndexBtn").onclick = toggleOnionSkinMatchIndexMode;
+   document.getElementById("matchIndexBtn").onclick = function () {
+    // resetOnionSkin(); // reset first
+    // setTimeout(() => {
+      const before = parseInt(document.getElementById("beforeSteps").value, 10);
+      const after = parseInt(document.getElementById("afterSteps").value, 10);
+      toggleOnionSkinMatchIndexMode(before, after); // apply after reset
+   // }, 10);
+  };
+
+  
+
+  // document.getElementById("matchIndexBtn").onclick = toggleOnionSkinMatchIndexMode;
 
   
 
