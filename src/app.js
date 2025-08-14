@@ -27,11 +27,6 @@ document.addEventListener("DOMContentLoaded", function () {
   
 
   // document.getElementById("matchIndexBtn").onclick = toggleOnionSkinMatchIndexMode;
-
-  
-
-
-  
  // document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin;
 
   document.getElementById("resetOnionSkinBtn").onclick = function () {
@@ -53,8 +48,6 @@ document.addEventListener("DOMContentLoaded", function () {
     Playback.stopPlayback(); // stop first so animation halts immediately
     resetOnionSkin();        // then do the reset
   };
-
-
 
 
   // Manual delay input
@@ -95,7 +88,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   };
 
-});
+  document.getElementById("hardResetBtn").onclick = showAllLayersAndFolders;
+  
+
+}); // DOM close
 
 
 
