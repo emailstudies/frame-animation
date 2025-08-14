@@ -15,6 +15,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 10);
   };
 
+  document.getElementById("matchIndexBtn").onclick = toggleOnionSkinMatchIndexMode;
+
+  
+
 
   
  // document.getElementById("resetOnionSkinBtn").onclick = resetOnionSkin;
