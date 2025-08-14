@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const before = parseInt(document.getElementById("beforeSteps").value, 10);
       const after = parseInt(document.getElementById("afterSteps").value, 10);
       toggleOnionSkinMode(before, after); // apply after reset
-    }, 10);
+    }, 5);
   };
 
    document.getElementById("matchIndexBtn").onclick = function () {
