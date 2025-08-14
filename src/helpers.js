@@ -37,3 +37,51 @@ function updateDelayInputState() {
   fpsSelect.disabled = manualDelay !== "";
 }
 
+
+// Hard Reset - all visble and all opacity = 100
+function showAllLayersAndFolders() {
+  const script = `
+    (function () {
+      var doc = app.activeDocument;
+      if (!doc) {
+        alert("No active document.");
+        return;
+      }
+
+      function isLayerSetLocked(layerSet) {
+        return layerSet.allLocked || layerSet.pixelsLocked || layerSet.positionLocked || layerSet.transparentPixelsLocked;
+      }
+
+      function processLayer(layer) {
+        if (layer.typename === "LayerSet") {
+          if (!isLayerSetLocked(layer)) {
+            try {
+              layer.visible = true;
+              layer.opacity = 100;
+            } catch (e) {
+              alert("⚠️ Could not update folder: " + layer.name);
+            }
+            for (var i = 0; i < layer.layers.length; i++) {
+              processLayer(layer.layers[i]);
+            }
+          }
+        } else {
+          try {
+            layer.visible = true;
+            layer.opacity = 100;
+          } catch (e) {
+            alert("⚠️ Failed to update layer: " + layer.name);
+          }
+        }
+      }
+
+      for (var i = 0; i < doc.layers.length; i++) {
+        processLayer(doc.layers[i]);
+      }
+    })();
+  `;
+
+  window.parent.postMessage(script, "*");
+}
+
+
