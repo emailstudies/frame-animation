@@ -66,11 +66,19 @@ button{
     <span style="position: absolute; left: 41px;">0</span>
     <span style="position: absolute; left: 150px; transform: translateX(-100%);">3</span>
   </div>
-
 </div>
+  <!-- Onion Skin to normally selected layers -->
+  <button id="onionSkinBtn" style="margin-top:4px;">Apply to Layer(s)</button>
 
-  <button id="onionSkinBtn" style="margin-top:4px;">Apply Onion Skin</button>
-  <button id="resetOnionSkinBtn" style="margin-top:4px;">Reset Onion Skin</button>
+  <!-- Onion skin to Match Index among folders -->
+<div>
+  <br>
+   <label for="matchIndexInput">or, Match Frame numbers in folders at Frame Number:</label>    
+   <span><input type="number" id="matchIndexInput" min="1" step="1" style="width:60px;"></span>
+  <button id="matchIndexBtn" style="margin-top:4px;">Apply in Folders</button>
+</div>
+  
+  <button id="resetOnionSkinBtn" style="margin-top:4px; margin-bottom:4px;">Reset Onion Skin</button>
   <hr style="margin:6px 0;">
 
   <!-- Playback -->
@@ -116,6 +124,7 @@ button{
 <script src="src/update_layer_numbers.js"></script>
 <script src="src/helpers.js"></script>
 <script src="src/onion_skin.js"></script>
+<script src="src/onion_input.js"></script>
 <script src="src/onion_skin_reset.js"></script>
 <script src="src/playback.js"></script>
 <script src="src/before_merge_in_export.js"></script>
